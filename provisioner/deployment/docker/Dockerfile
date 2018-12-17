@@ -14,9 +14,9 @@
 
 ARG GOVERSION=1.11.1
 FROM golang:$GOVERSION-alpine as builder
-WORKDIR /go/src/github.com/kubernetes-incubator/external-storage
+WORKDIR /go/src/github.com/kubernetes-sigs/sig-storage-local-static-provisioner
 ADD . .
-RUN cd local-volume/provisioner; \
+RUN cd provisioner; \
 	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o local-volume-provisioner ./cmd
 
 FROM k8s.gcr.io/debian-base-amd64:0.4.0
@@ -26,6 +26,6 @@ RUN clean-install \
     e2fsprogs \
     bash
 
-COPY --from=builder /go/src/github.com/kubernetes-incubator/external-storage/local-volume/provisioner/local-volume-provisioner /local-provisioner
-ADD local-volume/provisioner/deployment/docker/scripts /scripts
+COPY --from=builder /go/src/github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/local-volume-provisioner /local-provisioner
+ADD provisioner/deployment/docker/scripts /scripts
 ENTRYPOINT ["/local-provisioner"]

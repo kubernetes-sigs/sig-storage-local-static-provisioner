@@ -22,37 +22,25 @@ ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
 if ! which helm &>/dev/null; then
-    echo "helm not installed, see README.md for instructions on installing it"
-    exit 2
+    hack::install_helm
 fi
 
-# lint first
-ret=0
-helm lint ./provisioner || ret=$?
-if [ $ret -ne 0 ]; then
-    echo "helm lint failed"
-    exit 2
-fi
+cd helm
 
-# check examples
-function test_values_file() {
-    local input="examples/$1"
-    local expected="generated_examples/$1"
-    local tmpfile=$(mktemp)
-    trap "test -f $tmpfile && rm $tmpfile || true" EXIT
-    helm template ./provisioner -f examples/$f > $tmpfile
-    echo -n "Checking $input "
-    local diff=$(diff -u $expected $tmpfile 2>&1) || true
-    if [[ -n "${diff}" ]]; then
-        echo "failed, diff: "
-        echo "$diff"
-        exit 1
-    else
-        echo "passed."
-    fi
-}
+echo "*** IMPORTANT NOTE ***"
+cat <<EOF
+This script is used to update generated yaml files from helm values
+automatically. It does not validate generated yaml files. Please check to make
+sure generated files are what you expected.
+EOF
+echo "*** IMPORTANT NOTE ***"
 
 FILES=$(ls examples/)
 for f in $FILES; do
-    test_values_file $f
+    input="examples/$f"
+    generated="generated_examples/$f"
+    printf "Generating %s from %s\n" $generated $input
+    helm template ./provisioner -f examples/$f > generated_examples/$f
 done
+
+echo "Done."
