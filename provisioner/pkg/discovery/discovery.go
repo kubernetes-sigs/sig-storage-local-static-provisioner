@@ -24,10 +24,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/common"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/metrics"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/deleter"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
 	"k8s.io/api/core/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"

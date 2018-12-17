@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/common"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
 
 	batch_v1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"

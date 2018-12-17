@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/common"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
