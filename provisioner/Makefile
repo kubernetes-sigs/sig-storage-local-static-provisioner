@@ -35,7 +35,7 @@ build:
 .PHONY: build
 
 container:
-	docker build -t $(MUTABLE_IMAGE) --build-arg GOVERSION=${GOVERSION} -f deployment/docker/Dockerfile $(PWD)/../..
+	docker build -t $(MUTABLE_IMAGE) --build-arg GOVERSION=${GOVERSION} -f deployment/docker/Dockerfile $(PWD)/..
 	docker tag $(MUTABLE_IMAGE) $(IMAGE)
 .PHONY: container
 
