@@ -23,12 +23,12 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/cache"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/common"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/deleter"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/discovery"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/populator"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/util"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/cache"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/discovery"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/populator"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"

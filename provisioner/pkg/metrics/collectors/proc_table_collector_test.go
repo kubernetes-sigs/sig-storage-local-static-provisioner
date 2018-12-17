@@ -19,7 +19,7 @@ package collectors
 import (
 	"testing"
 
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/deleter"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 	"k8s.io/kube-state-metrics/pkg/collectors/testutils"
 )
 

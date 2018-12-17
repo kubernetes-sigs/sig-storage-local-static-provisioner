@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/cache"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/common"
-	"github.com/kubernetes-incubator/external-storage/local-volume/provisioner/pkg/util"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/cache"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
 	"time"
 
