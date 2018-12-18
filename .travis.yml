@@ -1,0 +1,13 @@
+language: go
+go:
+  - 1.11.1
+# required to run travis job on forked repo
+go_import_path: github.com/kubernetes-sigs/sig-storage-local-static-provisioner 
+services: docker
+script:
+  - make ${TARGET}
+jobs:
+  include:
+  - env: TARGET=all
+  - env: TARGET=test
+  - env: TARGET=verify
