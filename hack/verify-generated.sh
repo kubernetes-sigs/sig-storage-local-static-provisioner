@@ -23,7 +23,7 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-if ! which helm &>/dev/null; then
+if ! hack::verify_helm; then
     hack::install_helm
 fi
 
@@ -31,7 +31,7 @@ cd helm
 
 # lint first
 ret=0
-helm lint ./provisioner || ret=$?
+$HELM_BIN lint ./provisioner || ret=$?
 if [ $ret -ne 0 ]; then
     echo "helm lint failed"
     exit 2
@@ -43,7 +43,7 @@ function test_values_file() {
     local expected="generated_examples/$1"
     local tmpfile=$(mktemp)
     trap "test -f $tmpfile && rm $tmpfile || true" EXIT
-    helm template ./provisioner -f examples/$f > $tmpfile
+    $HELM_BIN template ./provisioner -f examples/$f > $tmpfile
     echo -n "Checking $input "
     local diff=$(diff -u $expected $tmpfile 2>&1) || true
     if [[ -n "${diff}" ]]; then

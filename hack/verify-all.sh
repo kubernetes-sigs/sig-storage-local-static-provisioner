@@ -21,4 +21,9 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
+hack/verify-boilerplate.sh
+hack/verify-gofmt.sh
+hack/verify-govet.sh
+hack/verify-golint.sh
 hack/verify-generated.sh
+hack/verify-deps.sh
