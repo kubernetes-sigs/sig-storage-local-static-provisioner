@@ -4,6 +4,12 @@
 # for detailed Gopkg.toml documentation.
 #
 
+required = [
+  # vendor subpacakge which contains .go files to work around dep issue:
+  # https://github.com/golang/dep/issues/1306
+  "k8s.io/repo-infra/kazel"
+]
+
 [[constraint]]
   name = "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner"
   version = "1.0.0"
@@ -24,3 +30,8 @@
   non-go = true
   go-tests = true
   unused-packages = true
+
+  [[prune.project]]
+  name = "k8s.io/repo-infra"
+  non-go = false
+  unused-packages = false
