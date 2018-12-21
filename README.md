@@ -117,7 +117,7 @@ requested Local SSDs. Please see
 [GKE documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/local-ssd)
 for instructions for how to create a cluster with Local SSDs.
 
-Then skip to [step 4](#step-4-create-local-persistent-volume-claim).
+Then skip to [step 2](#step-2-creating-a-storageclass-19).
 
 **Note:** The raw block feature is only supported on GKE Kubernetes alpha clusters.
 
