@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2017 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+load(
+    "@bazel_tools//tools/build_defs/pkg:pkg.bzl",
+    _real_pkg_tar = "pkg_tar",
+)
 
-ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
-cd $ROOT
-
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+# pkg_tar wraps the official pkg_tar rule with our faster
+# Go-based build_tar binary.
+def pkg_tar(**kwargs):
+    if "build_tar" not in kwargs:
+        kwargs["build_tar"] = "@io_kubernetes_build//tools/build_tar"
+    _real_pkg_tar(**kwargs)

@@ -21,6 +21,11 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+source "${ROOT}/hack/lib.sh"
+
+if ! hack::verify_dep; then
+    hack::install_dep
+fi
+
+$DEP_BIN version
+$DEP_BIN ensure -v

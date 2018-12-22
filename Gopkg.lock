@@ -2,6 +2,16 @@
 
 
 [[projects]]
+  digest = "1:03679414789b10f815a33667d29e3c77e57c8096bd32457fd1682a4222f25806"
+  name = "github.com/bazelbuild/buildtools"
+  packages = [
+    "build",
+    "tables",
+  ]
+  pruneopts = "NUT"
+  revision = "80c7f0d45d7e40fa1f7362852697d4a03df557b3"
+
+[[projects]]
   branch = "master"
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
   name = "github.com/beorn7/perks"
@@ -644,11 +654,12 @@
   version = "v10.0.0"
 
 [[projects]]
+  branch = "master"
   digest = "1:9cc257b3c9ff6a0158c9c661ab6eebda1fe8a4a4453cd5c4044dc9a2ebfb992b"
   name = "k8s.io/klog"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8139d8cb77af419532b33dfa7dd09fbc5f1d344f"
+  revision = "4767aaa894b9d76b3511781272db07d4ef45175e"
 
 [[projects]]
   digest = "1:03a96603922fc1f6895ae083e1e16d943b55ef0656b56965351bd87e7d90485f"
@@ -680,6 +691,14 @@
   ]
   pruneopts = "NUT"
   revision = "598a01989dcd06ec776248506fe6eb32f499bd38"
+
+[[projects]]
+  branch = "master"
+  digest = "1:84728799fa3ecb66fed5755e2cdf88c6d99478bab9251c035fe92eaf2ecd09eb"
+  name = "k8s.io/repo-infra"
+  packages = ["kazel"]
+  pruneopts = "T"
+  revision = "00fe14e3d1a3f9a73c4cea62d9c33b29c1e03ac4"
 
 [[projects]]
   digest = "1:867d98a27033c52150eb4c01ca0f9be938d3010e9a4909ea3a881a83c3ac1b3f"
@@ -734,6 +753,7 @@
     "k8s.io/kubernetes/pkg/kubelet/apis",
     "k8s.io/kubernetes/pkg/util/mount",
     "k8s.io/kubernetes/pkg/volume/util/fs",
+    "k8s.io/repo-infra/kazel",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
