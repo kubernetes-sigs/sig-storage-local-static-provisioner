@@ -21,6 +21,4 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+vendor/k8s.io/repo-infra/verify/verify-boilerplate.sh --rootdir "$ROOT"

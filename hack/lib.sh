@@ -14,10 +14,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [ -z "$ROOT" ]; then
+	echo "error: ROOT should be initialized"
+	exit 1
+fi
+
+OS=$(go env GOOS)
+ARCH=$(go env GOARCH)
+OUTPUT=${ROOT}/_output
+OUTPUT_BIN=${OUTPUT}/${OS}/${ARCH}
+HELM_VERSION=2.7.2
+DEP_VERSION=0.5.0
+DEP_BIN=$OUTPUT_BIN/dep
+HELM_BIN=$OUTPUT_BIN/helm
+
+test -d "$OUTPUT_BIN" || mkdir -p "$OUTPUT_BIN"
+
+function hack::verify_helm() {
+    if test -x "$HELM_BIN"; then
+        local v=$($HELM_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
+        [[ "$v" == "$HELM_VERSION" ]]
+        return
+    fi
+    return 1
+}
+
 function hack::install_helm() {
     local OS=$(uname | tr A-Z a-z)
-    local VERSION=v2.7.2
     local ARCH=amd64
-    local HELM_URL=http://storage.googleapis.com/kubernetes-helm/helm-${VERSION}-${OS}-${ARCH}.tar.gz
-    curl -s "$HELM_URL" | sudo tar --strip-components 1 -C $GOPATH/bin -zxf - ${OS}-${ARCH}/helm
+    local HELM_URL=http://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
+    curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm
+}
+
+function hack::verify_dep() {
+    if test -x "$DEP_BIN"; then
+        local v=$($DEP_BIN version | awk -F: '/^\s+version\s+:/ { print $2 }' | sed -r 's/^\s+v//g')
+        [[ "$v" == "$DEP_VERSION" ]]
+        return
+    fi
+    return 1
+}
+
+function hack::install_dep() {
+    platform=$(uname -s | tr A-Z a-z)
+    echo "Installing dep v$DEP_VERSION..."
+    tmpfile=$(mktemp)
+    trap "test -f $tmpfile && rm $tmpfile" RETURN
+    wget https://github.com/golang/dep/releases/download/v$DEP_VERSION/dep-${platform}-amd64 -O $tmpfile
+    mv $tmpfile $DEP_BIN
+    chmod +x $DEP_BIN
 }

@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2017 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +17,18 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
-cd $ROOT
+find_files() {
+  find . -not \( \
+      \( \
+        -wholename '*/vendor/*' \
+      \) -prune \
+    \) -name '*.go'
+}
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+GOFMT="gofmt -s"
+bad_files=$(find_files | xargs $GOFMT -l)
+if [[ -n "${bad_files}" ]]; then
+  echo "!!! '$GOFMT' needs to be run on the following files: "
+  echo "${bad_files}"
+  exit 1
+fi

@@ -21,6 +21,8 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+gofmt=$(which gofmt)
+
+PKGS=$(go list ./... | grep -v /vendor/)
+
+xargs -n 1 -I pkg gofmt -s -w ${GOPATH}/src/pkg <<<"${PKGS}"

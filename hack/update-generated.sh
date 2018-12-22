@@ -21,7 +21,9 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-if ! which helm &>/dev/null; then
+source "${ROOT}/hack/lib.sh"
+
+if ! hack::verify_helm; then
     hack::install_helm
 fi
 
@@ -40,7 +42,7 @@ for f in $FILES; do
     input="examples/$f"
     generated="generated_examples/$f"
     printf "Generating %s from %s\n" $generated $input
-    helm template ./provisioner -f examples/$f > generated_examples/$f
+    $HELM_BIN template ./provisioner -f examples/$f > generated_examples/$f
 done
 
 echo "Done."

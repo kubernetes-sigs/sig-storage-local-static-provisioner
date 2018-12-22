@@ -1,6 +1,5 @@
-#!/bin/bash
-
-# Copyright 2018 The Kubernetes Authors.
+#!/usr/bin/env bash
+# Copyright 2017 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +17,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
-cd $ROOT
+PKG=$1
+COMMIT=$2
+export GOPATH=$3
+export GOBIN="$GOPATH/bin"
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+go get -d -u "${PKG}"
+cd "${GOPATH}/src/${PKG}"
+git checkout -q "${COMMIT}"
+go install "${PKG}"

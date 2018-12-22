@@ -21,6 +21,17 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-hack/update-gofmt.sh
-hack/update-generated.sh
-hack/update-deps.sh
+if ! which golint > /dev/null; then
+    go get -u golang.org/x/lint/golint
+fi
+
+PKGS=($(go list ./... | grep -v /vendor/))
+
+errors=$(golint ${PKGS[*]} | grep -v -P '(zz_generated\.\w+\.go|generated\.pb\.go)') || true 
+
+if [[ -n "${errors}" ]]; then
+    echo "${errors}"
+    exit 1
+else
+    echo "$0 passed"
+fi
