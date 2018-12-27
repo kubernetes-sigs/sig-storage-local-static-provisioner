@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -57,8 +58,6 @@ const (
 	testServiceAccount = "local-storage-admin"
 	// volumeConfigName is the configmap passed to bootstrapper and provisioner
 	volumeConfigName = "local-volume-config"
-	// provisioner image used for e2e tests
-	provisionerImageName = "quay.io/external_storage/local-volume-provisioner:latest"
 	// provisioner daemonSetName name
 	daemonSetName = "local-volume-provisioner"
 	// provisioner default mount point folder
@@ -77,6 +76,10 @@ const (
 )
 
 var (
+	// provisioner image used for e2e tests
+	provisionerImageName                     = "quay.io/external_storage/local-volume-provisioner:latest"
+	provisionerImagePullPolicy v1.PullPolicy = "Never"
+	// provisionerImagePull
 	// storage class volume binding modes
 	waitMode      = storagev1.VolumeBindingWaitForFirstConsumer
 	immediateMode = storagev1.VolumeBindingImmediate
@@ -117,6 +120,19 @@ type localTestConfig struct {
 	client       clientset.Interface
 	scName       string
 	discoveryDir string
+}
+
+func init() {
+	imageNameFromEnv := os.Getenv("PROVISIONER_IMAGE_NAME")
+	if imageNameFromEnv != "" {
+		provisionerImageName = imageNameFromEnv
+	}
+	imagePullPolicyFromEnv := os.Getenv("PROVISIONER_IMAGE_PULL_POLICY")
+	if imagePullPolicyFromEnv != "" {
+		provisionerImagePullPolicy = v1.PullPolicy(imagePullPolicyFromEnv)
+	}
+	fmt.Printf("PROVISIONER_IMAGE_NAME: %s\n", imageNameFromEnv)
+	fmt.Printf("PROVISIONER_IMAGE_PULL_POLICY: %s\n", imagePullPolicyFromEnv)
 }
 
 var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
@@ -546,7 +562,7 @@ func createProvisionerDaemonset(config *localTestConfig) {
 						{
 							Name:            "provisioner",
 							Image:           provisionerImageName,
-							ImagePullPolicy: "Never", // Always use local image
+							ImagePullPolicy: provisionerImagePullPolicy,
 							SecurityContext: &v1.SecurityContext{
 								Privileged: &provisionerPrivileged,
 							},

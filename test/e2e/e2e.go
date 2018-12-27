@@ -24,6 +24,7 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/gomega"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/util/logs"
@@ -56,6 +57,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 				metav1.NamespaceSystem,
 				metav1.NamespaceDefault,
 				metav1.NamespacePublic,
+				v1.NamespaceNodeLease,
 			})
 		if err != nil {
 			framework.Failf("Error deleting orphaned namespaces: %v", err)
