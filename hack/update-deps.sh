@@ -23,9 +23,7 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-if ! hack::verify_dep; then
-    hack::install_dep
-fi
+hack::install_dep
 
 $DEP_BIN version
 $DEP_BIN ensure -v
