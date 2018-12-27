@@ -17,10 +17,11 @@ limitations under the License.
 package collectors
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
-	"k8s.io/kube-state-metrics/pkg/collectors/testutils"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func newUint64Pointer(i uint64) *uint64 {
@@ -62,7 +63,7 @@ func TestProcTableCollector(t *testing.T) {
 	fakeProcTable.MarkSucceeded("pv1")
 	fakeProcTable.MarkFailed("pv2")
 	fakeProcTable.MarkSucceeded("pv3")
-	if err := testutils.GatherAndCompare(&procTableCollector{procTable: fakeProcTable}, want, metrics); err != nil {
+	if err := testutil.CollectAndCompare(&procTableCollector{procTable: fakeProcTable}, strings.NewReader(want), metrics...); err != nil {
 		t.Errorf("unexpected collecting result:\n%s", err)
 	}
 }

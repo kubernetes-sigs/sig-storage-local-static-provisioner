@@ -202,14 +202,17 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:d41f9b875859399cd400b96ba7e15f299925c9c7a71b24e6fa92b0ea4c761b91"
+  digest = "1:272ae9aa79d45a54ab842aa8d234d235e9bcb5a6d4acdd3a97d2436842e21049"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
+    "prometheus/testutil",
   ]
   pruneopts = "NUT"
-  revision = "faf4ec335fe01ae5a6a0eaa34a5a9333bfbd1a30"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
 
 [[projects]]
   digest = "1:9fe8945a11a9f588a9d306b4741cad634da9015a704271b9506810e2cc77fa17"
@@ -669,14 +672,6 @@
   revision = "c59034cc13d587f5ef4e85ca0ade0c1866ae8e1d"
 
 [[projects]]
-  digest = "1:d40eabfb8adb37a5edde3e685f7a440c94a68bdf97dfa5796cb8b69f068c0dcf"
-  name = "k8s.io/kube-state-metrics"
-  packages = ["pkg/collectors/testutils"]
-  pruneopts = "NUT"
-  revision = "8a187c6344a48ec7f6c787a053d136d7f1043a1f"
-  version = "v1.4.0"
-
-[[projects]]
   branch = "release-1.13"
   digest = "1:c7f4102f5b933ac6901292c847ecdb40a21f0cbc7fe690e74c94ed8f2d3379fc"
   name = "k8s.io/kubernetes"
@@ -724,6 +719,7 @@
     "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/prometheus/client_golang/prometheus/testutil",
     "golang.org/x/sys/unix",
     "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
@@ -749,7 +745,6 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/workqueue",
-    "k8s.io/kube-state-metrics/pkg/collectors/testutils",
     "k8s.io/kubernetes/pkg/kubelet/apis",
     "k8s.io/kubernetes/pkg/util/mount",
     "k8s.io/kubernetes/pkg/volume/util/fs",
