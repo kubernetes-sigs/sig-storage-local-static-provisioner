@@ -16,7 +16,7 @@ required = [
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "10.0.0"
+  branch = "release-10.0"
 
 [[constraint]]
   name = "k8s.io/api"
@@ -25,6 +25,32 @@ required = [
 [[constraint]]
   name = "k8s.io/kubernetes"
   branch = "release-1.13"
+
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  branch = "release-1.13"
+
+[[constraint]]
+  name = "k8s.io/apiserver"
+  branch = "release-1.13"
+
+[[override]]
+  name = "k8s.io/cli-runtime"
+  branch = "release-1.13"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  branch = "release-1.13"
+
+# https://github.com/kubernetes/kubernetes/blob/v1.13.0/Godeps/Godeps.json#L1359
+[[override]]
+  name = "github.com/docker/docker"
+  revision = "a9fbbdc8dd8794b20af358382ab780559bca589d"
+
+# https://github.com/golang/dep/issues/1799
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
 
 [prune]
   non-go = true
