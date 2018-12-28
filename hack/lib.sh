@@ -27,6 +27,8 @@ HELM_VERSION=2.7.2
 DEP_VERSION=0.5.0
 DEP_BIN=$OUTPUT_BIN/dep
 HELM_BIN=$OUTPUT_BIN/helm
+MISSPELL_VERSION=0.3.4
+MISSPELL_BIN=$OUTPUT_BIN/misspell
 
 test -d "$OUTPUT_BIN" || mkdir -p "$OUTPUT_BIN"
 
@@ -40,6 +42,9 @@ function hack::verify_helm() {
 }
 
 function hack::install_helm() {
+    if hack::verify_helm; then
+        return 0
+    fi
     local OS=$(uname | tr A-Z a-z)
     local ARCH=amd64
     local HELM_URL=http://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
@@ -56,6 +61,9 @@ function hack::verify_dep() {
 }
 
 function hack::install_dep() {
+    if hack::verify_dep; then
+        return 0
+    fi
     platform=$(uname -s | tr A-Z a-z)
     echo "Installing dep v$DEP_VERSION..."
     tmpfile=$(mktemp)
@@ -63,4 +71,21 @@ function hack::install_dep() {
     wget https://github.com/golang/dep/releases/download/v$DEP_VERSION/dep-${platform}-amd64 -O $tmpfile
     mv $tmpfile $DEP_BIN
     chmod +x $DEP_BIN
+}
+
+function hack::verify_misspell() {
+    if test -x "$MISSPELL_BIN"; then
+        [[ "$($MISSPELL_BIN -v)" == "$MISSPELL_VERSION" ]]
+        return
+    fi
+    return 1
+}
+
+function hack::install_misspell() {
+    if hack::verify_misspell; then
+        return 0
+    fi
+    echo "Install misspell $MISSPELL_VERSION..."
+    local TARURL=https://github.com/client9/misspell/releases/download/v${MISSPELL_VERSION}/misspell_${MISSPELL_VERSION}_linux_64bit.tar.gz
+    wget -q $TARURL -O - | tar -zxf - -C "$OUTPUT_BIN"
 }

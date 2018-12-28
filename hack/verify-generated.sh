@@ -23,9 +23,7 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-if ! hack::verify_helm; then
-    hack::install_helm
-fi
+hack::install_helm
 
 cd helm
 
