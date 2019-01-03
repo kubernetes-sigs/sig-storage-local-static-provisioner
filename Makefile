@@ -23,6 +23,10 @@ verify:
 	./hack/verify-all.sh
 .PHONY: verify
 
+e2e:
+	./hack/e2e.sh
+.PHONY: e2e
+
 provisioner:
 	cd provisioner; make container
 .PHONY: provisioner
