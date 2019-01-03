@@ -79,7 +79,6 @@ var (
 	// provisioner image used for e2e tests
 	provisionerImageName                     = "quay.io/external_storage/local-volume-provisioner:latest"
 	provisionerImagePullPolicy v1.PullPolicy = "Never"
-	// provisionerImagePull
 	// storage class volume binding modes
 	waitMode      = storagev1.VolumeBindingWaitForFirstConsumer
 	immediateMode = storagev1.VolumeBindingImmediate
@@ -90,26 +89,8 @@ type localVolumeType string
 const (
 	// default local volume type, aka a directory
 	DirectoryLocalVolumeType localVolumeType = "dir"
-	// like DirectoryLocalVolumeType but it's a symbolic link to directory
-	DirectoryLinkLocalVolumeType localVolumeType = "dir-link"
-	// like DirectoryLocalVolumeType but bind mounted
-	DirectoryBindMountedLocalVolumeType localVolumeType = "dir-bindmounted"
-	// like DirectoryLocalVolumeType but it's a symbolic link to self bind mounted directory
-	// Note that bind mounting at symbolic link actually mounts at directory it
-	// links to.
-	DirectoryLinkBindMountedLocalVolumeType localVolumeType = "dir-link-bindmounted"
-	// creates a tmpfs and mounts it
-	TmpfsLocalVolumeType localVolumeType = "tmpfs"
-	// tests based on local ssd at /mnt/disks/by-uuid/
-	GCELocalSSDVolumeType localVolumeType = "gce-localssd-scsi-fs"
 	// Creates a local file, formats it, and maps it as a block device.
 	BlockLocalVolumeType localVolumeType = "block"
-	// Creates a local file serving as the backing for block device., formats it,
-	// and mounts it to use as FS mode local volume.
-	BlockFsWithFormatLocalVolumeType localVolumeType = "blockfswithformat"
-	// Creates a local file serving as the backing for block device. do not format it manually,
-	// and mounts it to use as FS mode local volume.
-	BlockFsWithoutFormatLocalVolumeType localVolumeType = "blockfswithoutformat"
 )
 
 type localTestConfig struct {
