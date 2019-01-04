@@ -25,13 +25,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/controller"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/metrics/collectors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/controller"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics/collectors"
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

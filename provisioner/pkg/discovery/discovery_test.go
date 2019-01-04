@@ -24,10 +24,10 @@ import (
 
 	"github.com/golang/glog"
 	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/cache"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/util"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
