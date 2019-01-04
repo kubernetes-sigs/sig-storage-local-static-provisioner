@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/cache"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
 	batch_v1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"

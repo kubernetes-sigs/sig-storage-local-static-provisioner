@@ -24,14 +24,14 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
 	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 	"k8s.io/api/core/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 )
 
 // Discoverer finds available volumes and creates PVs for them

@@ -79,7 +79,7 @@ TEST_ARGS=(
     test
     -timeout=60m
     -v
-    github.com/kubernetes-sigs/sig-storage-local-static-provisioner/test/e2e
+    sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e
     "-provider=$KUBERNETES_PROVIDER"
 )
 
