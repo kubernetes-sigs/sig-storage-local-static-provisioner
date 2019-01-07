@@ -22,8 +22,8 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/utils/update-helm-values-pre-v2.2.0/pkg/chartutil"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/utils/update-helm-values-pre-v2.2.0/pkg/chartutil"
 )
 
 var (

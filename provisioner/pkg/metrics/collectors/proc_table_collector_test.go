@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 )
 
 func newUint64Pointer(i uint64) *uint64 {

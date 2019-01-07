@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/cache"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/common"
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/provisioner/pkg/util"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
 	"time"
 
