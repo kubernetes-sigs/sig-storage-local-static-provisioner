@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -82,6 +83,8 @@ var (
 	// storage class volume binding modes
 	waitMode      = storagev1.VolumeBindingWaitForFirstConsumer
 	immediateMode = storagev1.VolumeBindingImmediate
+	// common selinux labels
+	selinuxLabel = &v1.SELinuxOptions{Level: "s0:c0,c1"}
 )
 
 type localVolumeType string
@@ -248,6 +251,139 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			cleanupLocalVolumeProvisionerMountPoint(config, dynamicVolumePath, config.node0)
 		})
 
+	})
+
+	Context("Stress with local volume provisioner [Serial]", func() {
+		var testVols [][]string
+
+		const (
+			volsPerNode = 10 // Make this non-divisable by volsPerPod to increase changes of partial binding failure
+			volsPerPod  = 3
+			podsFactor  = 4
+		)
+
+		BeforeEach(func() {
+			setupStorageClass(config, &waitMode)
+			setupLocalVolumeProvisioner(config)
+
+			testVols = [][]string{}
+			for i, node := range config.nodes {
+				By(fmt.Sprintf("Setting up local volumes on node %q", node.Name))
+				paths := []string{}
+				for j := 0; j < volsPerNode; j++ {
+					volumePath := path.Join(config.discoveryDir, fmt.Sprintf("vol-%v", string(uuid.NewUUID())))
+					setupLocalVolumeProvisionerMountPoint(config, volumePath, &config.nodes[i])
+					paths = append(paths, volumePath)
+				}
+				testVols = append(testVols, paths)
+			}
+
+			By("Starting the local volume provisioner")
+			createProvisionerDaemonset(config)
+		})
+
+		AfterEach(func() {
+			By("Deleting provisioner daemonset")
+			deleteProvisionerDaemonset(config)
+
+			for i, paths := range testVols {
+				for _, volumePath := range paths {
+					cleanupLocalVolumeProvisionerMountPoint(config, volumePath, &config.nodes[i])
+				}
+			}
+			cleanupLocalVolumeProvisioner(config)
+			cleanupStorageClass(config)
+		})
+
+		It("should use be able to process many pods and reuse local volumes", func() {
+			var (
+				podsLock sync.Mutex
+				// Have one extra pod pending
+				numConcurrentPods = volsPerNode/volsPerPod*len(config.nodes) + 1
+				totalPods         = numConcurrentPods * podsFactor
+				numCreated        = 0
+				numFinished       = 0
+				pods              = map[string]*v1.Pod{}
+			)
+
+			// Create pods gradually instead of all at once because scheduler has
+			// exponential backoff
+			// TODO: this is still a bit slow because of the provisioner polling period
+			By(fmt.Sprintf("Creating %v pods periodically", numConcurrentPods))
+			stop := make(chan struct{})
+			go wait.Until(func() {
+				podsLock.Lock()
+				defer podsLock.Unlock()
+
+				if numCreated >= totalPods {
+					// Created all the pods for the test
+					return
+				}
+
+				if len(pods) > numConcurrentPods/2 {
+					// Too many outstanding pods
+					return
+				}
+
+				for i := 0; i < numConcurrentPods; i++ {
+					pvcs := []*v1.PersistentVolumeClaim{}
+					for j := 0; j < volsPerPod; j++ {
+						pvc := framework.MakePersistentVolumeClaim(makeLocalPVCConfig(config, DirectoryLocalVolumeType), config.ns)
+						pvc, err := framework.CreatePVC(config.client, config.ns, pvc)
+						framework.ExpectNoError(err)
+						pvcs = append(pvcs, pvc)
+					}
+
+					pod := framework.MakeSecPod(config.ns, pvcs, false, "sleep 1", false, false, selinuxLabel, nil)
+					pod, err := config.client.CoreV1().Pods(config.ns).Create(pod)
+					Expect(err).NotTo(HaveOccurred())
+					pods[pod.Name] = pod
+					numCreated++
+				}
+			}, 2*time.Second, stop)
+
+			defer func() {
+				close(stop)
+				podsLock.Lock()
+				defer podsLock.Unlock()
+
+				for _, pod := range pods {
+					if err := deletePodAndPVCs(config, pod); err != nil {
+						framework.Logf("Deleting pod %v failed: %v", pod.Name, err)
+					}
+				}
+			}()
+
+			By("Waiting for all pods to complete successfully")
+			err := wait.PollImmediate(time.Second, 5*time.Minute, func() (done bool, err error) {
+				podsList, err := config.client.CoreV1().Pods(config.ns).List(metav1.ListOptions{})
+				if err != nil {
+					return false, err
+				}
+
+				podsLock.Lock()
+				defer podsLock.Unlock()
+
+				for _, pod := range podsList.Items {
+					switch pod.Status.Phase {
+					case v1.PodSucceeded:
+						// Delete pod and its PVCs
+						if err := deletePodAndPVCs(config, &pod); err != nil {
+							return false, err
+						}
+						delete(pods, pod.Name)
+						numFinished++
+						framework.Logf("%v/%v pods finished", numFinished, totalPods)
+					case v1.PodFailed:
+					case v1.PodUnknown:
+						return false, fmt.Errorf("pod %v is in %v phase", pod.Name, pod.Status.Phase)
+					}
+				}
+
+				return numFinished == totalPods, nil
+			})
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 })
 
@@ -730,6 +866,36 @@ func findProvisionerDaemonsetPodName(config *localTestConfig) string {
 	}
 	framework.Failf("Unable to find provisioner daemonset pod on node0")
 	return ""
+}
+
+func makeLocalPVCConfig(config *localTestConfig, volumeType localVolumeType) framework.PersistentVolumeClaimConfig {
+	pvcConfig := framework.PersistentVolumeClaimConfig{
+		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		StorageClassName: &config.scName,
+	}
+	if volumeType == BlockLocalVolumeType {
+		pvcVolumeMode := v1.PersistentVolumeBlock
+		pvcConfig.VolumeMode = &pvcVolumeMode
+	}
+	return pvcConfig
+}
+
+func deletePodAndPVCs(config *localTestConfig, pod *v1.Pod) error {
+	framework.Logf("Deleting pod %v", pod.Name)
+	if err := config.client.CoreV1().Pods(config.ns).Delete(pod.Name, nil); err != nil {
+		return err
+	}
+
+	// Delete PVCs
+	for _, vol := range pod.Spec.Volumes {
+		pvcSource := vol.VolumeSource.PersistentVolumeClaim
+		if pvcSource != nil {
+			if err := framework.DeletePersistentVolumeClaim(config.client, pvcSource.ClaimName, config.ns); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func TestE2E(t *testing.T) {
