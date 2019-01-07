@@ -19,7 +19,7 @@ package main
 import (
 	"testing"
 
-	"github.com/kubernetes-sigs/sig-storage-local-static-provisioner/utils/update-helm-values-pre-v2.2.0/pkg/chartutil"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/utils/update-helm-values-pre-v2.2.0/pkg/chartutil"
 )
 
 func TestUpgrade(t *testing.T) {
