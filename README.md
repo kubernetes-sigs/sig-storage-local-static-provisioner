@@ -273,9 +273,8 @@ to "Block".
 ## E2E Tests
 
 ### Running
-``` console
-go run hack/e2e.go -- -v --test --test_args="--ginkgo.focus=PersistentVolumes-local"
-```
+
+Run `./hack/e2e.sh -h` to view help.
 
 ### View CI Results
 [GCE](https://k8s-testgrid.appspot.com/sig-storage#gce&include-filter-by-regex=PersistentVolumes-local)
