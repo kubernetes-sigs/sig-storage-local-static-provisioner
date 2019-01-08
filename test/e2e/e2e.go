@@ -32,6 +32,9 @@ import (
 	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/ginkgowrapper"
+
+	// enable client-go GCP auth plugin, xref: http://issues.k8s.io/63743
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 // There are certain operations we only want to run once per overall test invocation

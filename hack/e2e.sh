@@ -86,7 +86,8 @@ Examples:
 
 4) To run against cluster with GKE provider locally
 
-  Prepare same as with GCE provider.
+  Prepare same as with GCE provider. In addition, you need to grant Kubernetes
+  Engine Admin (roles/container.admin) role to your GCP service account.
 
   Then run with following environments:
 
