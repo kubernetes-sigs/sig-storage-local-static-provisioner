@@ -31,31 +31,40 @@ source "${KUBE_ROOT}/cluster/kube-util.sh"
 KUBERNETES_SRC=${KUBE_ROOT}
 KUBECTL=${KUBE_ROOT}/cluster/kubectl.sh
 KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER:-} # e.g. local, gce
+KUBERNETES_CONFORMANCE_TEST=${KUBERNETES_CONFORMANCE_TEST:-}
+KUBERNETES_CONFORMANCE_PROVIDER=${KUBERNETES_CONFORMANCE_PROVIDER:-}
 KUBE_GCE_ZONE=${KUBE_GCE_ZONE:-} # Available when provider is gce
 PROJECT=${PROJECT:-} # Available when provider is gce
 KUBECONFIG=${KUBECONFIG:-$DEFAULT_KUBECONFIG}
 
 echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
 echo "KUBERNETES_PROVIDER: $KUBERNETES_PROVIDER" >&2
+echo "KUBERNETES_CONFORMANCE_PROVIDER: $KUBERNETES_CONFORMANCE_PROVIDER" >&2
+echo "KUBERNETES_CONFORMANCE_TEST: $KUBERNETES_CONFORMANCE_TEST" >&2
 echo "KUBE_GCE_ZONE: $KUBE_GCE_ZONE" >&2
 echo "PROJECT: $PROJECT" >&2
 echo "KUBECTL: $KUBECTL" >&2
 echo "KUBECONFIG: $KUBECONFIG" >&2
 
-if [ -z "$KUBERNETES_PROVIDER" ]; then
-    echo "error: KUBERNETES_PROVIDER not set" >&2
+if [ -z "$KUBERNETES_PROVIDER" -a -z "$KUBERNETES_CONFORMANCE_PROVIDER" ]; then
+    echo "error: KUBERNETES_PROVIDER/KUBERNETES_CONFORMANCE_PROVIDER not set" >&2
     exit 1
 fi
 
-echo "Testing cluster with provider: ${KUBERNETES_PROVIDER}" >&2
-
-prepare-e2e
-detect-master >/dev/null
+if [ -n "$KUBERNETES_CONFORMANCE_TEST" ]; then
+    echo "Conformance test: not doing test setup."
+else
+    echo "Setting up for KUBERNETES_PROVIDER=\"${KUBERNETES_PROVIDER}\"."
+    prepare-e2e
+    detect-master >/dev/null
+fi
 
 # build image
 make
 
-if [ "$KUBERNETES_PROVIDER" == "gce" ]; then
+# Why we use KUBERNETES_CONFORMANCE_PROVIDER here, see
+# https://github.com/kubernetes/test-infra/blob/5475440d76f9039f7e1a5fa86c2f85ea8414b093/kubetest/gke.go#L210-L229.
+if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "gke" ]; then
     if [ -z "$PROJECT" ]; then
         echo "error: PROJECT is required" >&2
         exit 1
