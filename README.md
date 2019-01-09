@@ -106,15 +106,15 @@ unless you want to customize the provisioner spec or storage classes.
 
 ``` console
 $ NODE_LOCAL_SSDS_EXT=<n>,<scsi|nvme>,fs cluster/kube-up.sh
-$ kubectl create -f provisioner/deployment/kubernetes/gce/class-local-ssds.yaml
-$ kubectl create -f provisioner/deployment/kubernetes/gce/provisioner_generated_gce_ssd_volumes.yaml
+$ kubectl create -f helm/generated-examples/gce.yaml
 ```
 
 #### Option 2: GKE
 
 GKE clusters will automatically format and mount the
 requested Local SSDs. Please see
-[GKE documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/local-ssd)
+[GKE
+documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/local-ssd)
 for instructions for how to create a cluster with Local SSDs.
 
 Then skip to [step 4](#step-4-create-local-persistent-volume-claim).
