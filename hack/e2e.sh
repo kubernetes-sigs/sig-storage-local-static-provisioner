@@ -106,8 +106,8 @@ Examples:
   test-infra google application credentiails and GCP ssh key pair.
 
   The first label will set `GOOGLE_APPLICATION_CREDENTIALS` environment for
-  you, and `kubetest` will acquire GCP project and zone from boskos
-  automatically. The latter will prepare SSH key pair.
+  you, and `kubetest` will acquire GCP project from boskos automatically. The
+  latter will prepare SSH key pair.
 
 EOF
 }
@@ -122,7 +122,7 @@ while getopts "h?" opt; do
 done
 
 PROVIDER=${PROVIDER:-}
-GCP_ZONE=${GCP_ZONE:-}
+GCP_ZONE=${GCP_ZONE:-us-central1-b}
 GCP_PROJECT=${GCP_PROJECT:-}
 EXTRACT_STRATEGY=${EXTRACT_STRATEGY:-ci/latest}
 DEPLOYMENT=${DEPLOYMENT:-}
