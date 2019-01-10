@@ -27,6 +27,10 @@ e2e:
 	./hack/e2e.sh
 .PHONY: e2e
 
+release:
+	./hack/release.sh
+.PHONY: release
+
 provisioner:
 	cd provisioner; make container
 .PHONY: provisioner
