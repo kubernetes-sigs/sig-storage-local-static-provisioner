@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ifeq ($(REGISTRY),)
-	REGISTRY = quay.io/external_storage/
+	REGISTRY = quay.io/external_storage
 endif
 
 ifeq ($(VERSION),)
@@ -24,8 +24,8 @@ ifeq ($(GOVERSION),)
 	GOVERSION = 1.11.1
 endif
 
-IMAGE = $(REGISTRY)local-volume-provisioner:$(VERSION)
-MUTABLE_IMAGE = $(REGISTRY)local-volume-provisioner:latest
+IMAGE = $(REGISTRY)/local-volume-provisioner:$(VERSION)
+MUTABLE_IMAGE = $(REGISTRY)/local-volume-provisioner:latest
 
 all: build
 .PHONY: all
