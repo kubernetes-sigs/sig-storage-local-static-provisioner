@@ -39,13 +39,15 @@ Recommended provisioner versions with Kubernetes versions
 
 | Provisioner version | K8s version   | Reason                    |
 | ------------------- | ------------- | ------------------------- |
-| [2.1.0][3]          | 1.10          | Beta API default, block   |
+| [2.3.0][4]          | 1.12          | fs on block support       |
+| [2.2.0][3]          | 1.10          | Beta API default, block   |
 | [2.0.0][2]          | 1.8, 1.9      | Mount propagation         |
 | [1.0.1][1]          | 1.7           |                           |
 
 [1]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v1.0.1/local-volume
 [2]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.0.0/local-volume
-[3]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.1.0/local-volume
+[3]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.2.0/local-volume
+[4]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.3.0
 
 ## K8s Feature Status
 
@@ -86,7 +88,7 @@ on older versions, please see version links under
 
 #### Enabling the alpha feature gates
 
-##### 1.10+
+##### 1.10-1.12
 
 If raw local block feature is needed,
 ```
