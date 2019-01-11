@@ -1,9 +1,23 @@
 # HEAD
 
-Deployment updates:
-* support fs volumes on block
+# [v2.3.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.0)
+
+Image updates:
+* Support mount options from StorageClass
+  ([#1005](https://github.com/kubernetes-incubator/external-storage/pull/1005))
+* Support fs volumes on block
   ([#980](https://github.com/kubernetes-incubator/external-storage/pull/980)).
-  The change breaks backwards compatibility for block volumes: Users must explicitly set volumeMode to "Block" in config if a StorageClass is expected to be used for block volumes.
+  **Breaking change:** The change breaks backwards compatibility for block volumes: Users must explicitly set volumeMode to "Block" in config if a StorageClass is expected to be used for block volumes.
+* Update base image to k8s.gcr.io/debian-base-amd64:0.4.0
+  ([#1040](https://github.com/kubernetes-incubator/external-storage/pull/1040))
+
+Deployment updates:
+* Add option for nodeSelector in DaemonSet template
+  ([#1022](https://github.com/kubernetes-incubator/external-storage/pull/1022))
+* Add option to create namespace and use apps/v1 DaemonSet
+  ([#1039](https://github.com/kubernetes-incubator/external-storage/pull/1039))
+* Fixes provisioner jobs role name in helm template
+  ([#1073](https://github.com/kubernetes-incubator/external-storage/pull/1073))
 
 # [v2.2.0](https://github.com/kubernetes-incubator/external-storage/releases/tag/local-volume-provisioner-v2.2.0)
 Image updates:
