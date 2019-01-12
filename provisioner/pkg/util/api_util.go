@@ -17,15 +17,12 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
 	"time"
 
-	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
 	batch_v1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -48,11 +45,11 @@ type APIUtil interface {
 var _ APIUtil = &apiUtil{}
 
 type apiUtil struct {
-	client *kubernetes.Clientset
+	client kubernetes.Interface
 }
 
 // NewAPIUtil creates a new APIUtil object that represents the K8s API
-func NewAPIUtil(client *kubernetes.Clientset) APIUtil {
+func NewAPIUtil(client kubernetes.Interface) APIUtil {
 	return &apiUtil{client: client}
 }
 
@@ -94,84 +91,5 @@ func (u *apiUtil) DeleteJob(jobName string, namespace string) error {
 		return err
 	}
 
-	return nil
-}
-
-var _ APIUtil = &FakeAPIUtil{}
-
-// FakeAPIUtil is a fake API wrapper for unit testing
-type FakeAPIUtil struct {
-	createdPVs  map[string]*v1.PersistentVolume
-	deletedPVs  map[string]*v1.PersistentVolume
-	CreatedJobs map[string]*batch_v1.Job
-	DeletedJobs map[string]string
-	shouldFail  bool
-	cache       *cache.VolumeCache
-}
-
-// NewFakeAPIUtil returns an APIUtil object that can be used for unit testing
-func NewFakeAPIUtil(shouldFail bool, cache *cache.VolumeCache) *FakeAPIUtil {
-	return &FakeAPIUtil{
-		createdPVs:  map[string]*v1.PersistentVolume{},
-		deletedPVs:  map[string]*v1.PersistentVolume{},
-		CreatedJobs: map[string]*batch_v1.Job{},
-		DeletedJobs: map[string]string{},
-		shouldFail:  shouldFail,
-		cache:       cache,
-	}
-}
-
-// CreatePV will add the PV to the created list and cache
-func (u *FakeAPIUtil) CreatePV(pv *v1.PersistentVolume) (*v1.PersistentVolume, error) {
-	if u.shouldFail {
-		return nil, fmt.Errorf("API failed")
-	}
-
-	u.createdPVs[pv.Name] = pv
-	u.cache.AddPV(pv)
-	return pv, nil
-}
-
-// DeletePV will delete the PV from the created list and cache, and also add it to the deleted list
-func (u *FakeAPIUtil) DeletePV(pvName string) error {
-	if u.shouldFail {
-		return fmt.Errorf("API failed")
-	}
-
-	pv, exists := u.cache.GetPV(pvName)
-	if exists {
-		u.deletedPVs[pvName] = pv
-		delete(u.createdPVs, pvName)
-		u.cache.DeletePV(pvName)
-		return nil
-	}
-	return errors.NewNotFound(v1.Resource("persistentvolumes"), pvName)
-}
-
-// GetAndResetCreatedPVs returns createdPVs and resets the map
-// This is only for testing
-func (u *FakeAPIUtil) GetAndResetCreatedPVs() map[string]*v1.PersistentVolume {
-	createdPVs := u.createdPVs
-	u.createdPVs = map[string]*v1.PersistentVolume{}
-	return createdPVs
-}
-
-// GetAndResetDeletedPVs returns createdPVs and resets the map
-// This is only for testing
-func (u *FakeAPIUtil) GetAndResetDeletedPVs() map[string]*v1.PersistentVolume {
-	deletedPVs := u.deletedPVs
-	u.deletedPVs = map[string]*v1.PersistentVolume{}
-	return deletedPVs
-}
-
-// CreateJob mocks job create method.
-func (u *FakeAPIUtil) CreateJob(job *batch_v1.Job) error {
-	u.CreatedJobs[job.Namespace+"/"+job.Name] = job
-	return nil
-}
-
-// DeleteJob mocks delete jon method.
-func (u *FakeAPIUtil) DeleteJob(jobName string, namespace string) error {
-	u.DeletedJobs[namespace+"/"+jobName] = jobName
 	return nil
 }

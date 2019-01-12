@@ -31,11 +31,13 @@ import (
 
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	core "k8s.io/client-go/testing"
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
@@ -112,7 +114,8 @@ type testConfig struct {
 	apiShouldFail bool
 	// The rest are set during setup
 	volUtil        *util.FakeVolumeUtil
-	apiUtil        *util.FakeAPIUtil
+	client         *fake.Clientset
+	apiUtil        util.APIUtil
 	cache          *cache.VolumeCache
 	cleanupTracker *deleter.CleanupStatusTracker
 }
@@ -340,7 +343,6 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 	test.cache = cache.NewVolumeCache()
 	test.volUtil = util.NewFakeVolumeUtil(false /*deleteShouldFail*/, map[string][]*util.FakeDirEntry{})
 	test.volUtil.AddNewDirEntries(testMountDir, test.dirLayout)
-	test.apiUtil = util.NewFakeAPIUtil(test.apiShouldFail, test.cache)
 	test.cleanupTracker = &deleter.CleanupStatusTracker{ProcTable: deleter.NewProcTable(),
 		JobController: deleter.NewFakeJobController()}
 
@@ -367,7 +369,35 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 	for _, o := range testStorageClasses {
 		objects = append(objects, runtime.Object(o))
 	}
-	client := fake.NewSimpleClientset(objects...)
+	test.client = fake.NewSimpleClientset(objects...)
+
+	test.client.PrependReactor("create", "persistentvolumes", func(action core.Action) (bool, runtime.Object, error) {
+		if test.apiShouldFail {
+			return true, nil, fmt.Errorf("API failed")
+		}
+
+		obj := action.(core.CreateAction).GetObject()
+		pv := obj.(*v1.PersistentVolume)
+		test.cache.AddPV(pv)
+		return false, nil, nil
+	})
+
+	test.client.PrependReactor("delete", "persistentvolumes", func(action core.Action) (bool, runtime.Object, error) {
+		if test.apiShouldFail {
+			return true, nil, fmt.Errorf("API failed")
+		}
+
+		pvName := action.(core.DeleteAction).GetName()
+		_, exists := test.cache.GetPV(pvName)
+		if exists {
+			test.cache.DeletePV(pvName)
+			return false, nil, nil
+		}
+		return true, nil, errors.NewNotFound(v1.Resource("persistentvolumes"), pvName)
+	})
+
+	test.apiUtil = util.NewAPIUtil(test.client)
+
 	runConfig := &common.RuntimeConfig{
 		UserConfig:      userConfig,
 		Cache:           test.cache,
@@ -375,8 +405,8 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 		APIUtil:         test.apiUtil,
 		Name:            testProvisionerName,
 		Mounter:         fm,
-		Client:          client,
-		InformerFactory: informers.NewSharedInformerFactory(client, 0),
+		Client:          test.client,
+		InformerFactory: informers.NewSharedInformerFactory(test.client, 0),
 	}
 	d, err := NewDiscoverer(runConfig, test.cleanupTracker)
 	if err != nil {
@@ -549,7 +579,7 @@ func verifyCreatedPVs(t *testing.T, test *testConfig) {
 		}
 	}
 
-	createdPVs := test.apiUtil.GetAndResetCreatedPVs()
+	createdPVs := getAndResetCreatedPVs(test.client, test.cache)
 	expectedLen := len(expectedPVs)
 	actualLen := len(createdPVs)
 	if expectedLen != actualLen {
@@ -667,4 +697,19 @@ func TestUseAlphaAPI(t *testing.T) {
 	if d.nodeAffinity != nil || len(d.nodeAffinityAnn) == 0 {
 		t.Fatal("the value nodeAffinityAnn should be set while nodeAffinity should not")
 	}
+}
+
+func getAndResetCreatedPVs(cli *fake.Clientset, cache *cache.VolumeCache) map[string]*v1.PersistentVolume {
+	pvs := make(map[string]*v1.PersistentVolume)
+	for _, action := range cli.Actions() {
+		if action.Matches("create", "persistentvolumes") {
+			obj := action.(core.CreateAction).GetObject()
+			pv := obj.(*v1.PersistentVolume)
+			if _, exists := cache.GetPV(pv.Name); exists {
+				pvs[pv.Name] = pv
+			}
+		}
+	}
+	cli.ClearActions()
+	return pvs
 }

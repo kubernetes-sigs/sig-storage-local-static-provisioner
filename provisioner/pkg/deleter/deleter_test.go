@@ -17,20 +17,25 @@ limitations under the License.
 package deleter
 
 import (
+	"fmt"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
-	"time"
-
-	"reflect"
-
+	batch_v1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -55,7 +60,8 @@ type testConfig struct {
 	// Layout of directory in which local volumes are searched for (optional, can be nil)
 	searchDir  map[string][]*util.FakeDirEntry
 	volUtil    *util.FakeVolumeUtil
-	apiUtil    *util.FakeAPIUtil
+	clientset  *fake.Clientset
+	apiUtil    util.APIUtil
 	cache      *cache.VolumeCache
 	procTable  *FakeProcTableImpl
 	jobControl *FakeJobController
@@ -420,11 +426,12 @@ func TestDeleteBlock_Jobs(t *testing.T) {
 		t.Errorf("Unexpected isrrunning %d", test.procTable.IsRunningCount)
 	}
 
-	if len(test.apiUtil.CreatedJobs) != 1 {
-		t.Fatalf("Job creation was not invoked correctly %+v", test.apiUtil.CreatedJobs)
+	jobs := getCreatedJobs(test.clientset)
+	if len(jobs) != 1 {
+		t.Fatalf("Job creation was not invoked correctly %+v", jobs)
 	}
 
-	for k, job := range test.apiUtil.CreatedJobs {
+	for k, job := range jobs {
 		nsjob := strings.Split(k, "/")
 		if nsjob[0] != "kubesystem" {
 			t.Fatalf("Invalid namespace in key %s", k)
@@ -490,8 +497,9 @@ func TestDeleteBlock_DuplicateAttempts_Jobs(t *testing.T) {
 		t.Errorf("Unexpected isrrunning %d", test.procTable.IsRunningCount)
 	}
 
-	if len(test.apiUtil.CreatedJobs) != 0 {
-		t.Errorf("Unexpected job was created. %+v", test.apiUtil.CreatedJobs)
+	jobs := getCreatedJobs(test.clientset)
+	if len(jobs) != 0 {
+		t.Errorf("Unexpected job was created. %+v", jobs)
 		t.Fatalf("No job should have been created when one is already simulated as running.")
 	}
 }
@@ -506,7 +514,30 @@ func testSetupForJobCleaning(t *testing.T, config *testConfig, cleanupCmd []stri
 
 func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForCleaning bool) *Deleter {
 	config.cache = cache.NewVolumeCache()
-	config.apiUtil = util.NewFakeAPIUtil(false, config.cache)
+	config.clientset = fake.NewSimpleClientset()
+
+	config.clientset.PrependReactor("create", "persistentvolumes", func(action core.Action) (bool, runtime.Object, error) {
+		obj := action.(core.CreateAction).GetObject()
+		pv := obj.(*v1.PersistentVolume)
+		config.cache.AddPV(pv)
+		return false, nil, nil
+	})
+
+	config.clientset.PrependReactor("delete", "persistentvolumes", func(action core.Action) (bool, runtime.Object, error) {
+		if config.apiShouldFail {
+			return true, nil, fmt.Errorf("API failed")
+		}
+
+		pvName := action.(core.DeleteAction).GetName()
+		_, exists := config.cache.GetPV(pvName)
+		if exists {
+			config.cache.DeletePV(pvName)
+			return false, nil, nil
+		}
+		return true, nil, errors.NewNotFound(v1.Resource("persistentvolumes"), pvName)
+	})
+
+	config.apiUtil = util.NewAPIUtil(config.clientset)
 	config.procTable = NewFakeProcTable()
 	config.jobControl = NewFakeJobController()
 	config.volUtil = util.NewFakeVolumeUtil(config.volDeleteShouldFail, map[string][]*util.FakeDirEntry{})
@@ -547,8 +578,6 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 		if err != nil {
 			t.Fatalf("Error creating fake PV: %v", err)
 		}
-		// Add PV to cache
-		config.cache.AddPV(pv)
 		// Track it in the list of generated PVs
 		config.generatedPVs[pvName] = pv
 		// Make sure the fake Volumeutil knows about it
@@ -560,8 +589,6 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 	}
 	// Update volume util
 	config.volUtil.AddNewDirEntries(testMountDir, newVols)
-
-	config.apiUtil = util.NewFakeAPIUtil(config.apiShouldFail, config.cache)
 
 	userConfig := &common.UserConfig{
 		DiscoveryMap: map[string]common.MountConfig{
@@ -585,6 +612,7 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 		VolUtil:    config.volUtil,
 		APIUtil:    config.apiUtil,
 		Recorder:   fakeRecorder,
+		Client:     config.clientset,
 	}
 
 	cleanupTracker := &CleanupStatusTracker{ProcTable: config.procTable, JobController: config.jobControl}
@@ -592,7 +620,7 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 }
 
 func verifyDeletedPVs(t *testing.T, config *testConfig) {
-	deletedPVs := config.apiUtil.GetAndResetDeletedPVs()
+	deletedPVs := getAndResetDeletedPVs(config.clientset, config.cache)
 	expectedLen := len(config.expectedDeletedPVs)
 	actualLen := len(deletedPVs)
 	if expectedLen != actualLen {
@@ -634,4 +662,30 @@ func waitForAsyncToComplete(t *testing.T, d *Deleter, pvNames ...string) {
 			t.Errorf("Command failed to complete for pv %s", pvName)
 		}
 	}
+}
+
+func getAndResetDeletedPVs(cli *fake.Clientset, cache *cache.VolumeCache) map[string]string {
+	pvs := make(map[string]string)
+	for _, action := range cli.Actions() {
+		if action.Matches("delete", "persistentvolumes") {
+			pvname := action.(core.DeleteAction).GetName()
+			if _, exists := cache.GetPV(pvname); !exists {
+				pvs[pvname] = pvname
+			}
+		}
+	}
+	cli.ClearActions()
+	return pvs
+}
+
+func getCreatedJobs(cli *fake.Clientset) map[string]*batch_v1.Job {
+	jobs := make(map[string]*batch_v1.Job)
+	for _, action := range cli.Actions() {
+		if action.Matches("create", "jobs") {
+			obj := action.(core.CreateAction).GetObject()
+			job := obj.(*batch_v1.Job)
+			jobs[job.Namespace+"/"+job.Name] = job
+		}
+	}
+	return jobs
 }
