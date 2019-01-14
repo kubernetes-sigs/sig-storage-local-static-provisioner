@@ -91,8 +91,8 @@ if [ -z "$ALLOW_DIRTY" -a "$GIT_DIRTY" != "clean" ]; then
 fi
 
 # our logic depends repo tags, make sure all tags are fetched
-echo "info: fetching all tags"
-git fetch --tags
+echo "info: fetching all tags from official upstream"
+git fetch --tags https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner.git
 
 if [ -z "$VERSION" ]; then
     echo "info: VERSION is not specified, detect automatically"
@@ -179,8 +179,8 @@ function is_latest_version() {
 }
 
 if ! is_stable_version "$VERSION"; then
-    echo "error: VERSION '$VERSION' is not stable version, skipped pushing as latest image"
-    exit 1
+    echo "info: VERSION '$VERSION' is not stable version, skip pushing as latest image"
+    exit 0
 fi
 
 latest_stable_version=$(git tag -l | grep -P '^v\d\.\d+\.\d+' | sort --version-sort | tail -n -1)
@@ -190,8 +190,8 @@ if [ -z "$latest_stable_version" ]; then
 fi
 
 if [ "$VERSION" != "$latest_stable_version" ]; then
-    echo "error: VERSION '$VERSION' is not latest stable version '$latest_stable_version', skiiped pushing as latest image"
-    exit 1
+    echo "info: VERSION '$VERSION' is not latest stable version '$latest_stable_version', skip pushing as latest image"
+    exit 0
 fi
 
 echo "info: VERSION '$VERSION' is latest stable version, pushing it as latest image"
