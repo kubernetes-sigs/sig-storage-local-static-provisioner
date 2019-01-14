@@ -19,9 +19,14 @@ ADD . .
 RUN cd provisioner; \
 	CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o local-volume-provisioner ./cmd
 
+# For security, we use kubernetes community maintained debian base image.
+# https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
 FROM k8s.gcr.io/debian-base-amd64:0.4.0
 
-RUN clean-install \
+# Keep packages up to date and install packages for our needs.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && clean-install \
     util-linux \
     e2fsprogs \
     bash
