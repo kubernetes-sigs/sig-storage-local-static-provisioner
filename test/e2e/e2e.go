@@ -19,10 +19,14 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,6 +119,9 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 }, func() {
 	// Run only Ginkgo on node 1
 	framework.Logf("Running AfterSuite actions on node 1")
+	if framework.TestContext.ReportDir != "" {
+		framework.CoreDump(framework.TestContext.ReportDir)
+	}
 })
 
 func init() {
@@ -133,6 +140,14 @@ func RunE2ETests(t *testing.T) {
 
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
 	var r []ginkgo.Reporter
+	if framework.TestContext.ReportDir != "" {
+		// Create report dir if it does not exist.
+		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
+			klog.Errorf("Failed creating report directory: %v", err)
+		} else {
+			r = append(r, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", framework.TestContext.ReportPrefix, config.GinkgoConfig.ParallelNode))))
+		}
+	}
 	klog.Infof("Starting e2e run %q on Ginkgo node %d", framework.RunId, config.GinkgoConfig.ParallelNode)
 
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Kubernetes Local Volume Provisioner e2e suite", r)
