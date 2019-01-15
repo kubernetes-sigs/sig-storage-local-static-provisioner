@@ -181,8 +181,8 @@ metadata:
     release: {{ .Release.Name | quote }}
     chart: {{ replace "+" "_" .Chart.Version | printf "%s-%s" .Chart.Name }}
     {{- if .Values.prometheus.operator.serviceMonitor.selector }}
-    {{ toYaml .Values.prometheus.operator.serviceMonitor.selector | indent 4 }}
-    {{- end }}
+    {{ toYaml .Values.prometheus.operator.serviceMonitor.selector }}
+    {{- end -}}
 spec:
   jobLabel: app
   selector:

@@ -119,8 +119,7 @@ metadata:
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.0
-        prometheus: kube-prometheus
-    
+    prometheus: kube-prometheus
 spec:
   jobLabel: app
   selector:
