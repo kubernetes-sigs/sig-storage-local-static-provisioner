@@ -1676,6 +1676,7 @@
     "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",
+    "github.com/onsi/ginkgo/reporters",
     "github.com/onsi/gomega",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
