@@ -36,6 +36,9 @@ KUBERNETES_CONFORMANCE_PROVIDER=${KUBERNETES_CONFORMANCE_PROVIDER:-}
 KUBE_GCE_ZONE=${KUBE_GCE_ZONE:-} # Available when provider is gce
 PROJECT=${PROJECT:-} # Available when provider is gce
 KUBECONFIG=${KUBECONFIG:-$DEFAULT_KUBECONFIG}
+# In prow, ARTIFACTS environment indicates an existent directory where job
+# artifacts can be dumped for automatic upload to GCS upon job completion.
+ARTIFACTS=${ARTIFACTS:-}
 
 echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
 echo "KUBERNETES_PROVIDER: $KUBERNETES_PROVIDER" >&2
@@ -45,6 +48,7 @@ echo "KUBE_GCE_ZONE: $KUBE_GCE_ZONE" >&2
 echo "PROJECT: $PROJECT" >&2
 echo "KUBECTL: $KUBECTL" >&2
 echo "KUBECONFIG: $KUBECONFIG" >&2
+echo "ARTIFACTS: $ARTIFACTS" >&2
 
 if [ -z "$KUBERNETES_PROVIDER" -a -z "$KUBERNETES_CONFORMANCE_PROVIDER" ]; then
     echo "error: KUBERNETES_PROVIDER/KUBERNETES_CONFORMANCE_PROVIDER not set" >&2
@@ -98,6 +102,10 @@ fi
 
 if [ -n "$KUBECONFIG" ]; then
     TEST_ARGS+=("-kubeconfig=$KUBECONFIG")
+fi
+
+if [ -n "$ARTIFACTS" ]; then
+    TEST_ARGS+=("-report-dir=$ARTIFACTS")
 fi
 
 TEST_ARGS+=("$@")
