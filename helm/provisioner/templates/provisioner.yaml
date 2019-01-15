@@ -131,7 +131,6 @@ spec:
 {{- $chart := .Chart }}
 {{- range $val := .Values.classes }}
 {{- if $val.storageClass }}
-{{- $reclaimPolicy := $val.reclaimPolicy | default "Delete" }}
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -143,7 +142,11 @@ metadata:
     chart: {{ replace "+" "_" $chart.Version | printf "%s-%s" $chart.Name }}
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: {{ $reclaimPolicy }}
+{{- if kindIs "map" $val.storageClass }}
+reclaimPolicy: {{ $val.storageClass.reclaimPolicy | default "Delete" }}
+{{- else }}
+reclaimPolicy: Delete
+{{- end }}
 {{- end }}
 {{- end }}
 {{- if .Values.prometheus.operator.enabled }}
