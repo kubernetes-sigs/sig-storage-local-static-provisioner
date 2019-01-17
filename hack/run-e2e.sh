@@ -39,6 +39,7 @@ KUBECONFIG=${KUBECONFIG:-$DEFAULT_KUBECONFIG}
 # In prow, ARTIFACTS environment indicates an existent directory where job
 # artifacts can be dumped for automatic upload to GCS upon job completion.
 ARTIFACTS=${ARTIFACTS:-}
+PROVISIONER_E2E_IMAGE=${PROVISIONER_E2E_IMAGE:-}
 
 echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
 echo "KUBERNETES_PROVIDER: $KUBERNETES_PROVIDER" >&2
@@ -49,6 +50,7 @@ echo "PROJECT: $PROJECT" >&2
 echo "KUBECTL: $KUBECTL" >&2
 echo "KUBECONFIG: $KUBECONFIG" >&2
 echo "ARTIFACTS: $ARTIFACTS" >&2
+echo "PROVISIONER_E2E_IMAGE: $PROVISIONER_E2E_IMAGE" >&2
 
 if [ -z "$KUBERNETES_PROVIDER" -a -z "$KUBERNETES_CONFORMANCE_PROVIDER" ]; then
     echo "error: KUBERNETES_PROVIDER/KUBERNETES_CONFORMANCE_PROVIDER not set" >&2
@@ -63,8 +65,13 @@ else
     detect-master >/dev/null
 fi
 
-# build image
-make
+# build image if not specified
+if [ -z "$PROVISIONER_E2E_IMAGE" ]; then
+    make
+    PROVISIONER_E2E_IMAGE="quay.io/external_storage/local-volume-provisioner:latest"
+else
+    docker pull $PROVISIONER_E2E_IMAGE
+fi
 
 # Why we use KUBERNETES_CONFORMANCE_PROVIDER here, see
 # https://github.com/kubernetes/test-infra/blob/5475440d76f9039f7e1a5fa86c2f85ea8414b093/kubetest/gke.go#L210-L229.
@@ -76,17 +83,21 @@ if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "g
     VERSION=$(git describe --tags --abbrev=8 --always)
     PROVISIONER_IMAGE_NAME=gcr.io/$PROJECT/local-volume-provisioner:$VERSION
     echo "Tag and push image $PROVISIONER_IMAGE_NAME"
-    docker tag quay.io/external_storage/local-volume-provisioner:latest $PROVISIONER_IMAGE_NAME
+    docker tag $PROVISIONER_E2E_IMAGE $PROVISIONER_IMAGE_NAME
     gcloud auth configure-docker
     docker push $PROVISIONER_IMAGE_NAME
-    export PROVISIONER_IMAGE_NAME
-    export PROVISIONER_IMAGE_PULL_POLICY=Always
+    PROVISIONER_IMAGE_PULL_POLICY=Always
 elif [ "$KUBERNETES_PROVIDER" == "local" ]; then
     KUBECONFIG=/var/run/kubernetes/admin.kubeconfig
+    PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
+    PROVISIONER_IMAGE_PULL_POLICY=Never
 else
     echo "error: unsupported provider '$KUBERNETES_PROVIDER'" >&2
     exit 1
 fi
+
+export PROVISIONER_IMAGE_NAME
+export PROVISIONER_IMAGE_PULL_POLICY
 
 TEST_ARGS=(
     test
@@ -111,5 +122,7 @@ fi
 TEST_ARGS+=("$@")
 
 echo "Running e2e tests:" >&2
+echo "PROVISIONER_IMAGE_NAME: $PROVISIONER_IMAGE_NAME"
+echo "PROVISIONER_IMAGE_PULL_POLICY: $PROVISIONER_IMAGE_PULL_POLICY"
 echo "go ${TEST_ARGS[@]}" >&2
 exec "go" "${TEST_ARGS[@]}"
