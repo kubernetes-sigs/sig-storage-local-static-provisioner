@@ -39,6 +39,7 @@ Usage: hack/e2e.sh
 
 Environments:
 
+    ARTIFACTS                           directory where job artifacts can be dumped
     PROVIDER                            local/gce/gke (detect automatically if not specified)
     GCP_ZONE                            (for gce/gke) GCP zone
     GCP_PROJECT                         (for gce/gke) GCP project
@@ -121,6 +122,7 @@ while getopts "h?" opt; do
     esac
 done
 
+ARTIFACTS=${ARTIFACTS:-}
 PROVIDER=${PROVIDER:-}
 GCP_ZONE=${GCP_ZONE:-us-central1-b}
 GCP_PROJECT=${GCP_PROJECT:-}
@@ -147,6 +149,7 @@ if [ -z "$PROVIDER" ]; then
     fi
 fi
 
+echo "ARTIFACTS: $ARTIFACTS" >&2
 echo "PROVIDER: $PROVIDER" >&2
 echo "KUBECTL: $KUBECTL" >&2
 echo "GCP_PROJECT: $GCP_PROJECT" >&2
@@ -155,6 +158,12 @@ echo "GCP_ZONE: $GCP_ZONE" >&2
 kubetest_args=(
     --provider "$PROVIDER"
 )
+
+if [ -n "$ARTIFACTS" ]; then
+    kubetest_args+=(
+	    --dump "${ARTIFACTS}"
+    )
+fi
 
 if [ -n "$KUBERNETES_SRC" ]; then
     echo "KUBERNETES_SRC is set to $KUBERNETES_SRC" >&2

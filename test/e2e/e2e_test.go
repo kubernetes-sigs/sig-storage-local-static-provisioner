@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 )
@@ -667,11 +668,11 @@ func createProvisionerDaemonset(config *localTestConfig) {
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "local-volume-provisioner"},
+				MatchLabels: map[string]string{"app": daemonSetName},
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "local-volume-provisioner"},
+					Labels: map[string]string{"app": daemonSetName},
 				},
 				Spec: v1.PodSpec{
 					ServiceAccountName: testServiceAccount,
@@ -680,6 +681,9 @@ func createProvisionerDaemonset(config *localTestConfig) {
 							Name:            "provisioner",
 							Image:           provisionerImageName,
 							ImagePullPolicy: provisionerImagePullPolicy,
+							Args: []string{
+								"-v=10",
+							},
 							SecurityContext: &v1.SecurityContext{
 								Privileged: &provisionerPrivileged,
 							},
@@ -824,10 +828,65 @@ func createFileDoesntExistCmd(testFileDir string, testFile string) string {
 	return fmt.Sprintf("[ ! -e %s ]", testFilePath)
 }
 
+func savePodLogs(client clientset.Interface, dir string, pods []v1.Pod) {
+	podLogsDir := filepath.Join(dir, "pods")
+	if err := os.MkdirAll(podLogsDir, 0755); err != nil {
+		klog.Errorf("Failed creating pods directory: %v", err)
+		return
+	}
+	for _, pod := range pods {
+		logs, err := framework.GetPodLogs(client, pod.Namespace, pod.Name, "")
+		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			continue
+		}
+		logPath := filepath.Join(podLogsDir, fmt.Sprintf("%s_%s_%s_%s.log", pod.Spec.NodeName, pod.Namespace, pod.Name, pod.UID))
+		file, err := os.Create(logPath)
+		if err != nil {
+			continue
+		}
+		defer file.Close()
+		file.WriteString(logs)
+	}
+}
+
+func (c *localTestConfig) isNodeInList(name string) bool {
+	for _, node := range c.nodes {
+		if node.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func deleteProvisionerDaemonset(config *localTestConfig) {
 	ds, err := config.client.ExtensionsV1beta1().DaemonSets(config.ns).Get(daemonSetName, metav1.GetOptions{})
 	if ds == nil {
 		return
+	}
+
+	// save pod logs for further debugging
+	if framework.TestContext.ReportDir != "" {
+		podList, err := config.client.CoreV1().Pods(config.ns).List(metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app=%s", daemonSetName),
+		})
+		if err != nil {
+			framework.Failf("could not get the pod list: %v", err)
+		}
+		podsToSave := []v1.Pod{}
+		for _, pod := range podList.Items {
+			if !metav1.IsControlledBy(&pod, ds) {
+				continue
+			}
+			if !config.isNodeInList(pod.Spec.NodeName) {
+				// daemonset controller will create pod on master, but by
+				// default client in GCE does not have permission to get its
+				// logs, and we only nee logs from nodes we are testing
+				continue
+			}
+			podsToSave = append(podsToSave, pod)
+		}
+		savePodLogs(config.client, framework.TestContext.ReportDir, podsToSave)
 	}
 
 	err = config.client.ExtensionsV1beta1().DaemonSets(config.ns).Delete(daemonSetName, nil)
