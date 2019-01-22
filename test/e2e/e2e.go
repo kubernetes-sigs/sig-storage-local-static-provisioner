@@ -119,9 +119,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 }, func() {
 	// Run only Ginkgo on node 1
 	framework.Logf("Running AfterSuite actions on node 1")
-	if framework.TestContext.ReportDir != "" {
-		framework.CoreDump(framework.TestContext.ReportDir)
-	}
 })
 
 func init() {
