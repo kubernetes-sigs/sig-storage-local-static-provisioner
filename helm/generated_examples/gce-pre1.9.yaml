@@ -105,7 +105,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: local-storage-provisioner-pv-binding
-  namespace: default
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
@@ -123,7 +122,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: local-storage-provisioner-node-clusterrole
-  namespace: default
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
@@ -137,7 +135,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: local-storage-provisioner-node-binding
-  namespace: default
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
