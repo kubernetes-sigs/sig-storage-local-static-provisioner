@@ -33,7 +33,7 @@ function usage() {
     cat <<'EOF'
 This script is entrypoint to run e2e tests.
 
-Usage: hack/e2e.sh
+Usage: hack/e2e.sh [-h] -- [extra kubetest args]
 
     -h      show this message and exit
 
@@ -59,7 +59,8 @@ Examples:
 
   Optionally, you can add extra test args, e.g.
 
-    KUBERNETES_SRC=$GOPATH/src/k8s.io/kubernetes DEPLOYMENT=none ./hack/e2e.sh --test-cmd-args=-ginkgo.focus='.*discovery.*'
+    KUBERNETES_SRC=$GOPATH/src/k8s.io/kubernetes DEPLOYMENT=none ./hack/e2e.sh -- --test-cmd-args=-ginkgo.focus='.*discovery.*'
+    KUBERNETES_SRC=$GOPATH/src/k8s.io/kubernetes DEPLOYMENT=none ./hack/e2e.sh -- --test-cmd-args=-clean-start=true
 
 2) To run against new local cluster started by k8s.io/kubernetes/hack/local-up-cluster.sh
 
@@ -130,13 +131,6 @@ EXTRACT_STRATEGY=${EXTRACT_STRATEGY:-ci/latest}
 DEPLOYMENT=${DEPLOYMENT:-}
 CLUSTER=${CLUSTER:-e2e}
 GKE_ENVIRONMENT=${GKE_ENVIRONMENT:-prod}
-if [ -z "${KUBECTL:-}" ]; then
-    KUBECTL=$(which kubectl 2>/dev/null || true)
-fi
-if [ -z "${KUBECTL:-}" ]; then
-    echo "error: kubectl not found" >&2
-    exit 1
-fi
 KUBERNETES_SRC=${KUBERNETES_SRC:-} # If set, skip extracting kubernetes, use it as kubernetes src.
 
 if [ -z "$PROVIDER" ]; then
@@ -151,9 +145,13 @@ fi
 
 echo "ARTIFACTS: $ARTIFACTS" >&2
 echo "PROVIDER: $PROVIDER" >&2
-echo "KUBECTL: $KUBECTL" >&2
-echo "GCP_PROJECT: $GCP_PROJECT" >&2
 echo "GCP_ZONE: $GCP_ZONE" >&2
+echo "GCP_PROJECT: $GCP_PROJECT" >&2
+echo "EXTRACT_STRATEGY: $EXTRACT_STRATEGY" >&2
+echo "DEPLOYMENT: $DEPLOYMENT" >&2
+echo "CLUSTER: $CLUSTER" >&2
+echo "GKE_ENVIRONMENT: $GKE_ENVIRONMENT" >&2
+echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
 
 kubetest_args=(
     --provider "$PROVIDER"
@@ -245,6 +243,10 @@ elif [ "$PROVIDER" == "local" ]; then
 else
     echo "error: unsupported provider '$PROVIDER'" >&2
     exit 1
+fi
+
+if [ "${1:-}" == "--" ]; then
+    shift
 fi
 
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
