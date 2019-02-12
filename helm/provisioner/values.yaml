@@ -92,6 +92,10 @@ daemonset:
   # Defines a name of the service account which Provisioner will use to communicate with API server.
   #
   serviceAccount: local-storage-admin
+  #
+  # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
+  #
+  priorityClassName: system-node-critical
   # If configured, nodeSelector will add a nodeSelector field to the DaemonSet PodSpec.
   #
   # NodeSelector constraint for local-volume-provisioner scheduling to nodes.
