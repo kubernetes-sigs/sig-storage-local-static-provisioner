@@ -64,6 +64,7 @@ spec:
         app: local-volume-provisioner
     spec:
       serviceAccountName: {{.Values.daemonset.serviceAccount}}
+      priorityClassName: {{.Values.daemonset.priorityClassName}}
 {{- if .Values.daemonset.nodeSelector }}
       nodeSelector:
 {{ .Values.daemonset.nodeSelector | toYaml | trim | indent 8 }}
