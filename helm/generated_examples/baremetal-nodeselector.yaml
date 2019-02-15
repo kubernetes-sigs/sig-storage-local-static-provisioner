@@ -39,6 +39,7 @@ spec:
         app: local-volume-provisioner
     spec:
       serviceAccountName: local-storage-admin
+      priorityClassName: system-node-critical
       nodeSelector:
         localVolume: present
       containers:

@@ -39,6 +39,7 @@ spec:
         app: local-volume-provisioner
     spec:
       serviceAccountName: local-storage-admin
+      priorityClassName: system-node-critical
       containers:
         - image: "quay.io/external_storage/local-volume-provisioner:v2.3.0"
           name: provisioner
