@@ -24,9 +24,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/controller"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
@@ -55,31 +55,31 @@ func main() {
 		MinResyncPeriod:    metav1.Duration{Duration: 5 * time.Minute},
 	}
 	if err := common.LoadProvisionerConfigs(common.ProvisionerConfigPath, &provisionerConfig); err != nil {
-		glog.Fatalf("Error parsing Provisioner's configuration: %#v. Exiting...\n", err)
+		klog.Fatalf("Error parsing Provisioner's configuration: %#v. Exiting...\n", err)
 	}
-	glog.Infof("Loaded configuration: %+v", provisionerConfig)
-	glog.Infof("Ready to run...")
+	klog.Infof("Loaded configuration: %+v", provisionerConfig)
+	klog.Infof("Ready to run...")
 
 	nodeName := os.Getenv("MY_NODE_NAME")
 	if nodeName == "" {
-		glog.Fatalf("MY_NODE_NAME environment variable not set\n")
+		klog.Fatalf("MY_NODE_NAME environment variable not set\n")
 	}
 
 	namespace := os.Getenv("MY_NAMESPACE")
 	if namespace == "" {
-		glog.Warningf("MY_NAMESPACE environment variable not set, will be set to default.\n")
+		klog.Warningf("MY_NAMESPACE environment variable not set, will be set to default.\n")
 		namespace = "default"
 	}
 
 	jobImage := os.Getenv("JOB_CONTAINER_IMAGE")
 	if jobImage == "" {
-		glog.Warningf("JOB_CONTAINER_IMAGE environment variable not set.\n")
+		klog.Warningf("JOB_CONTAINER_IMAGE environment variable not set.\n")
 	}
 
 	client := common.SetupClient()
 	node := getNode(client, nodeName)
 
-	glog.Info("Starting controller\n")
+	klog.Info("Starting controller\n")
 	procTable := deleter.NewProcTable()
 	go controller.StartLocalController(client, procTable, &common.UserConfig{
 		Node:              node,
@@ -93,7 +93,7 @@ func main() {
 		JobContainerImage: jobImage,
 	})
 
-	glog.Infof("Starting metrics server at %s\n", optListenAddress)
+	klog.Infof("Starting metrics server at %s\n", optListenAddress)
 	prometheus.MustRegister([]prometheus.Collector{
 		metrics.PersistentVolumeDiscoveryTotal,
 		metrics.PersistentVolumeDiscoveryDurationSeconds,
@@ -112,7 +112,7 @@ func main() {
 func getNode(client *kubernetes.Clientset, name string) *v1.Node {
 	node, err := client.CoreV1().Nodes().Get(name, metav1.GetOptions{})
 	if err != nil {
-		glog.Fatalf("Could not get node information: %v", err)
+		klog.Fatalf("Could not get node information: %v", err)
 	}
 	return node
 }

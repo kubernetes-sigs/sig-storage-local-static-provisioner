@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
@@ -178,29 +178,29 @@ func (d *Discoverer) getMountOptionsFromStorageClass(name string) ([]string, err
 }
 
 func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConfig) {
-	glog.V(7).Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
+	klog.V(7).Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
 
 	reclaimPolicy, err := d.getReclaimPolicyFromStorageClass(class)
 	if err != nil {
-		glog.Errorf("Failed to get ReclaimPolicy from storage class %q: %v", class, err)
+		klog.Errorf("Failed to get ReclaimPolicy from storage class %q: %v", class, err)
 		return
 	}
 
 	if reclaimPolicy != v1.PersistentVolumeReclaimRetain && reclaimPolicy != v1.PersistentVolumeReclaimDelete {
-		glog.Errorf("Unsupported ReclaimPolicy %q from storage class %q, supported policy are Retain and Delete.", reclaimPolicy, class)
+		klog.Errorf("Unsupported ReclaimPolicy %q from storage class %q, supported policy are Retain and Delete.", reclaimPolicy, class)
 		return
 	}
 
 	files, err := d.VolUtil.ReadDir(config.MountDir)
 	if err != nil {
-		glog.Errorf("Error reading directory: %v", err)
+		klog.Errorf("Error reading directory: %v", err)
 		return
 	}
 
 	// Retrieve list of mount points to iterate through discovered paths (aka files) below
 	mountPoints, mountPointsErr := d.RuntimeConfig.Mounter.List()
 	if mountPointsErr != nil {
-		glog.Errorf("Error retreiving mountpoints: %v", err)
+		klog.Errorf("Error retreiving mountpoints: %v", err)
 		return
 	}
 	// Put mount moints into set for faster checks below
@@ -215,7 +215,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		filePath := filepath.Join(config.MountDir, file)
 		volMode, err := common.GetVolumeMode(d.VolUtil, filePath)
 		if err != nil {
-			glog.Error(err)
+			klog.Error(err)
 			continue
 		}
 		// Check if PV already exists for it
@@ -225,7 +225,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			if pv.Spec.VolumeMode != nil && *pv.Spec.VolumeMode == v1.PersistentVolumeBlock &&
 				volMode == v1.PersistentVolumeFilesystem {
 				errStr := fmt.Sprintf("Incorrect Volume Mode: PV %q requires block mode but path %q was in fs mode.", pvName, filePath)
-				glog.Errorf(errStr)
+				klog.Errorf(errStr)
 				d.Recorder.Eventf(pv, v1.EventTypeWarning, common.EventVolumeFailedDelete, errStr)
 			}
 			continue
@@ -236,13 +236,13 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			usejob = d.RuntimeConfig.UseJobForCleaning
 		}
 		if d.CleanupTracker.InProgress(pvName, usejob) {
-			glog.Infof("PV %s is still being cleaned, not going to recreate it", pvName)
+			klog.Infof("PV %s is still being cleaned, not going to recreate it", pvName)
 			continue
 		}
 
 		mountOptions, err := d.getMountOptionsFromStorageClass(class)
 		if err != nil {
-			glog.Errorf("Failed to get mount options from storage class %s: %v", class, err)
+			klog.Errorf("Failed to get mount options from storage class %s: %v", class, err)
 			continue
 		}
 
@@ -252,30 +252,30 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		case v1.PersistentVolumeBlock:
 			capacityByte, err = d.VolUtil.GetBlockCapacityByte(filePath)
 			if err != nil {
-				glog.Errorf("Path %q block stats error: %v", filePath, err)
+				klog.Errorf("Path %q block stats error: %v", filePath, err)
 				continue
 			}
 			if desireVolumeMode == v1.PersistentVolumeBlock && len(mountOptions) != 0 {
-				glog.Warningf("Path %q will be used to create block volume, "+
+				klog.Warningf("Path %q will be used to create block volume, "+
 					"mount options %v will not take effect.", filePath, mountOptions)
 			}
 		case v1.PersistentVolumeFilesystem:
 			if desireVolumeMode == v1.PersistentVolumeBlock {
-				glog.Errorf("Path %q of filesystem mode cannot be used to create block volume", filePath)
+				klog.Errorf("Path %q of filesystem mode cannot be used to create block volume", filePath)
 				continue
 			}
 			// Validate that this path is an actual mountpoint
 			if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
-				glog.Errorf("Path %q is not an actual mountpoint", filePath)
+				klog.Errorf("Path %q is not an actual mountpoint", filePath)
 				continue
 			}
 			capacityByte, err = d.VolUtil.GetFsCapacityByte(filePath)
 			if err != nil {
-				glog.Errorf("Path %q fs stats error: %v", filePath, err)
+				klog.Errorf("Path %q fs stats error: %v", filePath, err)
 				continue
 			}
 		default:
-			glog.Errorf("Path %q has unexpected volume type %q", filePath, volMode)
+			klog.Errorf("Path %q has unexpected volume type %q", filePath, volMode)
 			continue
 		}
 
@@ -296,7 +296,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	pvName := generatePVName(file, d.Node.Name, class)
 	outsidePath := filepath.Join(config.HostDir, file)
 
-	glog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
+	klog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
 		outsidePath, capacityByte, pvName, volMode)
 
 	localPVConfig := &common.LocalPVConfig{
@@ -326,10 +326,10 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 
 	_, err := d.APIUtil.CreatePV(pvSpec)
 	if err != nil {
-		glog.Errorf("Error creating PV %q for volume at %q: %v", pvName, outsidePath, err)
+		klog.Errorf("Error creating PV %q for volume at %q: %v", pvName, outsidePath, err)
 		return
 	}
-	glog.Infof("Created PV %q for volume at %q", pvName, outsidePath)
+	klog.Infof("Created PV %q for volume at %q", pvName, outsidePath)
 	mode := string(volMode)
 	metrics.PersistentVolumeDiscoveryTotal.WithLabelValues(mode).Inc()
 	metrics.PersistentVolumeDiscoveryDurationSeconds.WithLabelValues(mode).Observe(time.Since(startTime).Seconds())
