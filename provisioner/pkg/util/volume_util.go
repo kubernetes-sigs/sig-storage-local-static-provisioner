@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/kubernetes/pkg/volume/util/fs"
@@ -252,7 +252,7 @@ func (u *FakeVolumeUtil) AddNewDirEntries(mountDir string, dirFiles map[string][
 		if curFiles == nil {
 			curFiles = []*FakeDirEntry{}
 		}
-		glog.Infof("Adding to directory %q: files %v\n", dir, files)
+		klog.Infof("Adding to directory %q: files %v\n", dir, files)
 		u.directoryFiles[mountedPath] = append(curFiles, files...)
 	}
 }

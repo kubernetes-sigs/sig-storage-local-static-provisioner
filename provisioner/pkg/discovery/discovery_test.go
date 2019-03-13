@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/glog"
 	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
@@ -417,7 +417,7 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 	// Wait for all started informers' cache were synced.
 	for v, synced := range runConfig.InformerFactory.WaitForCacheSync(wait.NeverStop) {
 		if !synced {
-			glog.Fatalf("Error syncing informer for %v", v)
+			klog.Fatalf("Error syncing informer for %v", v)
 		}
 	}
 	return d

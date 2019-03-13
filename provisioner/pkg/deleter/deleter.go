@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
@@ -75,12 +75,12 @@ func (d *Deleter) DeletePVs() {
 		name := pv.Name
 		switch pv.Spec.PersistentVolumeReclaimPolicy {
 		case v1.PersistentVolumeReclaimRetain:
-			glog.V(4).Infof("reclaimVolume[%s]: policy is Retain, nothing to do", name)
+			klog.V(4).Infof("reclaimVolume[%s]: policy is Retain, nothing to do", name)
 		case v1.PersistentVolumeReclaimRecycle:
-			glog.V(4).Infof("reclaimVolume[%s]: policy is Recycle which is not supported", name)
+			klog.V(4).Infof("reclaimVolume[%s]: policy is Recycle which is not supported", name)
 			d.RuntimeConfig.Recorder.Eventf(pv, v1.EventTypeWarning, "VolumeUnsupportedReclaimPolicy", "Volume has unsupported PersistentVolumeReclaimPolicy: Recycle")
 		case v1.PersistentVolumeReclaimDelete:
-			glog.V(4).Infof("reclaimVolume[%s]: policy is Delete", name)
+			klog.V(4).Infof("reclaimVolume[%s]: policy is Delete", name)
 			// Cleanup volume
 			err := d.deletePV(pv)
 			if err != nil {
@@ -95,7 +95,7 @@ func (d *Deleter) DeletePVs() {
 				metrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(mode), deleteType).Inc()
 				cleaningLocalPVErr := fmt.Errorf("Error cleaning PV %q: %v", name, err.Error())
 				d.RuntimeConfig.Recorder.Eventf(pv, v1.EventTypeWarning, common.EventVolumeFailedDelete, cleaningLocalPVErr.Error())
-				glog.Error(err)
+				klog.Error(err)
 				continue
 			}
 		default:
@@ -162,7 +162,7 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	switch state {
 	case CSSucceeded:
 		// Found a completed cleaning entry
-		glog.Infof("Deleting pv %s after successful cleanup", pv.Name)
+		klog.Infof("Deleting pv %s after successful cleanup", pv.Name)
 		if err = d.APIUtil.DeletePV(pv.Name); err != nil {
 			if !errors.IsNotFound(err) {
 				d.RuntimeConfig.Recorder.Eventf(pv, v1.EventTypeWarning, common.EventVolumeFailedDelete,
@@ -190,9 +190,9 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 		}
 		return nil
 	case CSFailed:
-		glog.Infof("Cleanup for pv %s failed. Restarting cleanup", pv.Name)
+		klog.Infof("Cleanup for pv %s failed. Restarting cleanup", pv.Name)
 	case CSNotFound:
-		glog.Infof("Start cleanup for pv %s", pv.Name)
+		klog.Infof("Start cleanup for pv %s", pv.Name)
 	default:
 		return fmt.Errorf("Unexpected state %d for pv %s", state, pv.Name)
 	}
@@ -229,16 +229,16 @@ func (d *Deleter) asyncCleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVol
 
 	err := d.cleanPV(pv, volMode, mountPath, config)
 	if err != nil {
-		glog.Error(err)
+		klog.Error(err)
 		// Set process as failed.
 		if err := d.CleanupStatus.ProcTable.MarkFailed(pv.Name); err != nil {
-			glog.Error(err)
+			klog.Error(err)
 		}
 		return
 	}
 	// Set process as succeeded.
 	if err := d.CleanupStatus.ProcTable.MarkSucceeded(pv.Name); err != nil {
-		glog.Error(err)
+		klog.Error(err)
 	}
 }
 
@@ -263,7 +263,7 @@ func (d *Deleter) cleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVolumeMo
 }
 
 func (d *Deleter) cleanFilePV(pv *v1.PersistentVolume, mountPath string, config common.MountConfig) error {
-	glog.Infof("Deleting PV file volume %q contents at hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
+	klog.Infof("Deleting PV file volume %q contents at hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
 		mountPath)
 
 	return d.VolUtil.DeleteContents(mountPath)
@@ -272,15 +272,15 @@ func (d *Deleter) cleanFilePV(pv *v1.PersistentVolume, mountPath string, config 
 func (d *Deleter) cleanBlockPV(pv *v1.PersistentVolume, blkdevPath string, config common.MountConfig) error {
 	cleaningInfo := fmt.Errorf("Starting cleanup of Block PV %q, this may take a while", pv.Name)
 	d.RuntimeConfig.Recorder.Eventf(pv, v1.EventTypeNormal, common.VolumeDelete, cleaningInfo.Error())
-	glog.Infof("Deleting PV block volume %q device hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
+	klog.Infof("Deleting PV block volume %q device hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
 		blkdevPath)
 
 	err := d.execScript(pv.Name, blkdevPath, config.BlockCleanerCommand[0], config.BlockCleanerCommand[1:]...)
 	if err != nil {
-		glog.Error(err)
+		klog.Error(err)
 		return err
 	}
-	glog.Infof("Completed cleanup of pv %q", pv.Name)
+	klog.Infof("Completed cleanup of pv %q", pv.Name)
 
 	return nil
 }
@@ -302,7 +302,7 @@ func (d *Deleter) execScript(pvName string, blkdevPath string, exe string, exeAr
 		outScanner := bufio.NewScanner(outReader)
 		for outScanner.Scan() {
 			outstr := outScanner.Text()
-			glog.Infof("Cleanup pv %q: StdoutBuf - %q", pvName, outstr)
+			klog.Infof("Cleanup pv %q: StdoutBuf - %q", pvName, outstr)
 		}
 	}()
 
@@ -316,7 +316,7 @@ func (d *Deleter) execScript(pvName string, blkdevPath string, exe string, exeAr
 		errScanner := bufio.NewScanner(errReader)
 		for errScanner.Scan() {
 			errstr := errScanner.Text()
-			glog.Infof("Cleanup pv %q: StderrBuf - %q", pvName, errstr)
+			klog.Infof("Cleanup pv %q: StderrBuf - %q", pvName, errstr)
 		}
 	}()
 
