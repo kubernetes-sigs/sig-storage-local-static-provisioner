@@ -27,10 +27,10 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/metrics"
 
-	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
 	"k8s.io/api/core/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
 )
 

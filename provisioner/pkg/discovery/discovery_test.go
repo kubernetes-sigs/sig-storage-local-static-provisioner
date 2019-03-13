@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	esUtil "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util"
 	"k8s.io/klog"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/deleter"
