@@ -17,11 +17,11 @@ limitations under the License.
 package util
 
 import (
-	"github.com/golang/glog"
 	"github.com/miekg/dns"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	glog "k8s.io/klog"
 	"net"
 )
 

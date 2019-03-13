@@ -444,14 +444,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:56bc48e55b5066f07723cfa32a6f2c5f90bebe3b34da9152b7bf7b3b11a062e3"
-  name = "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner"
-  packages = ["util"]
-  pruneopts = "NUT"
-  revision = "cdaf8fa71bb51d0a633d28d6f4ab46063d6e8f94"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   digest = "1:84a5a2b67486d5d67060ac393aa255d05d24ed5ee41daecd5635ec22657b6492"
   name = "github.com/mailru/easyjson"
@@ -1660,6 +1652,14 @@
   revision = "8a16e7dd8fb6d97d1331b0c79a16722f934b00b1"
 
 [[projects]]
+  digest = "1:ed73c88f1bd6521d1cc846e9e4fa4a18a140d3c59c6d9add4c419de4a8573bd9"
+  name = "sigs.k8s.io/sig-storage-lib-external-provisioner"
+  packages = ["util"]
+  pruneopts = "NUT"
+  revision = "0fcd2a19e047b6a1e9203b8ed3511ed8679b23f4"
+  version = "v3.0.0-beta"
+
+[[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
   name = "sigs.k8s.io/yaml"
   packages = ["."]
@@ -1673,7 +1673,6 @@
   input-imports = [
     "github.com/ghodss/yaml",
     "github.com/golang/glog",
-    "github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/util",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",
     "github.com/onsi/ginkgo/reporters",
@@ -1723,6 +1722,7 @@
     "k8s.io/kubernetes/test/e2e/framework/ginkgowrapper",
     "k8s.io/kubernetes/test/e2e/storage/utils",
     "k8s.io/repo-infra/kazel",
+    "sigs.k8s.io/sig-storage-lib-external-provisioner/util",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
