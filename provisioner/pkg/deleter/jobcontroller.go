@@ -253,8 +253,7 @@ func (c *jobController) RemoveJob(pvName string) (CleanupState, *time.Time, erro
 }
 
 // NewCleanupJob creates manifest for a cleaning job.
-func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMode, imageName string, nodeName string, namespace string, mountPath string,
-	config common.MountConfig) (*batch_v1.Job, error) {
+func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMode, imageName string, nodeName string, namespace string, mountPath string, config common.MountConfig) (*batch_v1.Job, error) {
 	priv := true
 	// Container definition
 	jobContainer := apiv1.Container{
@@ -290,7 +289,24 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 		Name:      mountName,
 		MountPath: config.MountDir},
 	}
-
+	if volMode == apiv1.PersistentVolumeBlock {
+		// We need to mount /dev into clean job for block volume.
+		// Note that in certain docker setup, this may override `/dev/init`
+		// which is mounted by docker to start container process.
+		// https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/issues/50
+		volumes = append(volumes, apiv1.Volume{
+			Name: "dev",
+			VolumeSource: apiv1.VolumeSource{
+				HostPath: &apiv1.HostPathVolumeSource{
+					Path: "/dev",
+				},
+			},
+		})
+		jobContainer.VolumeMounts = append(jobContainer.VolumeMounts, apiv1.VolumeMount{
+			Name:      "dev",
+			MountPath: "/dev",
+		})
+	}
 	// Make job query-able by some useful labels for admins.
 	labels := map[string]string{
 		common.NodeNameLabel: nodeName,
