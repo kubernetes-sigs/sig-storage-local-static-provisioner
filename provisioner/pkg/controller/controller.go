@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
@@ -42,7 +42,7 @@ import (
 
 // StartLocalController starts the sync loop for the local PV discovery and deleter
 func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, config *common.UserConfig) {
-	glog.Info("Initializing volume cache\n")
+	klog.Info("Initializing volume cache\n")
 
 	var provisionerName string
 	if config.UseNodeNameOnly {
@@ -80,15 +80,15 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 		labels := map[string]string{common.NodeNameLabel: config.Node.Name}
 		jobController, err = deleter.NewJobController(labels, runtimeConfig)
 		if err != nil {
-			glog.Fatalf("Error initializing jobController: %v", err)
+			klog.Fatalf("Error initializing jobController: %v", err)
 		}
-		glog.Infof("Enabling Jobs based cleaning.")
+		klog.Infof("Enabling Jobs based cleaning.")
 	}
 	cleanupTracker := &deleter.CleanupStatusTracker{ProcTable: ptable, JobController: jobController}
 
 	discoverer, err := discovery.NewDiscoverer(runtimeConfig, cleanupTracker)
 	if err != nil {
-		glog.Fatalf("Error initializing discoverer: %v", err)
+		klog.Fatalf("Error initializing discoverer: %v", err)
 	}
 
 	deleter := deleter.NewDeleter(runtimeConfig, cleanupTracker)
@@ -98,14 +98,14 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	// Wait for all started informers' cache were synced.
 	for v, synced := range runtimeConfig.InformerFactory.WaitForCacheSync(wait.NeverStop) {
 		if !synced {
-			glog.Fatalf("Error syncing informer for %v", v)
+			klog.Fatalf("Error syncing informer for %v", v)
 		}
 	}
 	// Run controller logic.
 	if jobController != nil {
 		go jobController.Run(wait.NeverStop)
 	}
-	glog.Info("Controller started\n")
+	klog.Info("Controller started\n")
 	for {
 		deleter.DeletePVs()
 		discoverer.DiscoverLocalVolumes()

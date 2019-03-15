@@ -17,7 +17,7 @@ limitations under the License.
 package populator
 
 import (
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 
 	"k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 		AddFunc: func(obj interface{}) {
 			pv, ok := obj.(*v1.PersistentVolume)
 			if !ok {
-				glog.Errorf("Added object is not a v1.PersistentVolume type")
+				klog.Errorf("Added object is not a v1.PersistentVolume type")
 				return
 			}
 			p.handlePVUpdate(pv)
@@ -45,7 +45,7 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			newPV, ok := newObj.(*v1.PersistentVolume)
 			if !ok {
-				glog.Errorf("Updated object is not a v1.PersistentVolume type")
+				klog.Errorf("Updated object is not a v1.PersistentVolume type")
 				return
 			}
 			p.handlePVUpdate(newPV)
@@ -53,7 +53,7 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 		DeleteFunc: func(obj interface{}) {
 			pv, ok := obj.(*v1.PersistentVolume)
 			if !ok {
-				glog.Errorf("Added object is not a v1.PersistentVolume type")
+				klog.Errorf("Added object is not a v1.PersistentVolume type")
 				return
 			}
 			p.handlePVDelete(pv)

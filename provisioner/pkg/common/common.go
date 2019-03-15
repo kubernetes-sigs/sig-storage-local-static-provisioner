@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/util"
 
@@ -313,7 +313,7 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		}
 
 		provisionerConfig.StorageClassConfig[class] = config
-		glog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q",
+		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q",
 			class,
 			config.MountDir,
 			config.HostDir,
@@ -347,7 +347,7 @@ func LoadProvisionerConfigs(configPath string, provisionerConfig *ProvisionerCon
 			if strings.Compare(file.Name(), "..data") != 0 {
 				fileContents, err := ioutil.ReadFile(path.Join(configPath, file.Name()))
 				if err != nil {
-					glog.Infof("Could not read file: %s due to: %v", path.Join(configPath, file.Name()), err)
+					klog.Infof("Could not read file: %s due to: %v", path.Join(configPath, file.Name()), err)
 					return err
 				}
 				data[file.Name()] = string(fileContents)
@@ -366,21 +366,21 @@ func SetupClient() *kubernetes.Clientset {
 	if kubeconfigFile != "" {
 		config, err = BuildConfigFromFlags("", kubeconfigFile)
 		if err != nil {
-			glog.Fatalf("Error creating config from %s specified file: %s %v\n", KubeConfigEnv,
+			klog.Fatalf("Error creating config from %s specified file: %s %v\n", KubeConfigEnv,
 				kubeconfigFile, err)
 		}
-		glog.Infof("Creating client using kubeconfig file %s", kubeconfigFile)
+		klog.Infof("Creating client using kubeconfig file %s", kubeconfigFile)
 	} else {
 		config, err = InClusterConfig()
 		if err != nil {
-			glog.Fatalf("Error creating InCluster config: %v\n", err)
+			klog.Fatalf("Error creating InCluster config: %v\n", err)
 		}
-		glog.Infof("Creating client using in-cluster config")
+		klog.Infof("Creating client using in-cluster config")
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("Error creating clientset: %v\n", err)
+		klog.Fatalf("Error creating clientset: %v\n", err)
 	}
 	return clientset
 }
