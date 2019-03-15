@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
 
 	batch_v1 "k8s.io/api/batch/v1"
@@ -101,7 +101,7 @@ func NewJobController(labelmap map[string]string, config *common.RuntimeConfig) 
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err == nil {
-				glog.Infof("Got update notification for %s", key)
+				klog.Infof("Got update notification for %s", key)
 				queue.Add(key)
 			}
 			return
@@ -109,7 +109,7 @@ func NewJobController(labelmap map[string]string, config *common.RuntimeConfig) 
 		DeleteFunc: func(obj interface{}) {
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 			if err == nil {
-				glog.Infof("Got delete notification for %s", key)
+				klog.Infof("Got delete notification for %s", key)
 				queue.Add(key)
 			}
 		},
@@ -129,8 +129,8 @@ func (c *jobController) Run(stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting Job controller")
-	defer glog.Infof("Shutting down Job controller")
+	klog.Infof("Starting Job controller")
+	defer klog.Infof("Shutting down Job controller")
 
 	// runWorker will loop until "something bad" happens.  The .Until will
 	// then rekick the worker after one second
@@ -156,12 +156,12 @@ func (c *jobController) processNextItem() bool {
 		// No error, tell the queue to stop tracking history
 		c.queue.Forget(key)
 	} else if c.queue.NumRequeues(key) < maxRetries {
-		glog.Errorf("Error processing %s (will retry): %v", key, err)
+		klog.Errorf("Error processing %s (will retry): %v", key, err)
 		// requeue the item to work on later
 		c.queue.AddRateLimited(key)
 	} else {
 		// err != nil and too many retries
-		glog.Errorf("Error processing %s (giving up): %v", key, err)
+		klog.Errorf("Error processing %s (giving up): %v", key, err)
 		c.queue.Forget(key)
 		utilruntime.HandleError(err)
 	}
@@ -170,7 +170,7 @@ func (c *jobController) processNextItem() bool {
 }
 
 func (c *jobController) processItem(key string) error {
-	glog.Infof("Processing change to Pod %s", key)
+	klog.Infof("Processing change to Pod %s", key)
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func (c *jobController) processItem(key string) error {
 
 	job, err := c.jobLister.Jobs(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.Infof("Job %s has been deleted", key)
+		klog.Infof("Job %s has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -187,17 +187,17 @@ func (c *jobController) processItem(key string) error {
 
 	if job.DeletionTimestamp != nil {
 		// This is just an event in response to the deletion of the job. Job deletion is probably still in progress.
-		glog.Infof("Job %s deletion timestamp has been set (%s)", key,
+		klog.Infof("Job %s deletion timestamp has been set (%s)", key,
 			*job.DeletionTimestamp)
 		return nil
 	}
 
 	if job.Status.Succeeded == 0 {
-		glog.Infof("Job %s has not yet completed successfully", key)
+		klog.Infof("Job %s has not yet completed successfully", key)
 		return nil
 	}
 
-	glog.Infof("Job %s has completed successfully", key)
+	klog.Infof("Job %s has completed successfully", key)
 	return nil
 }
 
@@ -210,7 +210,7 @@ func (c *jobController) IsCleaningJobRunning(pvName string) bool {
 	}
 
 	if err != nil {
-		glog.Warningf("Failed to check whether job %s is running (%s). Assuming its still running.",
+		klog.Warningf("Failed to check whether job %s is running (%s). Assuming its still running.",
 			jobName, err)
 		return true
 	}
@@ -236,7 +236,7 @@ func (c *jobController) RemoveJob(pvName string) (CleanupState, *time.Time, erro
 		if err == nil {
 			startTime = &parsedStartTime
 		} else {
-			glog.Errorf("Failed to parse start time %s: %v", startTimeStr, err)
+			klog.Errorf("Failed to parse start time %s: %v", startTimeStr, err)
 		}
 	}
 

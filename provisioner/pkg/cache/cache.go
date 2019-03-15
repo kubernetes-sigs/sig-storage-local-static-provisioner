@@ -19,7 +19,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/api/core/v1"
 )
@@ -52,7 +52,7 @@ func (cache *VolumeCache) AddPV(pv *v1.PersistentVolume) {
 	defer cache.mutex.Unlock()
 
 	cache.pvs[pv.Name] = pv
-	glog.Infof("Added pv %q to cache", pv.Name)
+	klog.Infof("Added pv %q to cache", pv.Name)
 }
 
 // UpdatePV updates the PV object in the cache
@@ -61,7 +61,7 @@ func (cache *VolumeCache) UpdatePV(pv *v1.PersistentVolume) {
 	defer cache.mutex.Unlock()
 
 	cache.pvs[pv.Name] = pv
-	glog.Infof("Updated pv %q to cache", pv.Name)
+	klog.Infof("Updated pv %q to cache", pv.Name)
 }
 
 // DeletePV deletes the PV object from the cache
@@ -70,7 +70,7 @@ func (cache *VolumeCache) DeletePV(pvName string) {
 	defer cache.mutex.Unlock()
 
 	delete(cache.pvs, pvName)
-	glog.Infof("Deleted pv %q from cache", pvName)
+	klog.Infof("Deleted pv %q from cache", pvName)
 }
 
 // ListPVs returns a list of all the PVs in the cache
