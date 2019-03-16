@@ -64,7 +64,16 @@ spec:
         app: local-volume-provisioner
     spec:
       serviceAccountName: {{.Values.daemonset.serviceAccount}}
+{{- if .Values.daemonset.priorityClassName }}
+{{- if eq .Values.common.namespace "kube-system" }}
       priorityClassName: {{.Values.daemonset.priorityClassName}}
+{{- else }}
+      {{- $systemCriticalClasses := list "system-cluster-critical" "system-node-critical" }}
+      {{- if not (has .Values.daemonset.priorityClassName $systemCriticalClasses) }}
+      priorityClassName: {{.Values.daemonset.priorityClassName}}
+      {{- end }}
+{{- end }}
+{{- end }}
 {{- if .Values.daemonset.nodeSelector }}
       nodeSelector:
 {{ .Values.daemonset.nodeSelector | toYaml | trim | indent 8 }}
