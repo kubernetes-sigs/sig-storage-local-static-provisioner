@@ -95,7 +95,11 @@ daemonset:
   #
   # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
   #
-  priorityClassName: system-node-critical
+  # Note that if you want to make it critical, specify "system-cluster-critical"
+  # or "system-node-critical" and deploy in kube-system namespace.
+  # Ref: https://k8s.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/#marking-pod-as-critical
+  #
+  #priorityClassName: system-node-critical
   # If configured, nodeSelector will add a nodeSelector field to the DaemonSet PodSpec.
   #
   # NodeSelector constraint for local-volume-provisioner scheduling to nodes.
