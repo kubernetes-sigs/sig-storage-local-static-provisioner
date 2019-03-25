@@ -87,6 +87,17 @@ if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "g
     gcloud auth configure-docker
     docker push $PROVISIONER_IMAGE_NAME
     PROVISIONER_IMAGE_PULL_POLICY=Always
+    if [ "$KUBERNETES_CONFORMANCE_PROVIDER" == "gke" ]; then
+        GCLOUD_ACCOUNT=$(gcloud config get-value account)
+        if [ -z "$GCLOUD_ACCOUNT" ]; then
+            echo "error: failed to get gcloud account"
+            exit 1
+        fi
+        echo "GCLOUD_ACCOUNT: $GCLOUD_ACCOUNT"
+        # Grant gcloud user the ability to create roles.
+        # https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control#prerequisites_for_using_role-based_access_control
+        $KUBECTL create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user "$GCLOUD_ACCOUNT"
+    fi
 elif [ "$KUBERNETES_PROVIDER" == "local" ]; then
     KUBECONFIG=/var/run/kubernetes/admin.kubeconfig
     PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
