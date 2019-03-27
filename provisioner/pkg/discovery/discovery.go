@@ -289,7 +289,7 @@ func generatePVName(file, node, class string) string {
 	h.Write([]byte(node))
 	h.Write([]byte(class))
 	// This is the FNV-1a 32-bit hash
-	return fmt.Sprintf("local-pv-%x", h.Sum32())
+	return fmt.Sprintf("%s-%x",file, h.Sum32())
 }
 
 func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVolumeReclaimPolicy, mountOptions []string, config common.MountConfig, capacityByte int64, volMode v1.PersistentVolumeMode, startTime time.Time) {
