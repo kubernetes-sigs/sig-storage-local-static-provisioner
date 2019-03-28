@@ -198,12 +198,12 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 	}
 
 	// Retrieve list of mount points to iterate through discovered paths (aka files) below
-	mountPoints, mountPointsErr := d.RuntimeConfig.Mounter.List()
-	if mountPointsErr != nil {
+	mountPoints, err := d.RuntimeConfig.Mounter.List()
+	if err != nil {
 		klog.Errorf("Error retreiving mountpoints: %v", err)
 		return
 	}
-	// Put mount moints into set for faster checks below
+	// Put mount points into set for faster checks below
 	type empty struct{}
 	mountPointMap := make(map[string]empty)
 	for _, mp := range mountPoints {
