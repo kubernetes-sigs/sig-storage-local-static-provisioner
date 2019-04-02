@@ -53,6 +53,14 @@ Recommended provisioner versions with Kubernetes versions
 
 Also see [known issues](KNOWN_ISSUES.md) and [CHANGELOG](CHANGELOG.md).
 
+### 1.14: GA
+
+* No new features added
+
+### 1.12: Beta
+
+* Added support for automatically formatting a filesystem on the given block device in `localVolumeSource.path`
+
 ### 1.10: Beta
 
 * New PV.NodeAffinity field added.

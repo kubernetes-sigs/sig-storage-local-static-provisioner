@@ -1,9 +1,12 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-test-reader
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: local-test-reader
   template:
     metadata:
       labels:
@@ -12,8 +15,8 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: reader
-        image: gcr.io/google_containers/busybox:1.24
-        command: 
+        image: k8s.gcr.io/busybox
+        command:
         - "/bin/sh"
         args:
         - "-c"
@@ -23,5 +26,5 @@ spec:
           mountPath: /usr/test-pod
       volumes:
       - name: local-vol
-        persistentVolumeClaim: 
+        persistentVolumeClaim:
           claimName: "local-vol-local-test-0"
