@@ -1,10 +1,13 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: local-test-affinity
 spec:
   serviceName: "local-service"
   replicas: 3
+  selector:
+    matchLabels:
+      app: local-test-affinity
   template:
     metadata:
       labels:
@@ -22,8 +25,8 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: test-container
-        image: gcr.io/google_containers/busybox:1.24
-        command: 
+        image: k8s.gcr.io/busybox
+        command:
         - "/bin/sh"
         args:
         - "-c"
@@ -33,7 +36,7 @@ spec:
           mountPath: /usr/test-pod
         env:
         - name: MY_POD_NAME
-          valueFrom: 
+          valueFrom:
             fieldRef:
               fieldPath: metadata.name
       securityContext:
