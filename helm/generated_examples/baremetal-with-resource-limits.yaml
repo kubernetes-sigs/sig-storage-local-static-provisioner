@@ -161,3 +161,7 @@ roleRef:
 # Source: provisioner/templates/namespace.yaml
 
 
+---
+# Source: provisioner/templates/pod-security-policy.yaml
+
+
