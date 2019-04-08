@@ -161,3 +161,7 @@ roleRef:
   name: local-storage-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
 
+---
+# Source: provisioner/templates/pod-security-policy.yaml
+
+
