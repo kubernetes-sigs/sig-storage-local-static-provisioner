@@ -37,6 +37,10 @@ common:
   # Defines the name of configmap used by Provisioner
   #
   configMapName: "local-provisioner-config"
+  #
+  # Enables or disables Pod Security Policy creation and binding
+  #
+  podSecurityPolicy: false
 #
 # Configure storage classes.
 #
