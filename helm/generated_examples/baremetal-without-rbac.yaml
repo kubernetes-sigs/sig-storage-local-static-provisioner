@@ -91,6 +91,10 @@ reclaimPolicy: Delete
 
 
 ---
+# Source: provisioner/templates/pod-security-policy.yaml
+
+
+---
 # Source: provisioner/templates/provisioner-cluster-role-binding.yaml
 
 

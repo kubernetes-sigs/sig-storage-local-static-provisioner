@@ -82,4 +82,43 @@ roleRef:
   name: local-storage-provisioner-jobs-role
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
+{{- if .Values.common.podSecurityPolicy }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-storage-provisioner-psp-role
+  namespace: {{ .Values.common.namespace }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: {{ replace "+" "_" .Chart.Version | printf "%s-%s" .Chart.Name }}
+rules:
+- apiGroups:
+    - policy
+  resources:
+    - podsecuritypolicies
+  resourceNames:
+    - local-storage-provisioner-pod-security-policy
+  verbs:
+    - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-storage-provisioner-psp-rolebinding
+  namespace: {{ .Values.common.namespace }}
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: {{ replace "+" "_" .Chart.Version | printf "%s-%s" .Chart.Name }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.daemonset.serviceAccount }}
+  namespace: {{ .Values.common.namespace }}
+roleRef:
+  kind: Role
+  name: local-storage-provisioner-psp-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
 {{- end }}
