@@ -42,7 +42,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
 const (
