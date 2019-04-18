@@ -12,13 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ifeq ($(REGISTRY),)
+	REGISTRY = quay.io/external_storage
+endif
+
+ifeq ($(VERSION),)
+	VERSION = latest
+endif
+
+ifeq ($(GOVERSION),)
+	GOVERSION = 1.11.1
+endif
+
+IMAGE = $(REGISTRY)/local-volume-provisioner:$(VERSION)
+MUTABLE_IMAGE = $(REGISTRY)/local-volume-provisioner:latest
+
 all: provisioner
 .PHONY: all
 
-test: 
-	cd provisioner; make test
-.PHONY: test
- 
 verify:
 	./hack/verify-all.sh
 .PHONY: verify
@@ -32,13 +43,20 @@ release:
 .PHONY: release
 
 provisioner:
-	cd provisioner; make container
+	docker build -t $(MUTABLE_IMAGE) --build-arg GOVERSION=${GOVERSION} -f deployment/docker/Dockerfile .
+	docker tag $(MUTABLE_IMAGE) $(IMAGE)
 .PHONY: provisioner
 
-push:
-	cd provisioner; make push
+push: provisioner
+	docker push $(IMAGE)
+	docker push $(MUTABLE_IMAGE)
 .PHONY: push
 
+test: provisioner
+	go test ./cmd/... ./pkg/...
+	docker run --privileged -v $(PWD)/deployment/docker/test.sh:/test.sh --entrypoint bash quay.io/external_storage/local-volume-provisioner:latest /test.sh
+.PHONY: test
+
 clean:
+	rm -f deployment/docker/local-volume-provisioner
 .PHONY: clean
-	cd provisioner; make clean
