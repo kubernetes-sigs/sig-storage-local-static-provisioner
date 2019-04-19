@@ -53,12 +53,13 @@ provisioner chart and their default values.
 | ---                                          | ---                                                                                                   | ---      | ---                                                        |
 | common.rbac                                  | Generating RBAC (Role Based Access Control) objects.                                                  | bool     | `true`                                                     |
 | common.namespace                             | Namespace where provisioner runs.                                                                     | str      | `default`                                                  |
-| common.createNamespace                       | Whether to create namespace for provisioner.                                                          | bool      | `false`                                                  |
+| common.createNamespace                       | Whether to create namespace for provisioner.                                                          | bool     | `false`                                                    |
 | common.useAlphaAPI                           | If running against pre-1.10 k8s version, the `useAlphaAPI` flag must be enabled.                      | bool     | `false`                                                    |
 | common.useJobForCleaning                     | If set to true, provisioner will use jobs-based block cleaning.                                       | bool     | `false`                                                    |
 | common.useNodeNameOnly                       | If set to true, provisioner name will only use Node.Name and not Node.UID.                            | bool     | `false`                                                    |
 | common.minResyncPeriod                       | Resync period in reflectors will be random between `minResyncPeriod` and `2*minResyncPeriod`.         | str      | `5m0s`                                                     |
 | common.configMapName                         | Provisioner ConfigMap name.                                                                           | str      | `local-provisioner-config`                                 |
+| common.podSecurityPolicy                     | Whether to create pod security policy or not.                                                         | bool     | `false`                                                    |
 | classes.[n].name                             | StorageClass name.                                                                                    | str      | `-`                                                        |
 | classes.[n].hostDir                          | Path on the host where local volumes of this storage class are mounted under.                         | str      | `-`                                                        |
 | classes.[n].mountDir                         | Optionally specify mount path of local volumes. By default, we use same path as hostDir in container. | str      | `-`                                                        |
@@ -81,6 +82,7 @@ provisioner chart and their default values.
 | prometheus.operator.serviceMonitor.interval  | Interval at which Prometheus scrapes the provisioner                                                  | str      | `10s`                                                      |
 | prometheus.operator.serviceMonitor.namespace | The namespace Prometheus is installed in                                                              | str      | `monitoring`                                               |
 | prometheus.operator.serviceMonitor.selector  | The Prometheus selector label                                                                         | map      | `prometheus: kube-prometheus`                              |
+
 Note: `classes` is a list of objects, you can specify one or more classes.
 
 ## Examples
