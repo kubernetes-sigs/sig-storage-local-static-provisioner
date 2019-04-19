@@ -151,9 +151,7 @@ fi
 
 if [ -z "$SKIP_BUILD" ]; then
     echo "info: building $image"
-    pushd provisioner &>/dev/null
-    make container REGISTRY=$REGISTRY VERSION=$VERSION
-    popd
+    make provisioner REGISTRY=$REGISTRY VERSION=$VERSION
 else
     echo "info: building is skipped"
 fi
