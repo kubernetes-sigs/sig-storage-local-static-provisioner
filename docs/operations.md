@@ -125,7 +125,7 @@ NOTE:
 
 - Local PVs sharing one disk filesystem will have same capacity and will have
   no capacity isolation. If you want to separate a disk into multiple PVs with
-  capacity isolation. You can separate disk into multiple
+  capacity isolation. You can [separate disk into multiple
   partitions](#separate-disk-into-multiple-partitions) first.
 
 ### Link devices into directory to be discovered as block PVs
@@ -184,7 +184,7 @@ guide to format and discover as filesystem volume or use as block device.
 When you want to decommission the local volume, here is a possible workflow.
 
 1. Stop the pods that are using the volume
-2. Remove the local volume from the node (ie unmounting, pulling out the disk, etc)
+2. Remove the local volume from the node (ie unmounting, pulling out the disk, remove mount entries from /etc/fstab, etc)
 3. Delete the PVC
 4. The provisioner will try to cleanup the volume, but will fail since the volume no longer exists
 5. Manually delete the PV object
