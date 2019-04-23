@@ -2,6 +2,8 @@
 
 ## Table of Contents
 
+- [Why it's best to use UUID of disk in mount point path](#why-its-best-to-use-uuid-of-disk-in-mount-point-path)
+- [Why I need to bind mount normal directories to create PVs for them](#why-i-need-to-bind-mount-normal-directories-to-create-pvs-for-them)
 - [I updated provisioner configuration but volumes are not discovered](#i-updated-provisioner-configuration-but-volumes-are-not-discovered)
 - [I bind mounted a directory into sub-directory of discovery directory, but no PVs created](#i-bind-mounted-a-directory-into-sub-directory-of-discovery-directory-but-no-pvs-created)
 - [Failed to start when docker --init flag is enabled.](#failed-to-start-when-docker---init-flag-is-enabled)
@@ -9,6 +11,34 @@
 - [PV with delete reclaimPolicy is released but not going to be reclaimed](#pv-with-delete-reclaimpolicy-is-released-but-not-going-to-be-reclaimed)
 - [Why my application uses an empty volume when node gets recreated in GCP](#why-my-application-uses-an-empty-volume-when-node-gets-recreated-in-gcp)
 - [Can I change storage class name after some volumes has been provisioned](#can-i-change-storage-class-name-after-some-volumes-has-been-provisioned)
+
+## Why it's best to use UUID of disk in mount point path
+
+In our [operations guide](operations.md) and [best
+practices](best-practices.md), we recommend you to set up local volumes with a
+UUID built in its mount or raw block path in discovery directory. This builds
+unique mappings between paths of local volume and PV objects which is stable
+across reboots and when disks are added or removed. With node name, it enforces
+the uniqueness of local PV in Kubernetes cluster. You can safely recreate node and
+local SSDs on it, see [Why my application uses an empty volume when a node gets
+recreated in
+GCP](#why-my-application-uses-an-empty-volume-when-node-gets-recreated-in-gcp)
+for an issue if a new disk is mounted at the path of the old disk.
+
+Note that when a disk is pulled out and attached to another node, it will be
+discovered as a new PV even if old PV exists, but it is not possible to use
+them at the same time because old PV is stale now (does not exist on the old
+node). It is safe but it is best to follow our [operation guide to decommission
+local volumes](operations.md#deletingremoving-the-underlying-volume).
+
+## Why I need to bind mount normal directories to create PVs for them
+
+This is because there is a race between mounting another filesystem volume on a
+normal directory and creating a PV for it. If you want to create PVs for normal
+directories which do not have a mount point, you need to bind mount them onto
+another directory under discovery directory, or themselves if they are already
+in. Mount point on directory explicitly express it is ready to have a PV
+created for it.
 
 ## I updated provisioner configuration but volumes are not discovered
 
@@ -32,7 +62,7 @@ Check new pods are created by daemon set, also please make sure they are running
 ```
 kubectl -n <provisioner-namespace> get pods -l app=local-volume-provisioner
 ```
- 
+
 ## I bind mounted a directory into sub-directory of discovery directory, but no PVs created
 
 Provisioner only creates local PVs for mounted directories in the first level
@@ -71,11 +101,18 @@ associated PVs.
 
 ## PV with delete reclaimPolicy is released but not going to be reclaimed
 
-At first, please check provisioner is running on the node.  If provisioner is
-running, please check whether the volume exists on the node. If the volume is
-missing, provisioner can not clean the volume data. For safety, it will not
-clean the associated PV object. This is to prevent old volume from being used
-by other programs if it recovers later.
+At first, please check provisioner is running on the node. If provisioner is
+not running, please check configuration and logs of the previous instance of
+provisioner.
+
+If provisioner is running, there are still some possibilities that it cannot
+reclaim released PV:
+
+1) Volume is missing on the node
+
+If the volume is missing, provisioner can not clean the volume data. For
+safety, it will not clean the associated PV object. This is to prevent the old
+volume from being used by other programs if it recovers later.
 
 It’s up to the system administrator to fix this:
 
@@ -90,6 +127,19 @@ It’s up to the system administrator to fix this:
 Of course, on a specific platform if you have a reliable mechanism to detect if
 a volume is permanently deleted or cannot recover, you can write an operator or
 sidecar to automate this.
+
+2) Kubernetes node object has been recreated
+
+If by accident kubernetes node object has been recreated, new node object with
+the same name for the same node will get a new UID. By default, provisioner
+includes node.UID in its name, it will filter out local PVs that were not
+created with this name and do not reclaim these PVs. You can check
+`pv.kubernetes.io/provisioned-by` annotation in PV object.
+
+You can use enable `useNodeNameOnly` to set provisioner name without node UID
+to solve this cleanup issue. However, this will only fix new deployments going
+forward. Existing PVs created with an older local provisioner will still have
+the UID provisioner naming.
 
 ## Why my application uses an empty volume when node gets recreated in GCP
 
