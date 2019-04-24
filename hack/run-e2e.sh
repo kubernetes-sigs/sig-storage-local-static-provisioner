@@ -84,6 +84,7 @@ if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "g
     PROVISIONER_IMAGE_NAME=gcr.io/$PROJECT/local-volume-provisioner:$VERSION
     echo "Tag and push image $PROVISIONER_IMAGE_NAME"
     docker tag $PROVISIONER_E2E_IMAGE $PROVISIONER_IMAGE_NAME
+    unset DOCKER_CONFIG # We don't need this and it may be read-only and fail the command to fail
     gcloud auth configure-docker
     docker push $PROVISIONER_IMAGE_NAME
     PROVISIONER_IMAGE_PULL_POLICY=Always
