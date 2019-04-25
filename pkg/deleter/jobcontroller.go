@@ -274,10 +274,9 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 	} else {
 		return nil, fmt.Errorf("unknown PersistentVolume mode: %v", volMode)
 	}
-	mountName := common.GenerateMountName(&config)
 	volumes := []apiv1.Volume{
 		{
-			Name: mountName,
+			Name: "mnt",
 			VolumeSource: apiv1.VolumeSource{
 				HostPath: &apiv1.HostPathVolumeSource{
 					Path: config.HostDir,
@@ -285,9 +284,11 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 			},
 		},
 	}
-	jobContainer.VolumeMounts = []apiv1.VolumeMount{{
-		Name:      mountName,
-		MountPath: config.MountDir},
+	jobContainer.VolumeMounts = []apiv1.VolumeMount{
+		{
+			Name:      "mnt",
+			MountPath: config.MountDir,
+		},
 	}
 	if volMode == apiv1.PersistentVolumeBlock {
 		// We need to mount /dev into clean job for block volume.

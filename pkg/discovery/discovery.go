@@ -247,8 +247,7 @@ func (d *Discoverer) getMountOptionsFromStorageClass(name string) ([]string, err
 }
 
 func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConfig) error {
-	klog.V(7).Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
-
+	klog.Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
 	reclaimPolicy, err := d.getReclaimPolicyFromStorageClass(class)
 	if err != nil {
 		return fmt.Errorf("failed to get ReclaimPolicy from storage class %q: %v", class, err)
@@ -381,8 +380,8 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	pvName := generatePVName(file, d.Node.Name, class)
 	outsidePath := filepath.Join(config.HostDir, file)
 
-	klog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
-		outsidePath, capacityByte, pvName, volMode)
+	klog.Infof("Found new volume at host path %q with capacity %d for storage class %q, creating Local PV %q, required volumeMode %q",
+		outsidePath, capacityByte, class, pvName, volMode)
 
 	localPVConfig := &common.LocalPVConfig{
 		Name:            pvName,
@@ -415,7 +414,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	if err != nil {
 		return fmt.Errorf("error creating PV %q for volume at %q: %v", pvName, outsidePath, err)
 	}
-	klog.Infof("Created PV %q for volume at %q", pvName, outsidePath)
+	klog.Infof("Successfully created PV %q for volume at %q", pvName, outsidePath)
 	mode := string(volMode)
 	metrics.PersistentVolumeDiscoveryTotal.WithLabelValues(mode).Inc()
 	metrics.PersistentVolumeDiscoveryDurationSeconds.WithLabelValues(mode).Observe(time.Since(startTime).Seconds())

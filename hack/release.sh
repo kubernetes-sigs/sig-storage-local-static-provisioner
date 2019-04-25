@@ -31,8 +31,6 @@ function usage() {
     cat <<'EOF'
 This script is entrypoint to release images automatically.
 
-Note that this script expected
-
 Usage: hack/release.sh
 
     -h      show this message and exit

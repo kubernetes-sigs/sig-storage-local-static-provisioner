@@ -25,12 +25,6 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"k8s.io/klog"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cache"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
-
-	"hash/fnv"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +33,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/util/mount"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cache"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
 const (
@@ -401,14 +398,6 @@ func SetupClient() *kubernetes.Clientset {
 		klog.Fatalf("Error creating clientset: %v\n", err)
 	}
 	return clientset
-}
-
-// GenerateMountName generates a volumeMount.name for pod spec, based on volume configuration.
-func GenerateMountName(mount *MountConfig) string {
-	h := fnv.New32a()
-	h.Write([]byte(mount.HostDir))
-	h.Write([]byte(mount.MountDir))
-	return fmt.Sprintf("mount-%x", h.Sum32())
 }
 
 // GetVolumeMode check volume mode of given path.
