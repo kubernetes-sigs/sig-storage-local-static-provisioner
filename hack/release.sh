@@ -181,7 +181,7 @@ if ! is_stable_version "$VERSION"; then
     exit 0
 fi
 
-latest_stable_version=$(git tag -l | grep -P '^v\d\.\d+\.\d+' | sort --version-sort | tail -n -1)
+latest_stable_version=$(git tag -l | grep -P '^v\d\.\d+\.\d+$' | sort --version-sort | tail -n -1)
 if [ -z "$latest_stable_version" ]; then
     echo "error: failed to get latest stable version"
     exit 1
