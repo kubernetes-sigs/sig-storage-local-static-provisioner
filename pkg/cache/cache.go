@@ -52,7 +52,7 @@ func (cache *VolumeCache) AddPV(pv *v1.PersistentVolume) {
 	defer cache.mutex.Unlock()
 
 	cache.pvs[pv.Name] = pv
-	klog.Infof("Added pv %q to cache", pv.Name)
+	klog.V(4).Infof("Added pv %q to cache", pv.Name)
 }
 
 // UpdatePV updates the PV object in the cache
@@ -61,7 +61,7 @@ func (cache *VolumeCache) UpdatePV(pv *v1.PersistentVolume) {
 	defer cache.mutex.Unlock()
 
 	cache.pvs[pv.Name] = pv
-	klog.Infof("Updated pv %q to cache", pv.Name)
+	klog.V(4).Infof("Updated pv %q to cache", pv.Name)
 }
 
 // DeletePV deletes the PV object from the cache
@@ -70,7 +70,7 @@ func (cache *VolumeCache) DeletePV(pvName string) {
 	defer cache.mutex.Unlock()
 
 	delete(cache.pvs, pvName)
-	klog.Infof("Deleted pv %q from cache", pvName)
+	klog.V(4).Infof("Deleted pv %q from cache", pvName)
 }
 
 // ListPVs returns a list of all the PVs in the cache
