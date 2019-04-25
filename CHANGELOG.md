@@ -1,6 +1,6 @@
 # HEAD
 
-# [v2.3.1](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.1)
+# [v2.3.2](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.2)
 
 Image updates:
 - Fix an issue in block devices cleanup by Kubernetes Job
@@ -12,6 +12,10 @@ Deployment updates:
 - Support pod priority class
   ([#53](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/53))
 - Minor bugs fixed
+
+# [v2.3.1](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.1)
+
+Abandoned and not released.
 
 # [v2.3.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.0)
 
