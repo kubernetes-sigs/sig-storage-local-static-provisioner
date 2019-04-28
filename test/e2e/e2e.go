@@ -31,14 +31,17 @@ import (
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/client-go/pkg/version"
+	"k8s.io/component-base/logs"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/ginkgowrapper"
 
 	// enable client-go GCP auth plugin, xref: http://issues.k8s.io/63743
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
+	// ensure that cloud providers are loaded
+	_ "k8s.io/kubernetes/test/e2e/framework/providers/gce"
 )
 
 // There are certain operations we only want to run once per overall test invocation
