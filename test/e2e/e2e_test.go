@@ -128,7 +128,7 @@ var testConfigs = []*testConfig{
 type localTestConfig struct {
 	ns           string
 	nodes        []v1.Node
-	nodeExecPods map[string]*v1.Pod
+	hostExec     utils.HostExec
 	node0        *v1.Node
 	client       clientset.Interface
 	scName       string
@@ -167,12 +167,13 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 		// Choose the first node
 		node0 := &nodes.Items[0]
+		hostExec := utils.NewHostExec(f)
 
 		config = &localTestConfig{
 			ns:           f.Namespace.Name,
 			client:       f.ClientSet,
 			nodes:        nodes.Items[:maxLen],
-			nodeExecPods: make(map[string]*v1.Pod, maxLen),
+			hostExec:     hostExec,
 			node0:        node0,
 			scName:       fmt.Sprintf("%v-%v", testSCPrefix, f.Namespace.Name),
 			discoveryDir: filepath.Join(hostBase, f.Namespace.Name),
@@ -219,7 +220,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				// Delete the persistent volume claim: file will be cleaned up and volume be re-created.
 				By("Deleting the persistent volume claim to clean up persistent volume and re-create one")
 				writeCmd := createWriteCmd(volumePath, testFile, testFileContent, testConfig.VolumeType)
-				err = issueNodeCommand(config, writeCmd, config.node0)
+				err = config.hostExec.IssueCommand(writeCmd, config.node0)
 				Expect(err).NotTo(HaveOccurred())
 				err = config.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Delete(claim.Name, &metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -229,7 +230,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(newPV.UID).NotTo(Equal(oldPV.UID))
 				fileDoesntExistCmd := createFileDoesntExistCmd(volumePath, testFile)
-				err = issueNodeCommand(config, fileDoesntExistCmd, config.node0)
+				err = config.hostExec.IssueCommand(fileDoesntExistCmd, config.node0)
 				Expect(err).NotTo(HaveOccurred())
 
 				cleanupLocalVolumeProvisionerMountPoint(config, testVol, config.node0)
@@ -255,7 +256,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			directoryPath := filepath.Join(config.discoveryDir, "notbindmount")
 			By("Creating a directory, not bind mounted, in discovery directory")
 			mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", directoryPath)
-			err := issueNodeCommand(config, mkdirCmd, config.node0)
+			err := config.hostExec.IssueCommand(mkdirCmd, config.node0)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Allowing provisioner to run for 30s and discover potential local PVs")
@@ -434,7 +435,7 @@ func setupLocalVolumeProvisioner(config *localTestConfig, testConfig *testConfig
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Initializing local volume discovery base path on node %v", node.Name))
 		mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", config.discoveryDir)
-		err := issueNodeCommand(config, mkdirCmd, &node)
+		err := config.hostExec.IssueCommand(mkdirCmd, &node)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
@@ -447,7 +448,7 @@ func cleanupLocalVolumeProvisioner(config *localTestConfig) {
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Removing the test discovery directory on node %v", node.Name))
 		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", config.discoveryDir, config.discoveryDir)
-		err := issueNodeCommand(config, removeCmd, &node)
+		err := config.hostExec.IssueCommand(removeCmd, &node)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
@@ -558,13 +559,13 @@ func createAndSetupLoopDevice(config *localTestConfig, file string, node *v1.Nod
 	}
 	ddCmd := fmt.Sprintf("dd if=/dev/zero of=%s bs=4096 count=%d", file, count)
 	losetupCmd := fmt.Sprintf("sudo losetup -f %s", file)
-	err := issueNodeCommand(config, fmt.Sprintf("%s && %s", ddCmd, losetupCmd), node)
+	err := config.hostExec.IssueCommand(fmt.Sprintf("%s && %s", ddCmd, losetupCmd), node)
 	Expect(err).NotTo(HaveOccurred())
 }
 
 func findLoopDevice(config *localTestConfig, file string, node *v1.Node) string {
 	cmd := fmt.Sprintf("E2E_LOOP_DEV=$(sudo losetup | grep %s | awk '{ print $1 }') 2>&1 > /dev/null && echo ${E2E_LOOP_DEV}", file)
-	loopDevResult, err := issueNodeCommandWithResult(config, cmd, node)
+	loopDevResult, err := config.hostExec.IssueCommandWithResult(cmd, node)
 	Expect(err).NotTo(HaveOccurred())
 	return strings.TrimSpace(loopDevResult)
 }
@@ -574,12 +575,12 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 	if volumeType == DirectoryLocalVolumeType {
 		By(fmt.Sprintf("Creating local directory at path %q", volumePath))
 		mkdirCmd := fmt.Sprintf("mkdir %v -m 777", volumePath)
-		err := issueNodeCommand(config, mkdirCmd, node)
+		err := config.hostExec.IssueCommand(mkdirCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 
 		By(fmt.Sprintf("Mounting local directory at path %q", volumePath))
 		mntCmd := fmt.Sprintf("sudo mount --bind %v %v", volumePath, volumePath)
-		err = issueNodeCommand(config, mntCmd, node)
+		err = config.hostExec.IssueCommand(mntCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 		return &localVolume{
 			volumePath: volumePath,
@@ -593,7 +594,7 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 
 		By(fmt.Sprintf("Linking %s at %s", loopDev, volumePath))
 		cmd := fmt.Sprintf("sudo ln -s %s %s", loopDev, volumePath)
-		err := issueNodeCommand(config, cmd, node)
+		err := config.hostExec.IssueCommand(cmd, node)
 		Expect(err).NotTo(HaveOccurred())
 		return &localVolume{
 			volumePath: volumePath,
@@ -605,88 +606,21 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 	return nil
 }
 
-// launchNodeExecPodForLocalPV launches a hostexec pod for local PV and waits
-// until it's Running.
-func launchNodeExecPodForLocalPV(client clientset.Interface, ns, node string) *v1.Pod {
-	hostExecPod := framework.NewHostExecPodSpec(ns, fmt.Sprintf("hostexec-%s", node))
-	hostExecPod.Spec.NodeName = node
-	hostExecPod.Spec.Volumes = []v1.Volume{
-		{
-			// Required to enter into host mount namespace via nsenter.
-			Name: "rootfs",
-			VolumeSource: v1.VolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
-					Path: "/",
-				},
-			},
-		},
-	}
-	hostExecPod.Spec.Containers[0].VolumeMounts = []v1.VolumeMount{
-		{
-			Name:      "rootfs",
-			MountPath: "/rootfs",
-			ReadOnly:  true,
-		},
-	}
-	hostExecPod.Spec.Containers[0].SecurityContext = &v1.SecurityContext{
-		Privileged: func(privileged bool) *bool {
-			return &privileged
-		}(true),
-	}
-	pod, err := client.CoreV1().Pods(ns).Create(hostExecPod)
-	framework.ExpectNoError(err)
-	err = framework.WaitForPodRunningInNamespace(client, pod)
-	framework.ExpectNoError(err)
-	return pod
-}
-
-// issueNodeCommandWithResult issues command on given node and returns stdout.
-func issueNodeCommandWithResult(config *localTestConfig, cmd string, node *v1.Node) (string, error) {
-	var pod *v1.Pod
-	pod, ok := config.nodeExecPods[node.Name]
-	if !ok {
-		pod = launchNodeExecPodForLocalPV(config.client, config.ns, node.Name)
-		if pod == nil {
-			return "", fmt.Errorf("failed to create hostexec pod for node %q", node)
-		}
-		config.nodeExecPods[node.Name] = pod
-	}
-	args := []string{
-		"exec",
-		fmt.Sprintf("--namespace=%v", pod.Namespace),
-		pod.Name,
-		"--",
-		"nsenter",
-		"--mount=/rootfs/proc/1/ns/mnt",
-		"--",
-		"sh",
-		"-c",
-		cmd,
-	}
-	return framework.RunKubectl(args...)
-}
-
-// issueNodeCommand works like issueNodeCommandWithResult, but discards result.
-func issueNodeCommand(config *localTestConfig, cmd string, node *v1.Node) error {
-	_, err := issueNodeCommandWithResult(config, cmd, node)
-	return err
-}
-
 func cleanupLocalVolumeProvisionerMountPoint(config *localTestConfig, vol *localVolume, node *v1.Node) {
 	if vol.volumeType == DirectoryLocalVolumeType {
 		By(fmt.Sprintf("Unmounting the test mount point from %q", vol.volumePath))
 		umountCmd := fmt.Sprintf("[ ! -e %v ] || sudo umount %v", vol.volumePath, vol.volumePath)
-		err := issueNodeCommand(config, umountCmd, node)
+		err := config.hostExec.IssueCommand(umountCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Removing the test mount point")
 		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", vol.volumePath, vol.volumePath)
-		err = issueNodeCommand(config, removeCmd, node)
+		err = config.hostExec.IssueCommand(removeCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 	} else {
 		By(fmt.Sprintf("Tear down block device %q on node %q at path %s", vol.loopDev, node.Name, vol.loopFile))
 		losetupDeleteCmd := fmt.Sprintf("sudo losetup -d %s && sudo rm %s", vol.loopDev, vol.loopFile)
-		err := issueNodeCommand(config, losetupDeleteCmd, node)
+		err := config.hostExec.IssueCommand(losetupDeleteCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 	}
 
