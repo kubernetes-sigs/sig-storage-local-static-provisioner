@@ -67,8 +67,8 @@ fi
 
 # build image if not specified
 if [ -z "$PROVISIONER_E2E_IMAGE" ]; then
-    make
-    PROVISIONER_E2E_IMAGE="quay.io/external_storage/local-volume-provisioner:latest"
+    make provisioner
+    PROVISIONER_E2E_IMAGE="quay.io/external_storage/local-volume-provisioner-amd64:latest"
 else
     docker pull $PROVISIONER_E2E_IMAGE
 fi
