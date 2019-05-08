@@ -39,7 +39,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/kubernetes/pkg/kubelet/apis"
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
@@ -48,7 +47,7 @@ const (
 	AnnProvisionedBy = "pv.kubernetes.io/provisioned-by"
 	// NodeLabelKey is the label key that this provisioner uses for PV node affinity
 	// hostname is not the best choice, but it's what pod and node affinity also use
-	NodeLabelKey = apis.LabelHostname
+	NodeLabelKey = v1.LabelHostname
 
 	// DefaultBlockCleanerCommand is the default block device cleaning command
 	DefaultBlockCleanerCommand = "/scripts/quick_reset.sh"

@@ -116,7 +116,6 @@ TEST_ARGS=(
     -timeout=60m
     -v
     sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e
-    "-provider=$KUBERNETES_PROVIDER"
 )
 
 if [ -n "$KUBECTL" ]; then
@@ -129,6 +128,14 @@ fi
 
 if [ -n "$ARTIFACTS" ]; then
     TEST_ARGS+=("-report-dir=$ARTIFACTS")
+fi
+
+if [ -n "$KUBERNETES_PROVIDER" ]; then
+    TEST_ARGS+=("-provider=$KUBERNETES_PROVIDER")
+fi
+
+if [ -n "$KUBE_GCE_ZONE" ]; then
+    TEST_ARGS+=("-gce-zone=$KUBE_GCE_ZONE")
 fi
 
 TEST_ARGS+=("$@")
