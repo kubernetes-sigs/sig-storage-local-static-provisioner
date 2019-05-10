@@ -1,7 +1,7 @@
 ## Getting started
 
 These instructions reflect the latest version of the codebase.  For instructions
-kn older versions, please see version links under
+on older versions, please see version links under
 [Version Compatibility](../README.md#version-compatibility).
 
 ## Table of Contents
