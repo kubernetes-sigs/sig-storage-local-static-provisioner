@@ -79,6 +79,8 @@ ALLOW_UNSTABLE=${ALLOW_UNSTABLE:-}
 ALLOW_DIRTY=${ALLOW_DIRTY:-}
 ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
+ALL_ARCH="amd64 arm arm64 ppc64le s390x"
+IMAGE="$REGISTRY/local-volume-provisioner"
 
 # remove trailing `/` if present
 REGISTRY=${REGISTRY%/}
@@ -116,7 +118,7 @@ if [ -z "$ALLOW_UNSTABLE" ]; then
     fi
 fi
 
-image="$REGISTRY/local-volume-provisioner:$VERSION"
+image="$IMAGE:$VERSION"
 if [ -z "$CONFIRM" ]; then
     read -r -p "info: build and push to $image? [y/N]" response
     if [[ ! $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
@@ -147,34 +149,52 @@ if [ -z "$ALLOW_OVERRIDE" ] && is_stable_version "$VERSION"; then
     echo "info: '$image' does not exist, continue"
 fi
 
-# build & push container
+# build & push multi-arch images
 
 if [ -z "$SKIP_BUILD" ]; then
     echo "info: building $image"
-    make provisioner REGISTRY=$REGISTRY VERSION=$VERSION
+    for arch in $ALL_ARCH; do
+        make provisioner REGISTRY=$REGISTRY VERSION=$VERSION ARCH=$arch
+    done
 else
     echo "info: building is skipped"
 fi
 
-echo "info: pushing $image"
-docker_args=()
-if [ -n "$DOCKER_CONFIG" ]; then
-    if [ ! -d "$DOCKER_CONFIG" ]; then
-        echo "error: DOCKER_CONFIG '$DOCKER_CONFIG' does not exist or not a directory"
-        exit 1
+function docker_push() {
+    local image="$1"
+    echo "info: pushing $image"
+    docker_args=()
+    if [ -n "$DOCKER_CONFIG" ]; then
+        if [ ! -d "$DOCKER_CONFIG" ]; then
+            echo "error: DOCKER_CONFIG '$DOCKER_CONFIG' does not exist or not a directory"
+            exit 1
+        fi
+        if [ ! -f "$DOCKER_CONFIG/config.json" ]; then
+            echo "error: docker config json '$DOCKER_CONFIG/config.json' does not exist"
+            exit 1
+        fi
+        docker_args+=(--config "$DOCKER_CONFIG")
     fi
-    if [ ! -f "$DOCKER_CONFIG/config.json" ]; then
-        echo "error: docker config json '$DOCKER_CONFIG/config.json' does not exist"
-        exit 1
-    fi
-    docker_args+=(--config "$DOCKER_CONFIG")
-fi
-docker_args+=(push "$image")
-docker "${docker_args[@]}"
-
-function is_latest_version() {
-    local v="$1"
+    docker_args+=(push "$image")
+    docker "${docker_args[@]}"
 }
+
+for arch in $ALL_ARCH; do
+    docker_push "$REGISTRY/local-volume-provisioner-$arch:$VERSION"
+done
+
+echo "info: create multi-arch manifest for $IMAGE:$VERSION"
+function docker_create_multi_arch() {
+    export DOCKER_CLI_EXPERIMENTAL=enabled
+    local tag="$1"
+    docker manifest create --amend $IMAGE:$tag $(echo ${ALL_ARCH} | sed -e "s~[^ ]*~${IMAGE}\-&:${tag}~g")
+    for arch in $ALL_ARCH; do
+        docker manifest annotate --arch ${arch} ${IMAGE}:${tag} ${IMAGE}-${arch}:${tag}
+    done
+    docker manifest push --purge $IMAGE:$tag
+}
+
+docker_create_multi_arch "$VERSION"
 
 if ! is_stable_version "$VERSION"; then
     echo "info: VERSION '$VERSION' is not stable version, skip pushing as latest image"
@@ -192,7 +212,11 @@ if [ "$VERSION" != "$latest_stable_version" ]; then
     exit 0
 fi
 
-echo "info: VERSION '$VERSION' is latest stable version, pushing it as latest image"
-latestimage="$REGISTRY/local-volume-provisioner:latest"
-docker tag "$image" "$latestimage"
-docker push "$latestimage"
+echo "info: VERSION '$VERSION' is latest stable version, push multi-arch images for latest tag"
+for arch in $ALL_ARCH; do
+    docker tag "$REGISTRY/local-volume-provisioner-$arch:$VERSION" "$REGISTRY/local-volume-provisioner-$arch:latest"
+    docker_push "$REGISTRY/local-volume-provisioner-$arch:latest"
+done
+
+echo "info: VERSION '$VERSION' is latest stable version, create multi-arch manifest for latest tag"
+docker_create_multi_arch "latest"
