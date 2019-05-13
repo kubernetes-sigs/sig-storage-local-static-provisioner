@@ -15,7 +15,6 @@
 REGISTRY ?= quay.io/external_storage
 VERSION ?= latest
 GOVERSION ?= 1.11.1
-# Architectures supported: amd64, arm, arm64, ppc64le and s390x
 ARCH ?= amd64
 
 ALL_ARCH = amd64 arm arm64 ppc64le s390x
