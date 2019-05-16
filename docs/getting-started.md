@@ -143,7 +143,7 @@ $ kubectl create -f deployment/kubernetes/example/default_example_storageclass.y
     Name:		local-pv-ce05be60
     Labels:		<none>
     Annotations:	pv.kubernetes.io/provisioned-by=local-volume-provisioner-minikube-18f57fb2-a186-11e7-b543-080027d51893
-    StorageClass:	local-fast
+    StorageClass:	local-storage
     Status:		Available
     Claim:		
     Reclaim Policy:	Delete
@@ -159,7 +159,7 @@ $ kubectl create -f deployment/kubernetes/example/default_example_storageclass.y
     Events:		<none>
     ```
 
-    The PV described above can be claimed and bound to a PVC by referencing the `local-fast` storageClassName.
+    The PV described above can be claimed and bound to a PVC by referencing the `local-storage` storageClassName.
 
 #### Option 2: Manually create local persistent volume
 
