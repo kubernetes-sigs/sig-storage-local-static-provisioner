@@ -12,15 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG OS=linux
+ARG ARCH=amd64
 ARG GOVERSION=1.11.1
 FROM golang:$GOVERSION-alpine as builder
 WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
 ADD . .
-RUN CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o local-volume-provisioner ./cmd/local-volume-provisioner
+RUN CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-static"' -o _output/${OS}/${ARCH}/local-volume-provisioner ./cmd/local-volume-provisioner
 
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
-FROM k8s.gcr.io/debian-base-amd64:0.4.0
+FROM k8s.gcr.io/debian-base-${ARCH}:0.4.0
+
+# If we're building for another architecture than amd64, the CROSS_BUILD_ placeholder is removed so
+# e.g. CROSS_BUILD_COPY turns into COPY
+# If we're building normally, for amd64, CROSS_BUILD lines are removed
+CROSS_BUILD_COPY _output/qemu-QEMUARCH-static /usr/bin/
 
 # Keep packages up to date and install packages for our needs.
 RUN apt-get update \
@@ -30,6 +37,6 @@ RUN apt-get update \
     e2fsprogs \
     bash
 
-COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/local-volume-provisioner /local-provisioner
+COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/${OS}/${ARCH}/local-volume-provisioner /local-provisioner
 ADD deployment/docker/scripts /scripts
 ENTRYPOINT ["/local-provisioner"]

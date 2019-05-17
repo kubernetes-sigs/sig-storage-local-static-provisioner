@@ -1,4 +1,3 @@
 # kubetest will extract kubernetes here, ignore them to speed up docker build
 kubernetes/
 kubernetes.tar.gz
-_output/
