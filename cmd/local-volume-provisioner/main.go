@@ -38,6 +38,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const maxGetNodesRetries = 3
+
 var (
 	optListenAddress string
 	optMetricsPath   string
@@ -111,9 +113,20 @@ func main() {
 }
 
 func getNode(client *kubernetes.Clientset, name string) *v1.Node {
-	node, err := client.CoreV1().Nodes().Get(name, metav1.GetOptions{})
-	if err != nil {
-		klog.Fatalf("Could not get node information: %v", err)
+	var retries int
+
+	for {
+		node, err := client.CoreV1().Nodes().Get(name, metav1.GetOptions{})
+		if err == nil {
+			return node
+		}
+
+		retries++
+		klog.Infof("Could not get node information (remaining retries: %d): %v", maxGetNodesRetries-retries, err)
+
+		if retries >= maxGetNodesRetries {
+			klog.Fatalf("Could not get node information: %v", err)
+		}
+		time.Sleep(time.Second)
 	}
-	return node
 }
