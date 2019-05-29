@@ -82,6 +82,15 @@ SKIP_BUILD=${SKIP_BUILD:-}
 ALL_ARCH="amd64 arm arm64 ppc64le s390x"
 IMAGE="$REGISTRY/local-volume-provisioner"
 
+# In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
+# expects it is writable.
+if [ -n "$DOCKER_CONFIG" ]; then
+    tmpDir=$(mktemp -d)
+    echo "info: copy $DOCKER_CONFIG/config.json to $tmpDir and set DOCKER_CONFIG to $tmpDir"
+    cp -r $DOCKER_CONFIG/config.json $tmpDir/
+    DOCKER_CONFIG=$tmpDir
+fi
+
 # remove trailing `/` if present
 REGISTRY=${REGISTRY%/}
 
