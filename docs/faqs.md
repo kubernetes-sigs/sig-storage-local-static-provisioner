@@ -11,6 +11,7 @@
 - [PV with delete reclaimPolicy is released but not going to be reclaimed](#pv-with-delete-reclaimpolicy-is-released-but-not-going-to-be-reclaimed)
 - [Why my application uses an empty volume when node gets recreated in GCP](#why-my-application-uses-an-empty-volume-when-node-gets-recreated-in-gcp)
 - [Can I change storage class name after some volumes has been provisioned](#can-i-change-storage-class-name-after-some-volumes-has-been-provisioned)
+- [Volume does not exist with containerized kubelet](#volume-does-not-exist-with-containerized-kubelet)
 
 ## Why it's best to use UUID of disk in mount point path
 
@@ -175,3 +176,22 @@ For now, we don't support migrating volumes to another storage class. If you
 really need to do this, the only way is to clean all volumes under old
 storage class, configure discovery directory under new storage class and
 restart all provisioners.
+
+## Volume does not exist with containerized kubelet
+
+If your kubelet is running in a container, it may not be able to access the
+path on the host.
+
+In order to allow the kubelet to access the path on the host, you must prefix
+`hostDir` with the prefix of the host filesystem in the kubelet container or
+mount the directory of the local volumes into the kubelet container at the same
+path.
+
+For example, if the root filesystem of the host is mounted at `/rootfs` in the
+kubelet container, you need to prefix the `hostDir` with `/rootfs`. This
+requires recreating the local PV objects. You can delete them all and wait for
+them to be discovered again.
+
+Another solution is to add a bind in the kubelet deployment configuration to
+mount the parent directory of local volumes into the kubelet container at the
+same path. This requires restarting the kubelet container.
