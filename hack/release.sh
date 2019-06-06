@@ -87,7 +87,7 @@ IMAGE="$REGISTRY/local-volume-provisioner"
 if [ -n "$DOCKER_CONFIG" ]; then
     tmpDir=$(mktemp -d)
     echo "info: copy $DOCKER_CONFIG/config.json to $tmpDir and set DOCKER_CONFIG to $tmpDir"
-    cp -r $DOCKER_CONFIG/config.json $tmpDir/
+    cp -L $DOCKER_CONFIG/config.json $tmpDir/
     DOCKER_CONFIG=$tmpDir
 fi
 
