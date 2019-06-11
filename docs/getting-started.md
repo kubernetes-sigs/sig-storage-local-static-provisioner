@@ -36,14 +36,19 @@ be enabled on all Kubernetes components, because the persistent local volumes an
 
 #### Option 1: GCE
 
-GCE clusters brought up with kube-up.sh will automatically format and mount the
-requested Local SSDs, so you can deploy the provisioner with the pre-generated
-deployment spec and skip to [step 4](#step-4-create-local-persistent-volume-claim),
-unless you want to customize the provisioner spec or storage classes.
+GCE clusters brought up with `clusters/kube-up.sh` script in [Kubernetes
+repository](https://github.com/kubernetes/kubernetes) will automatically format
+and mount the requested Local SSDs, so you can deploy the provisioner with the
+pre-generated deployment spec and skip to [step
+4](#step-4-create-local-persistent-volume-claim), unless you want to customize
+the provisioner spec or storage classes.
 
 ``` console
+$ git clone --depth=1 https://github.com/kubernetes/kubernetes
+$ cd kubernetes
 $ NODE_LOCAL_SSDS_EXT=<n>,<scsi|nvme>,fs cluster/kube-up.sh
-$ kubectl create -f helm/generated-examples/gce.yaml
+$ cd ../
+$ kbuectl create -f helm/generated_examples/gce.yaml
 ```
 
 #### Option 2: GKE
@@ -73,8 +78,13 @@ Then skip to [step 4](#step-4-create-local-persistent-volume-claim).
 
 #### Option 4: Local test cluster
 
+Kubernetes provides a script to build and start a lightweight local cluster on
+Linux. You can try to deploy local-volume-provisioner in this cluster and
+discovery local volumes on your local machine.
+
 1. Create `/mnt/disks` directory and mount several volumes into its subdirectories.
    The example below uses three ram disks to simulate real local volumes:
+
 ```console
 $ mkdir /mnt/disks
 $ for vol in vol1 vol2 vol3; do
@@ -86,8 +96,14 @@ done
 2. Run the local cluster.
 
 ```console
+$ git clone --depth=1 https://github.com/kubernetes/kubernetes
+$ cd kubernetes
 $ ALLOW_PRIVILEGED=true LOG_LEVEL=5 FEATURE_GATES=$KUBE_FEATURE_GATES hack/local-up-cluster.sh
 ```
+
+See [running Kubernetes
+locally](https://github.com/kubernetes/community/blob/master/contributors/devel/running-locally.md)
+for more information.
 
 ### Step 2: Creating a StorageClass (1.9+)
 
