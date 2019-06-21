@@ -60,10 +60,15 @@ var nodeLabelsForPV = []string{
 	common.NodeLabelKey,
 	"non-existent-label-that-pv-will-not-get"}
 
+var labelsForPV = map[string]string{
+	"local-storage-cr-name": "foobar",
+}
+
 var expectedPVLabels = map[string]string{
 	"failure-domain.beta.kubernetes.io/zone":   "west-1",
 	"failure-domain.beta.kubernetes.io/region": "west",
-	common.NodeLabelKey:                        testNodeName}
+	common.NodeLabelKey:                        testNodeName,
+	"local-storage-cr-name":                    "foobar"}
 
 var testNode = &v1.Node{
 	ObjectMeta: metav1.ObjectMeta{
@@ -364,6 +369,7 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 		DiscoveryMap:    scMapping,
 		NodeLabelsForPV: nodeLabelsForPV,
 		UseAlphaAPI:     useAlphaAPI,
+		LabelsForPV:     labelsForPV,
 	}
 	objects := make([]runtime.Object, 0)
 	for _, o := range testStorageClasses {
