@@ -105,6 +105,8 @@ type UserConfig struct {
 	// UseNodeNameOnly indicates if Node.Name should be used in the provisioner name
 	// instead of Node.UID.
 	UseNodeNameOnly bool
+	// LabelsForPV stores additional labels added to provisioned PVs
+	LabelsForPV map[string]string
 }
 
 // MountConfig stores a configuration for discoverying a specific storageclass
@@ -194,6 +196,9 @@ type ProvisionerConfiguration struct {
 	// instead of Node.UID. Default is false.
 	// +optional
 	UseNodeNameOnly bool `json:"useNodeNameOnly" yaml:"useNodeNameOnly"`
+	// LabelsForPV could be used to specify additional labels that will be
+	// added to PVs created by static provisioner.
+	LabelsForPV map[string]string `json:"labelsForPV" yaml:"labelsForPV"`
 }
 
 // CreateLocalPVSpec returns a PV spec that can be used for PV creation

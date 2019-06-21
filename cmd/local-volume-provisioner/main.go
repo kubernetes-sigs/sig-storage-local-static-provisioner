@@ -94,6 +94,7 @@ func main() {
 		UseNodeNameOnly:   provisionerConfig.UseNodeNameOnly,
 		Namespace:         namespace,
 		JobContainerImage: jobImage,
+		LabelsForPV:       provisionerConfig.LabelsForPV,
 	})
 
 	klog.Infof("Starting metrics server at %s\n", optListenAddress)
