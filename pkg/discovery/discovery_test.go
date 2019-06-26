@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,6 +68,7 @@ var expectedPVLabels = map[string]string{
 	"failure-domain.beta.kubernetes.io/zone":   "west-1",
 	"failure-domain.beta.kubernetes.io/region": "west",
 	common.NodeLabelKey:                        testNodeName,
+	common.LocalStorageClassLabel:              "sc1",
 	"local-storage-cr-name":                    "foobar"}
 
 var testNode = &v1.Node{
@@ -497,6 +498,7 @@ func verifyPVLabels(t *testing.T, pv *v1.PersistentVolume) {
 		t.Errorf("Labels not set")
 		return
 	}
+	expectedPVLabels[common.LocalStorageClassLabel] = pv.Spec.StorageClassName
 	eq := reflect.DeepEqual(pv.Labels, expectedPVLabels)
 	if !eq {
 		t.Errorf("Labels not as expected %v != %v", pv.Labels, expectedPVLabels)

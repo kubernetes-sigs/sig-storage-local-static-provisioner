@@ -27,7 +27,8 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
 	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
@@ -304,6 +305,17 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	klog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
 		outsidePath, capacityByte, pvName, volMode)
 
+	pvLabels := make(map[string]string)
+	for k, v := range d.Labels {
+		pvLabels[k] = v
+	}
+	// truncate the class name if it exceeds the max allowed length
+	if len(class) > validation.LabelValueMaxLength {
+		pvLabels[common.LocalStorageClassLabel] = class[:validation.LabelValueMaxLength]
+	} else {
+		pvLabels[common.LocalStorageClassLabel] = class
+	}
+
 	localPVConfig := &common.LocalPVConfig{
 		Name:            pvName,
 		HostPath:        outsidePath,
@@ -312,7 +324,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 		ReclaimPolicy:   reclaimPolicy,
 		ProvisionerName: d.Name,
 		VolumeMode:      volMode,
-		Labels:          d.Labels,
+		Labels:          pvLabels,
 		MountOptions:    mountOptions,
 	}
 

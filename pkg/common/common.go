@@ -31,7 +31,7 @@ import (
 
 	"hash/fnv"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -81,6 +81,10 @@ const (
 
 	// DefaultVolumeMode is the default volume mode of created PV object.
 	DefaultVolumeMode = "Filesystem"
+
+	// LocalStorageClassLabel is the name of local storage class label which is
+	// automatically added for local PVs.
+	LocalStorageClassLabel = "local.storage.k8s.io/storageclass"
 )
 
 // UserConfig stores all the user-defined parameters to the provisioner
