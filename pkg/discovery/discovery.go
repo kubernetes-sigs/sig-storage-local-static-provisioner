@@ -67,6 +67,11 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		}
 	}
 
+	// Also add any additional labels configured for the PVs
+	for labelName, labelValue := range config.LabelsForPV {
+		labelMap[labelName] = labelValue
+	}
+
 	if config.UseAlphaAPI {
 		nodeAffinity, err := generateNodeAffinity(config.Node)
 		if err != nil {
