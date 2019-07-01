@@ -17,6 +17,9 @@ data:
 {{- if .Values.common.useAlphaAPI }}
   useAlphaAPI: "true"
 {{- end }}
+{{- if .Values.common.setPVOwnerRef }}
+  setPVOwnerRef: "true"
+{{- end }}
 {{- if .Values.common.useJobForCleaning }}
   useJobForCleaning: "yes"
 {{- end}}
