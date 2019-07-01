@@ -35,7 +35,7 @@ And there are [a lot of examples](TODO) to help you get started quickly.
 
 Helm templating is used to generate the provisioner's DaemonSet, ConfigMap and
 other necessary objects' specs.  The generated specs can be further customized
-as needed (usually not necessary), and then deployed using kubectl. 
+as needed (usually not necessary), and then deployed using kubectl.
 
 **helm template** uses 3 sources of information:
 
@@ -100,6 +100,7 @@ provisioner chart and their default values.
 | common.minResyncPeriod                       | Resync period in reflectors will be random between `minResyncPeriod` and `2*minResyncPeriod`.         | str      | `5m0s`                                                     |
 | common.configMapName                         | Provisioner ConfigMap name.                                                                           | str      | `local-provisioner-config`                                 |
 | common.podSecurityPolicy                     | Whether to create pod security policy or not.                                                         | bool     | `false`                                                    |
+| common.setPVOwnerRef                         | If set to true, PVs are set to be dependents of the owner Node.                                       | bool     | `false`                                                    |
 | classes.[n].name                             | StorageClass name.                                                                                    | str      | `-`                                                        |
 | classes.[n].hostDir                          | Path on the host where local volumes of this storage class are mounted under.                         | str      | `-`                                                        |
 | classes.[n].mountDir                         | Optionally specify mount path of local volumes. By default, we use same path as hostDir in container. | str      | `-`                                                        |
