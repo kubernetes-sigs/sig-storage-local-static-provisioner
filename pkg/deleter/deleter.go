@@ -69,9 +69,30 @@ func NewDeleter(config *common.RuntimeConfig, cleanupTracker *CleanupStatusTrack
 // delete them
 func (d *Deleter) DeletePVs() {
 	for _, pv := range d.Cache.ListPVs() {
-		if pv.Status.Phase != v1.VolumeReleased {
+
+		var shouldTryToDelete bool
+		switch pv.Status.Phase {
+		// PV which is Released state, provisioner will clear it's data
+		case v1.VolumeReleased:
+			shouldTryToDelete = true
+		// When the pv has a hardware problem,
+		// 1. If the pv is Bound state, some pod is using it, after migrating
+		// the affected pod to another node, we can delete pvc, so pv will be
+		// Released state, similar to above.
+		// 2. If the pv is Available state, after recycling the hardware,
+		// provisioner automatically removes the pv both in cluster and
+		// its cache.
+		case v1.VolumeAvailable:
+			_, err := os.Stat(pv.Spec.Local.Path)
+			if os.IsNotExist(err) {
+				shouldTryToDelete = true
+			}
+		}
+
+		if !shouldTryToDelete {
 			continue
 		}
+
 		name := pv.Name
 		switch pv.Spec.PersistentVolumeReclaimPolicy {
 		case v1.PersistentVolumeReclaimRetain:
