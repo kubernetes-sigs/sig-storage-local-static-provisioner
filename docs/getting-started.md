@@ -48,7 +48,7 @@ $ git clone --depth=1 https://github.com/kubernetes/kubernetes
 $ cd kubernetes
 $ NODE_LOCAL_SSDS_EXT=<n>,<scsi|nvme>,fs cluster/kube-up.sh
 $ cd ../
-$ kbuectl create -f helm/generated_examples/gce.yaml
+$ kubectl create -f helm/generated_examples/gce.yaml
 ```
 
 #### Option 2: GKE
