@@ -7,18 +7,14 @@ metadata:
   namespace: default
   labels:
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 data:
   storageClassMap: |
-    fast-disks:
-       hostDir: /mnt/fast-disks
-       mountDir: /mnt/fast-disks
-       blockCleanerCommand:
-         - "/scripts/shred.sh"
-         - "2"
+    local-storage:
+       hostDir: /mnt/disks
+       mountDir: /mnt/disks
        volumeMode: Filesystem
-       fsType: ext4
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -28,7 +24,7 @@ metadata:
   labels:
     app: local-volume-provisioner
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 spec:
   selector:
@@ -62,8 +58,8 @@ spec:
               readOnly: true
             - mountPath: /dev
               name: provisioner-dev
-            - mountPath: /mnt/fast-disks
-              name: fast-disks
+            - mountPath: /mnt/disks
+              name: local-storage
               mountPropagation: "HostToContainer"
       volumes:
         - name: provisioner-config
@@ -72,9 +68,23 @@ spec:
         - name: provisioner-dev
           hostPath:
             path: /dev
-        - name: fast-disks
+        - name: local-storage
           hostPath:
-            path: /mnt/fast-disks
+            path: /mnt/disks
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+  annotations:  
+    storageclass.kubernetes.io/is-default-class: "true"
+  labels:
+    heritage: "Tiller"
+    release: "RELEASE-NAME"
+    chart: provisioner-2.3.2
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
 
 ---
 # Source: provisioner/templates/provisioner-service-account.yaml
@@ -86,7 +96,7 @@ metadata:
   namespace: default
   labels:
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 
 ---
@@ -98,7 +108,7 @@ metadata:
   name: local-storage-provisioner-pv-binding
   labels:
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 subjects:
 - kind: ServiceAccount
@@ -115,7 +125,7 @@ metadata:
   name: local-storage-provisioner-node-clusterrole
   labels:
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 rules:
 - apiGroups: [""]
@@ -128,7 +138,7 @@ metadata:
   name: local-storage-provisioner-node-binding
   labels:
     heritage: "Tiller"
-    release: "release-name"
+    release: "RELEASE-NAME"
     chart: provisioner-2.3.2
 subjects:
 - kind: ServiceAccount
