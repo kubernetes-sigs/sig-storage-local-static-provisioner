@@ -1,0 +1,7 @@
+classes:
+- name: local-storage
+  hostDir: /mnt/disks
+  volumeMode: Filesystem
+  storageClass: 
+    # create and set storage class as default
+    isDefaultClass: true
