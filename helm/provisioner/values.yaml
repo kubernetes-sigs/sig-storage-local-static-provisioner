@@ -76,6 +76,8 @@ classes:
   # Uncomment to create storage class object and configure it.
   # storageClass:
     # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
+    # isDefaultClass: true # set as default class
+
 #
 # Configure DaemonSet for provisioner.
 # 
