@@ -154,6 +154,38 @@ Link it into discovery directory:
 $ sudo ln -s /dev/disk/by-id/lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf /mnt/disks
 ```
 
+### Link devices into directory to be discovered as Filesystem PVs
+
+Similar to the above instruction for 
+[block PVs](#link-devices-into-directory-to-be-discovered-as-block-pvs), if you
+want to expose block devices directly without preformatting them, you can link
+them into the discovery directory.
+
+For safety, you must use the unique path of device.
+
+Find unique path of device:
+
+```
+$ ls -l /dev/disk/by-id/
+lrwxrwxrwx 1 root root  9 Apr 18 14:26 lvm-pv-uuid-kdWgMJ-OOfq-ox5N-ie4E-NU2h-8zPJ-edX1Og -> ../../sde
+lrwxrwxrwx 1 root root  9 Apr 18 14:26 lvm-pv-uuid-VqD1G2-upe2-Xnek-PdXD-mkOT-LhSv-rUV2is -> ../../sdc
+lrwxrwxrwx 1 root root  9 Apr 18 14:26 lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf -> ../../sdb
+```
+
+For example, if you want to use `/dev/sdb`, you must link
+`/dev/disk/by-id/lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf` not 
+`/dev/sdb`.
+
+Link it into discovery directory:
+
+```
+$ sudo ln -s /dev/disk/by-id/lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf /mnt/disks
+```
+
+Additional notes: Your storage class must have VolumeMode set to "Filesystem"
+and fsType set (for example "ext4"). If fsType is unset, it will use Block
+mode.
+
 ### Separate disk into multiple partitions
 
 You can use [parted](https://www.gnu.org/s/parted/manual/parted.html) or other
