@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
 	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
@@ -301,6 +301,12 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	pvName := generatePVName(file, d.Node.Name, class)
 	outsidePath := filepath.Join(config.HostDir, file)
 
+	labels := make(map[string]string, len(d.Labels)+1)
+	for k, v := range d.Labels {
+		labels[k] = v
+	}
+	labels["local-storage-host-file"] = file
+
 	klog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
 		outsidePath, capacityByte, pvName, volMode)
 
@@ -312,7 +318,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 		ReclaimPolicy:   reclaimPolicy,
 		ProvisionerName: d.Name,
 		VolumeMode:      volMode,
-		Labels:          d.Labels,
+		Labels:          labels,
 		MountOptions:    mountOptions,
 	}
 
