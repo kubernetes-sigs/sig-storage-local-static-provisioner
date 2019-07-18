@@ -81,6 +81,9 @@ const (
 
 	// DefaultVolumeMode is the default volume mode of created PV object.
 	DefaultVolumeMode = "Filesystem"
+
+	// HostFileLabelKey is a label key for a label holding host file name of the PV.
+	HostFileLabelKey = "local-storage-host-file"
 )
 
 // UserConfig stores all the user-defined parameters to the provisioner

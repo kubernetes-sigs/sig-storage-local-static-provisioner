@@ -305,7 +305,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 	for k, v := range d.Labels {
 		labels[k] = v
 	}
-	labels["local-storage-host-file"] = file
+	labels[common.HostFileLabelKey] = file
 
 	klog.Infof("Found new volume at host path %q with capacity %d, creating Local PV %q, required volumeMode %q",
 		outsidePath, capacityByte, pvName, volMode)

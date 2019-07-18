@@ -507,7 +507,7 @@ func verifyPVLabels(t *testing.T, createdPV *v1.PersistentVolume, expectedPV *te
 	}
 
 	// Add per-volume custom labels.
-	expectedPVLabels["local-storage-host-file"] = expectedPV.fileName
+	expectedPVLabels[common.HostFileLabelKey] = expectedPV.fileName
 
 	// Assert.
 	eq := reflect.DeepEqual(createdPV.Labels, expectedPVLabels)
