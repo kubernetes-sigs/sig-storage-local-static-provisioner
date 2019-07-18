@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +64,7 @@ var labelsForPV = map[string]string{
 	"local-storage-cr-name": "foobar",
 }
 
-var expectedPVLabels = map[string]string{
+var expectedPVLabelsCommon = map[string]string{
 	"failure-domain.beta.kubernetes.io/zone":   "west-1",
 	"failure-domain.beta.kubernetes.io/region": "west",
 	common.NodeLabelKey:                        testNodeName,
@@ -492,14 +492,27 @@ func verifyNodeAffinity(t *testing.T, pv *v1.PersistentVolume) {
 	}
 }
 
-func verifyPVLabels(t *testing.T, pv *v1.PersistentVolume) {
-	if len(pv.Labels) == 0 {
+func verifyPVLabels(t *testing.T, createdPV *v1.PersistentVolume, expectedPV *testPVInfo) {
+	if len(createdPV.Labels) == 0 {
 		t.Errorf("Labels not set")
 		return
 	}
-	eq := reflect.DeepEqual(pv.Labels, expectedPVLabels)
+
+	// Prepare labels set for comparison.
+	expectedPVLabels := make(map[string]string)
+
+	// Copy the labels that are common to all the volumes.
+	for k, v := range expectedPVLabelsCommon {
+		expectedPVLabels[k] = v
+	}
+
+	// Add per-volume custom labels.
+	expectedPVLabels["local-storage-host-file"] = expectedPV.fileName
+
+	// Assert.
+	eq := reflect.DeepEqual(createdPV.Labels, expectedPVLabels)
 	if !eq {
-		t.Errorf("Labels not as expected %v != %v", pv.Labels, expectedPVLabels)
+		t.Errorf("Labels not as expected %v != %v", createdPV.Labels, expectedPVLabels)
 	}
 }
 
@@ -559,6 +572,7 @@ func verifyMountOptions(t *testing.T, createdPV *v1.PersistentVolume) {
 type testPVInfo struct {
 	pvName       string
 	path         string
+	fileName     string
 	capacity     int64
 	storageClass string
 	volumeMode   v1.PersistentVolumeMode
@@ -578,6 +592,7 @@ func verifyCreatedPVs(t *testing.T, test *testConfig) {
 			expectedPVs[pvName] = &testPVInfo{
 				pvName:       pvName,
 				path:         path,
+				fileName:     file.Name,
 				capacity:     file.Capacity,
 				storageClass: sc,
 				volumeMode:   v1.PersistentVolumeMode(mode),
@@ -611,7 +626,7 @@ func verifyCreatedPVs(t *testing.T, test *testConfig) {
 
 		verifyProvisionerName(t, createdPV)
 		verifyNodeAffinity(t, createdPV)
-		verifyPVLabels(t, createdPV)
+		verifyPVLabels(t, createdPV, expectedPV)
 		verifyCapacity(t, createdPV, expectedPV)
 		verifyVolumeMode(t, createdPV, expectedPV)
 		verifyMountOptions(t, createdPV)
