@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/collectors"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -95,6 +95,7 @@ func main() {
 		Namespace:         namespace,
 		JobContainerImage: jobImage,
 		LabelsForPV:       provisionerConfig.LabelsForPV,
+		SetPVOwnerRef:     provisionerConfig.SetPVOwnerRef,
 	})
 
 	klog.Infof("Starting metrics server at %s\n", optListenAddress)

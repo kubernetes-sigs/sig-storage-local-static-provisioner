@@ -27,7 +27,8 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
 	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
@@ -45,6 +46,7 @@ type Discoverer struct {
 	nodeAffinityAnn string
 	nodeAffinity    *v1.VolumeNodeAffinity
 	classLister     storagev1listers.StorageClassLister
+	ownerReference  *metav1.OwnerReference
 }
 
 // NewDiscoverer creates a Discoverer object that will scan through
@@ -72,6 +74,12 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		labelMap[labelName] = labelValue
 	}
 
+	// Generate owner reference
+	ownerRef, err := generateOwnerReference(config.Node)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to generate owner reference: %v", err)
+	}
+
 	if config.UseAlphaAPI {
 		nodeAffinity, err := generateNodeAffinity(config.Node)
 		if err != nil {
@@ -87,7 +95,8 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 			Labels:          labelMap,
 			CleanupTracker:  cleanupTracker,
 			classLister:     sharedInformer.Lister(),
-			nodeAffinityAnn: tmpAnnotations[common.AlphaStorageNodeAffinityAnnotation]}, nil
+			nodeAffinityAnn: tmpAnnotations[common.AlphaStorageNodeAffinityAnnotation],
+			ownerReference:  ownerRef}, nil
 	}
 
 	volumeNodeAffinity, err := generateVolumeNodeAffinity(config.Node)
@@ -100,7 +109,25 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		Labels:         labelMap,
 		CleanupTracker: cleanupTracker,
 		classLister:    sharedInformer.Lister(),
-		nodeAffinity:   volumeNodeAffinity}, nil
+		nodeAffinity:   volumeNodeAffinity,
+		ownerReference: ownerRef}, nil
+}
+
+func generateOwnerReference(node *v1.Node) (*metav1.OwnerReference, error) {
+	if node.GetName() == "" {
+		return nil, fmt.Errorf("Node does not have name")
+	}
+
+	if node.GetUID() == "" {
+		return nil, fmt.Errorf("Node does not have UID")
+	}
+
+	return &metav1.OwnerReference{
+		Kind:       "Node",
+		APIVersion: "v1",
+		Name:       node.GetName(),
+		UID:        node.UID,
+	}, nil
 }
 
 func generateNodeAffinity(node *v1.Node) (*v1.NodeAffinity, error) {
@@ -314,6 +341,8 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 		VolumeMode:      volMode,
 		Labels:          d.Labels,
 		MountOptions:    mountOptions,
+		SetPVOwnerRef:   d.SetPVOwnerRef,
+		OwnerReference:  d.ownerReference,
 	}
 
 	if d.UseAlphaAPI {

@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +45,7 @@ const (
 	testHostDir         = "/mnt/disks"
 	testMountDir        = "/discoveryPath"
 	testNodeName        = "test-node"
+	testNodeUID         = "d9607e19-f88f-11e6-a518-42010a800195"
 	testProvisionerName = "test-provisioner"
 )
 
@@ -74,6 +75,7 @@ var testNode = &v1.Node{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:   testNodeName,
 		Labels: nodeLabels,
+		UID:    testNodeUID,
 	},
 }
 
@@ -117,6 +119,8 @@ type testConfig struct {
 	expectedVolumes map[string][]*util.FakeDirEntry
 	// True if testing api failure
 	apiShouldFail bool
+	// True if PVs should be dependents of the owner Node
+	testPVOwnerRef bool
 	// The rest are set during setup
 	volUtil        *util.FakeVolumeUtil
 	client         *fake.Clientset
@@ -139,8 +143,9 @@ func TestDiscoverVolumes_Basic(t *testing.T) {
 	test := &testConfig{
 		dirLayout:       vols,
 		expectedVolumes: vols,
+		testPVOwnerRef:  true,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, true)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
@@ -161,7 +166,7 @@ func TestDiscoverVolumes_BasicTwice(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: vols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
@@ -178,7 +183,7 @@ func TestDiscoverVolumes_NoDir(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: vols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
@@ -192,7 +197,7 @@ func TestDiscoverVolumes_EmptyDir(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: vols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
@@ -213,7 +218,7 @@ func TestDiscoverVolumes_NewVolumesLater(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: vols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 
@@ -250,7 +255,7 @@ func TestDiscoverVolumes_CreatePVFails(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: map[string][]*util.FakeDirEntry{},
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 
@@ -268,7 +273,7 @@ func TestDiscoverVolumes_BadVolume(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: map[string][]*util.FakeDirEntry{},
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 
@@ -302,7 +307,7 @@ func TestDiscoverVolumes_CleaningInProgress(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: expectedVols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	// Mark dir1/mount2 PV as being cleaned. This one should not get created
 	pvName := getPVName(vols["dir1"][1])
@@ -338,13 +343,13 @@ func TestDiscoverVolumes_InvalidMode(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: expectedVols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
 }
 
-func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
+func testSetup(t *testing.T, test *testConfig, useAlphaAPI, setPVOwnerRef bool) *Discoverer {
 	test.cache = cache.NewVolumeCache()
 	test.volUtil = util.NewFakeVolumeUtil(false /*deleteShouldFail*/, map[string][]*util.FakeDirEntry{})
 	test.volUtil.AddNewDirEntries(testMountDir, test.dirLayout)
@@ -370,6 +375,7 @@ func testSetup(t *testing.T, test *testConfig, useAlphaAPI bool) *Discoverer {
 		NodeLabelsForPV: nodeLabelsForPV,
 		UseAlphaAPI:     useAlphaAPI,
 		LabelsForPV:     labelsForPV,
+		SetPVOwnerRef:   setPVOwnerRef,
 	}
 	objects := make([]runtime.Object, 0)
 	for _, o := range testStorageClasses {
@@ -555,6 +561,23 @@ func verifyMountOptions(t *testing.T, createdPV *v1.PersistentVolume) {
 	}
 }
 
+func verifyOwnerReference(t *testing.T, pv *v1.PersistentVolume) {
+	ownerReference := &pv.ObjectMeta.OwnerReferences[0]
+	if ownerReference == nil {
+		t.Errorf("No owner reference found")
+	}
+
+	if ownerReference.Name != testNodeName {
+		t.Errorf("Owner reference name is %s, expected %s", ownerReference.Name, testNodeName)
+		return
+	}
+
+	if ownerReference.UID != testNodeUID {
+		t.Errorf("Owner reference UID is %s, expected %s", ownerReference.UID, testNodeUID)
+		return
+	}
+}
+
 // testPVInfo contains all the fields we are intested in validating.
 type testPVInfo struct {
 	pvName       string
@@ -615,6 +638,9 @@ func verifyCreatedPVs(t *testing.T, test *testConfig) {
 		verifyCapacity(t, createdPV, expectedPV)
 		verifyVolumeMode(t, createdPV, expectedPV)
 		verifyMountOptions(t, createdPV)
+		if test.testPVOwnerRef {
+			verifyOwnerReference(t, createdPV)
+		}
 		// TODO: Verify volume type once that is supported in the API.
 	}
 }
@@ -676,7 +702,7 @@ func TestDiscoverVolumes_NotMountPoint(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: expectedVols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 
 	d.DiscoverLocalVolumes()
 	verifyCreatedPVs(t, test)
@@ -688,7 +714,7 @@ func TestUseAlphaAPI(t *testing.T) {
 		dirLayout:       vols,
 		expectedVolumes: vols,
 	}
-	d := testSetup(t, test, false)
+	d := testSetup(t, test, false, false)
 	if d.UseAlphaAPI {
 		t.Fatal("UseAlphaAPI should be false")
 	}
@@ -696,7 +722,7 @@ func TestUseAlphaAPI(t *testing.T) {
 		t.Fatal("the value nodeAffinityAnn shouldn't be set while nodeAffinity should")
 	}
 
-	d = testSetup(t, test, true)
+	d = testSetup(t, test, true, false)
 	if !d.UseAlphaAPI {
 		t.Fatal("UseAlphaAPI should be true")
 	}
