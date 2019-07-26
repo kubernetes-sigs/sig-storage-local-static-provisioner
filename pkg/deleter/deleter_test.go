@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
 	batch_v1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,6 +42,8 @@ import (
 const (
 	testHostDir      = "/mnt/disks"
 	testMountDir     = "/discoveryPath"
+	testNodeName     = "somehost.acme.com"
+	testNodeUID      = "d9607e19-f88f-11e6-a518-42010a800195"
 	testStorageClass = "sc1"
 )
 
@@ -558,6 +560,11 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 			Name:         pvName,
 			HostPath:     fakePath,
 			StorageClass: testStorageClass,
+			OwnerReference: &meta_v1.OwnerReference{
+				Kind: "Node",
+				Name: testNodeName,
+				UID:  testNodeUID,
+			},
 		}
 		// If volume mode has been explicitly specified in the volume config, then explicitly set it in the PV.
 		switch vol.VolumeMode {
@@ -598,7 +605,10 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 				BlockCleanerCommand: cleanupCmd,
 			},
 		},
-		Node:              &v1.Node{ObjectMeta: meta_v1.ObjectMeta{Name: "somehost.acme.com"}},
+		Node: &v1.Node{ObjectMeta: meta_v1.ObjectMeta{
+			Name: testNodeName,
+			UID:  testNodeUID,
+		}},
 		UseJobForCleaning: useJobForCleaning,
 		JobContainerImage: containerImage,
 		Namespace:         ns,

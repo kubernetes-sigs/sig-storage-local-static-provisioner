@@ -12,12 +12,17 @@ common:
   namespace: default
   #
   # Defines whether to create provisioner namespace
-  # 
+  #
   createNamespace: false
+  #
   # Beta PV.NodeAffinity field is used by default. If running against pre-1.10
   # k8s version, the `useAlphaAPI` flag must be enabled in the configMap.
   #
   useAlphaAPI: false
+  #
+  # Indicates if PVs should be dependents of the owner Node.
+  #
+  setPVOwnerRef: false
   #
   # Provisioner clean volumes in process by default. If set to true, provisioner
   # will use Jobs to clean.
@@ -80,7 +85,7 @@ classes:
 
 #
 # Configure DaemonSet for provisioner.
-# 
+#
 daemonset:
   #
   # Defines the name of a Provisioner

@@ -31,7 +31,7 @@ import (
 
 	"hash/fnv"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
@@ -107,6 +107,8 @@ type UserConfig struct {
 	UseNodeNameOnly bool
 	// LabelsForPV stores additional labels added to provisioned PVs
 	LabelsForPV map[string]string
+	// SetPVOwnerRef indicates if PVs should be dependents of the owner Node
+	SetPVOwnerRef bool
 }
 
 // MountConfig stores a configuration for discoverying a specific storageclass
@@ -165,6 +167,8 @@ type LocalPVConfig struct {
 	MountOptions    []string
 	FsType          *string
 	Labels          map[string]string
+	SetPVOwnerRef   bool
+	OwnerReference  *metav1.OwnerReference
 }
 
 // BuildConfigFromFlags being defined to enable mocking during unit testing
@@ -199,6 +203,8 @@ type ProvisionerConfiguration struct {
 	// LabelsForPV could be used to specify additional labels that will be
 	// added to PVs created by static provisioner.
 	LabelsForPV map[string]string `json:"labelsForPV" yaml:"labelsForPV"`
+	// SetPVOwnerRef indicates if PVs should be dependents of the owner Node, default to false
+	SetPVOwnerRef bool `json:"setPVOwnerRef" yaml:"setPVOwnerRef"`
 }
 
 // CreateLocalPVSpec returns a PV spec that can be used for PV creation
@@ -230,11 +236,19 @@ func CreateLocalPVSpec(config *LocalPVConfig) *v1.PersistentVolume {
 			MountOptions:     config.MountOptions,
 		},
 	}
+
 	if config.UseAlphaAPI {
 		pv.ObjectMeta.Annotations[AlphaStorageNodeAffinityAnnotation] = config.AffinityAnn
 	} else {
 		pv.Spec.NodeAffinity = config.NodeAffinity
 	}
+
+	if config.SetPVOwnerRef {
+		pv.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			*config.OwnerReference,
+		}
+	}
+
 	return pv
 }
 
