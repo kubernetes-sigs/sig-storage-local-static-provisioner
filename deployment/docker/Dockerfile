@@ -22,12 +22,7 @@ RUN CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-
 
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
-FROM k8s.gcr.io/debian-base-${ARCH}:0.4.0
-
-# If we're building for another architecture than amd64, the CROSS_BUILD_ placeholder is removed so
-# e.g. CROSS_BUILD_COPY turns into COPY
-# If we're building normally, for amd64, CROSS_BUILD lines are removed
-CROSS_BUILD_COPY _output/qemu-QEMUARCH-static /usr/bin/
+FROM k8s.gcr.io/debian-base-${ARCH}:0.4.1
 
 # Keep packages up to date and install packages for our needs.
 RUN apt-get update \
