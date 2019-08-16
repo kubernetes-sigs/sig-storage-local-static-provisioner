@@ -48,7 +48,7 @@ var (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	klog.InitFlags(nil)
-	flag.StringVar(&optListenAddress, "listen-address", ":8080", "address on which to expose metrics")
+	flag.StringVar(&optListenAddress, "listen-address", ":8080", "address on which to expose metrics and readiness status")
 	flag.StringVar(&optMetricsPath, "metrics-path", "/metrics", "path under which to expose metrics")
 	flag.Parse()
 	flag.Set("logtostderr", "true")
