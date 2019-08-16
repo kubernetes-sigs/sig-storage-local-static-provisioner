@@ -19,6 +19,7 @@ package controller
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"k8s.io/klog"
@@ -32,6 +33,7 @@ import (
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -90,6 +92,7 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	if err != nil {
 		klog.Fatalf("Error initializing discoverer: %v", err)
 	}
+	healthz.InstallPathHandler(http.DefaultServeMux, "/ready", discoverer.Readyz)
 
 	deleter := deleter.NewDeleter(runtimeConfig, cleanupTracker)
 

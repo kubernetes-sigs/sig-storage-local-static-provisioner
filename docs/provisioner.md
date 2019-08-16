@@ -43,10 +43,14 @@ The basic components of the provisioner are as follows:
   The discovery and deleter run serially to simplify synchronization with the cache
   and create/delete operations.
 
-## Prometheus Metrics
+## Monitoring
 
-The metrics are exported through the Prometheus golang client on the HTTP
-endpoint `/metrics` on the listening port (default 8080).
+A dedicated HTTP server (default listening on 0.0.0.0:8080) exposes metrics and
+readiness state. 
+
+### Metrics
+
+The metrics are exported through the Prometheus golang client on the path `/metrics`.
 
 | Metric name                                                   | Metric type | Labels                                                                                                                                                                             |
 | ----------                                                    | ----------- | -----------                                                                                                                                                                        |
@@ -61,3 +65,11 @@ endpoint `/metrics` on the listening port (default 8080).
 | local_volume_provisioner_proctable_running                    | Gauge       |                                                                                                                                                                                    |
 | local_volume_provisioner_proctable_failed                     | Gauge       |                                                                                                                                                                                    |
 | local_volume_provisioner_proctable_succeeded                  | Gauge       |                                                                                                                                                                                    |
+
+### Readiness
+
+The readiness state is exposed on the path `/ready`.
+
+The state become ready when discovered local volumes are successfully created.
+
+Note that if there is no disk to create, the state will be marked as ready.
