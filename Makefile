@@ -40,7 +40,7 @@ endif
    
 SUDO = $(if $(filter 0,$(shell id -u)),,sudo)
 
-all: cross
+all: provisioner
 .PHONY: all
 
 cross: $(addprefix provisioner-,$(ALL_ARCH))
