@@ -92,6 +92,8 @@ func wait(cmd string, args ...string) error {
 	c := exec.Command(cmd, args...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+	c.Env = append(c.Env, os.Environ()...)
+	c.Env = append(c.Env, "GO111MODULE=on")
 	if err := c.Start(); err != nil {
 		return err
 	}
@@ -158,7 +160,7 @@ func (t tester) getKubetest(get bool, old time.Duration) (string, error) {
 		return "", fmt.Errorf("Cannot install kubetest until $GOPATH is set")
 	}
 	log.Print("Updating kubetest binary...")
-	cmd := []string{"go", "get", "-u", "k8s.io/test-infra/kubetest"}
+	cmd := []string{"go", "get", "k8s.io/test-infra/kubetest"}
 	if err = t.wait(cmd[0], cmd[1:]...); err != nil {
 		return "", fmt.Errorf("%s: %v", strings.Join(cmd, " "), err) // Could not upgrade
 	}
