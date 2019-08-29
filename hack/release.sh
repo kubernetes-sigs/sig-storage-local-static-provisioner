@@ -79,7 +79,10 @@ ALLOW_UNSTABLE=${ALLOW_UNSTABLE:-}
 ALLOW_DIRTY=${ALLOW_DIRTY:-}
 ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
-ALL_ARCH="amd64 arm arm64 ppc64le s390x"
+# There is a problem in building multi-arch images in prow environment. Enable non-amd64
+# arches when we have a reliable way, see https://github.com/kubernetes/test-infra/issues/13937.
+#ALL_ARCH="amd64 arm arm64 ppc64le s390x"
+ALL_ARCH="amd64"
 IMAGE="$REGISTRY/local-volume-provisioner"
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
