@@ -4,15 +4,15 @@
 
 Image updates:
 - Allow user to configure additional PV labels
-  ([#118](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/118)
+  ([#118](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/118))
 - Add an option to create PVs owned by their respective Nodes
-  ([#123](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/123)
+  ([#123](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/123))
 
 Deployment updates:
 - Fix invalid pod security policy in helm chart
-  ([#93](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/93)
+  ([#93](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/93))
 - Able to set storage class default in Kubernetes
-  ([#125](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/125)
+  ([#125](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/125))
 
 # [v2.3.2](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.2)
 
