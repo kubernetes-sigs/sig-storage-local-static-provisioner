@@ -919,7 +919,7 @@
   version = "kubernetes-1.14.0"
 
 [[projects]]
-  digest = "1:34093094960df1db1c921bea4dc054663f4bce54cf41de5c240f0864e23140c7"
+  digest = "1:1967352ea3ad2426f023b6366bc965ec6581039cbf54088865d678b23c3e8425"
   name = "k8s.io/apiserver"
   packages = [
     "pkg/apis/audit",
@@ -932,6 +932,7 @@
     "pkg/authentication/user",
     "pkg/authorization/authorizer",
     "pkg/features",
+    "pkg/server/healthz",
     "pkg/storage",
     "pkg/storage/etcd",
     "pkg/util/feature",
@@ -1575,6 +1576,7 @@
     "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/apiserver/pkg/server/healthz",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
