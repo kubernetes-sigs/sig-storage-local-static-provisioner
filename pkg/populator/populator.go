@@ -17,11 +17,12 @@ limitations under the License.
 package populator
 
 import (
-	"k8s.io/klog"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	"strings"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
 // The Populator uses an Informer to populate the VolumeCache.
@@ -72,7 +73,13 @@ func (p *Populator) handlePVUpdate(pv *v1.PersistentVolume) {
 			if !found {
 				return
 			}
-			if provisioner == p.Name {
+			// If keep UserConfig.UseNodeNameOnly as default value(false), the provisioner name will always include
+			// node name and uid.
+			// If change UserConfig.UseNodeNameOnly from default value(false) to true, should add these pvc created
+			// by old provisioner to cache.
+			// If change UserConfig.UseNodeNameOnly from true to false, the provisioner will ignore the old pvs, the
+			// operation is not recommended.
+			if provisioner == p.Name || (p.UseNodeNameOnly && strings.HasPrefix(provisioner, p.Name)) {
 				// This PV was created by this provisioner
 				p.Cache.AddPV(pv)
 			}
