@@ -115,7 +115,7 @@ TEST_ARGS=(
     test
     -timeout=60m
     -v
-    sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e
+    ./test/e2e
 )
 
 if [ -n "$KUBECTL" ]; then
