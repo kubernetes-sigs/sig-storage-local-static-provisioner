@@ -59,6 +59,10 @@ Examples:
 
     REGISTRY=quay.io/<yourname> ALLOW_UNSTABLE=true VERSION=canary ./hack/release.sh
 
+3) Release multi-arch image to your own registry
+
+    REGISTRY=quay.io/<yourname> ALL_ARCH="amd64 arm64" ./hack/release.sh
+
 EOF
 }
 
@@ -81,8 +85,10 @@ ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
 # There is a problem in building multi-arch images in prow environment. Enable non-amd64
 # arches when we have a reliable way, see https://github.com/kubernetes/test-infra/issues/13937.
+# In the meantime, you may set the ALL_ARCH environment variable to name the architectures you'd
+# like to target.
 #ALL_ARCH="amd64 arm arm64 ppc64le s390x"
-ALL_ARCH="amd64"
+ALL_ARCH=${ALL_ARCH=-amd64}
 IMAGE="$REGISTRY/local-volume-provisioner"
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
