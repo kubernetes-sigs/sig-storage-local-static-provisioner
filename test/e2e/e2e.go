@@ -28,7 +28,7 @@ import (
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/pkg/version"
@@ -123,12 +123,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	// Run only Ginkgo on node 1
 	framework.Logf("Running AfterSuite actions on node 1")
 })
-
-func init() {
-	// Register framework flags, then handle flags and Viper config.
-	framework.HandleFlags()
-	framework.AfterReadingAllFlags(&framework.TestContext)
-}
 
 // RunE2ETests runs e2e tests.
 func RunE2ETests(t *testing.T) {
