@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -990,6 +991,17 @@ func deletePodAndPVCs(config *localTestConfig, pod *v1.Pod) error {
 		}
 	}
 	return nil
+}
+
+func init() {
+	// Register framework flags, then handle flags and Viper config.
+	framework.RegisterCommonFlags()
+	framework.RegisterClusterFlags()
+	framework.AfterReadingAllFlags(&framework.TestContext)
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
 }
 
 func TestE2E(t *testing.T) {
