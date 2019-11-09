@@ -24,7 +24,7 @@ RUN CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-
 
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
-FROM k8s.gcr.io/debian-base-${ARCH}:0.4.1
+FROM k8s.gcr.io/debian-base-${ARCH}:v1.0.0
 ARG OS=linux
 ARG ARCH=amd64
 
