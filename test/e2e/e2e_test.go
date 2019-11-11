@@ -993,15 +993,17 @@ func deletePodAndPVCs(config *localTestConfig, pod *v1.Pod) error {
 	return nil
 }
 
-func init() {
+func handleFlags() {
 	// Register framework flags, then handle flags and Viper config.
 	framework.RegisterCommonFlags()
 	framework.RegisterClusterFlags()
-	framework.AfterReadingAllFlags(&framework.TestContext)
+	flag.Parse()
 }
 
 func TestMain(m *testing.M) {
-	flag.Parse()
+	handleFlags()
+	framework.AfterReadingAllFlags(&framework.TestContext)
+	os.Exit(m.Run())
 }
 
 func TestE2E(t *testing.T) {
