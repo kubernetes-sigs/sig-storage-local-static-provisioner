@@ -40,12 +40,12 @@ Usage: hack/e2e.sh [-h] -- [extra kubetest args]
 Environments:
 
     ARTIFACTS                           directory where job artifacts can be dumped
-    PROVIDER                            local/gce/gke (detect automatically if not specified)
+    PROVIDER                            local/gce/gke/skeleton (detect automatically if not specified)
     GCP_ZONE                            (for gce/gke) GCP zone
     GCP_PROJECT                         (for gce/gke) GCP project
     EXTRACT_STRATEGY                    kubetest extract strategy, see k8s.io/test-infra/kubetest/README.md for explanation
     KUBERNETES_SRC                      if specified, kubetest will skip extracting kubernetes src from GCS, use it instead
-    DEPLOYMENT                          none/bash/gke
+    DEPLOYMENT                          none/bash/gke/local/kind
     GKE_ENVIRONMENT                     (gke only) test/staging/prod
     GOOGLE_APPLICATION_CREDENTIALS      (for gce/gke) google applcation credentials which is used to access google cloud platform
     JENKINS_GCE_SSH_PRIVATE_KEY_FILE    (for gce/gke) GCP ssh key private file
@@ -68,7 +68,16 @@ Examples:
 
   Note that current kubetest needs root permission to cleanup.
 
-3) To run against cluster with GCE provider locally
+3) To run against a cluster started by kind
+
+    PROVIDER=skeleton DEPLOYMENT=kind ./hack/e2e.sh
+    PROVIDER=skeleton DEPLOYMENT=kind KIND_NODE_IMAGE=kindest/node:v1.16.1 KUBERNETES_SRC=$GOPATH/src/k8s.io/kubernetes ./hack/e2e.sh
+
+  WARNING: kind nodes share `/dev` with the host, so loop devices created in
+  e2e tests can be seen on the host and may interfere with each other. It's not
+  recommended to run this in shared environment.
+
+4 ) To run against cluster with GCE provider locally
 
   You need install Google Cloud SDK first, then prepare google application
   credentials and configure ssh key pairs.
@@ -86,7 +95,7 @@ Examples:
     export GCP_PROJECT=<your-gcp-project>
     ./hack/e2e.sh
 
-4) To run against cluster with GKE provider locally
+5) To run against cluster with GKE provider locally
 
   Prepare same as with GCE provider. In addition, you need to grant Kubernetes
   Engine Admin (roles/container.admin) role to your GCP service account.
@@ -101,7 +110,7 @@ Examples:
     export EXTRACT_STRATEGY=gke-default
     ./hack/e2e.sh
 
-5) To run against cluster with GCE/GKE provider in test-infra/prow job
+6) To run against cluster with GCE/GKE provider in test-infra/prow job
 
   Almost same as running locally, you can add `preset-service-account:
   "true"` and `preset-k8s-ssh: "true"` labels in your prow job to use
@@ -132,6 +141,7 @@ DEPLOYMENT=${DEPLOYMENT:-}
 CLUSTER=${CLUSTER:-e2e}
 GKE_ENVIRONMENT=${GKE_ENVIRONMENT:-prod}
 KUBERNETES_SRC=${KUBERNETES_SRC:-} # If set, skip extracting kubernetes, use it as kubernetes src.
+KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-} # Prebuilt kind node image to use, e.g. kindest/node:v1.15.0.
 
 if [ -z "$PROVIDER" ]; then
     echo "PROVIDER not specified, detecting provider automatically" >&2
@@ -159,7 +169,7 @@ kubetest_args=(
 
 if [ -n "$ARTIFACTS" ]; then
     kubetest_args+=(
-	    --dump "${ARTIFACTS}"
+        --dump "${ARTIFACTS}"
     )
 fi
 
@@ -239,6 +249,33 @@ if [ "$PROVIDER" == "gce" -o "$PROVIDER" == "gke" ]; then
 elif [ "$PROVIDER" == "local" ]; then
     if [ -z "$DEPLOYMENT" ]; then
         DEPLOYMENT=local
+    fi
+elif [ "$PROVIDER" == "skeleton" ]; then
+    if [ "$DEPLOYMENT" == "kind" ]; then
+        export KUBERNETES_CONFORMANCE_PROVIDER=kind
+        tmpfile=$(mktemp)
+        trap "test -f $tmpfile && rm $tmpfile" EXIT
+    cat <<EOF > $tmpfile
+kind: Cluster
+apiVersion: kind.sigs.k8s.io/v1alpha3
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+EOF
+        kubetest_args+=(
+            --kind-config-path=$tmpfile
+            --kind-binary-version=stable
+        )
+        if [ -n "$KIND_NODE_IMAGE" ]; then
+            kubetest_args+=(
+                --kind-node-image=$KIND_NODE_IMAGE
+            )
+        else
+            kubetest_args+=(
+                --build quick
+            )
+        fi
     fi
 else
     echo "error: unsupported provider '$PROVIDER'" >&2
