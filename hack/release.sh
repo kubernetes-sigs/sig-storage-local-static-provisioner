@@ -88,7 +88,7 @@ SKIP_BUILD=${SKIP_BUILD:-}
 # In the meantime, you may set the ALL_ARCH environment variable to name the architectures you'd
 # like to target.
 #ALL_ARCH="amd64 arm arm64 ppc64le s390x"
-ALL_ARCH=${ALL_ARCH=-amd64}
+ALL_ARCH=${ALL_ARCH:-amd64}
 IMAGE="$REGISTRY/local-volume-provisioner"
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
