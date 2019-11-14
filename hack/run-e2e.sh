@@ -103,8 +103,17 @@ elif [ "$KUBERNETES_PROVIDER" == "local" ]; then
     KUBECONFIG=/var/run/kubernetes/admin.kubeconfig
     PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
     PROVISIONER_IMAGE_PULL_POLICY=Never
+elif [ "$KUBERNETES_CONFORMANCE_PROVIDER" == "kind" ]; then
+    PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
+    kind load docker-image --name=kind-kubetest $PROVISIONER_IMAGE_NAME
+    PROVISIONER_IMAGE_PULL_POLICY=Never
+    # install sudo
+    # FIXME: remove when we upgrade Kuberenetes code to 1.16+, see https://github.com/kubernetes/kubernetes/pull/80329.
+    for n in $(kind get nodes --name=kind-kubetest); do
+        docker exec $n sh -c 'apt-get update && apt-get install -y sudo'
+    done
 else
-    echo "error: unsupported provider '$KUBERNETES_PROVIDER'" >&2
+    echo "error: unsupported provider '$KUBERNETES_PROVIDER' or '$KUBERNETES_CONFORMANCE_PROVIDER'" >&2
     exit 1
 fi
 
