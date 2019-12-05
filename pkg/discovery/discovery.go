@@ -276,6 +276,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 	}
 
 	var discoErrors []error
+	var totalCapacityBlockBytes, totalCapacityFSBytes int64
 	for _, file := range files {
 		startTime := time.Now()
 		filePath := filepath.Join(config.MountDir, file)
@@ -321,6 +322,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, fmt.Errorf("path %q block stats error: %v", filePath, err))
 				continue
 			}
+			totalCapacityBlockBytes += capacityByte
 			if desireVolumeMode == v1.PersistentVolumeBlock && len(mountOptions) != 0 {
 				klog.Warningf("Path %q will be used to create block volume, "+
 					"mount options %v will not take effect.", filePath, mountOptions)
@@ -340,6 +342,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
 				continue
 			}
+			totalCapacityFSBytes += capacityByte
 		default:
 			discoErrors = append(discoErrors, fmt.Errorf("path %q has unexpected volume type %q", filePath, volMode))
 			continue
@@ -350,6 +353,8 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			discoErrors = append(discoErrors, err)
 		}
 	}
+	metrics.PersistentVolumeCapacityBytes.WithLabelValues(string(v1.PersistentVolumeBlock)).Set(float64(totalCapacityBlockBytes))
+	metrics.PersistentVolumeCapacityBytes.WithLabelValues(string(v1.PersistentVolumeFilesystem)).Set(float64(totalCapacityFSBytes))
 	if discoErrors == nil {
 		return nil
 	}
