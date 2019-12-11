@@ -38,6 +38,15 @@ const (
 )
 
 var (
+	// PersistentVolumeCapacityBytes is used to collect the size of the local volumes discovered.
+	PersistentVolumeCapacityBytes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Subsystem: LocalVolumeProvisionerSubsystem,
+			Name:      "persistentvolume_capacity_bytes",
+			Help:      "Persistent volumes capacity by mode discovered in bytes.",
+		},
+		[]string{"mode"},
+	)
 	// PersistentVolumeDiscoveryTotal is used to collect accumulated count of persistent volumes discoveried.
 	PersistentVolumeDiscoveryTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
