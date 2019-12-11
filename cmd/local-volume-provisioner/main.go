@@ -100,6 +100,7 @@ func main() {
 
 	klog.Infof("Starting metrics server at %s\n", optListenAddress)
 	prometheus.MustRegister([]prometheus.Collector{
+		metrics.PersistentVolumeCapacityBytes,
 		metrics.PersistentVolumeDiscoveryTotal,
 		metrics.PersistentVolumeDiscoveryDurationSeconds,
 		metrics.PersistentVolumeDeleteTotal,
