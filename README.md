@@ -11,6 +11,8 @@ provisioning.
 - [User Guide](#user-guide)
   * [Getting started](#getting-started)
   * [Managing your local volumes](#managing-your-local-volumes)
+  * [Deploying](#deploying)
+  * [Upgrading](#upgrading)
   * [FAQs](#faqs)
   * [Best Practices](#best-practices)
 - [Version Compatibility](#version-compatibility)
@@ -61,10 +63,21 @@ and use PVC in your pod to request a local PV.
 See our [operations](docs/operations.md) documentation which contains of
 preparing, setting up and cleaning up local volumes on the nodes.
 
-### Deploy provisioner with helm
+### Deploying
 
 See our [helm](helm/README.md) documentation for how to deploy and configure
-local-volume-provisioner in Kubernetes cluster.
+local-volume-provisioner in Kubernetes cluster with helm.
+
+If you want to manage provisioner with plain YAML files, you can refer to our
+[example yamls](deployment/kubernetes/example). [helm generated
+yamls](helm/generated_examples/) are good sources of examples too.
+[Here](docs/provisioner.md#configuration) is a full explanation of provisioner
+configuration.
+
+### Upgrading
+
+See our [upgrading](docs/upgrading.md) documentation for how to upgrade
+provisioner version or update configuration in Kubernetes cluster.
 
 ### FAQs
 
