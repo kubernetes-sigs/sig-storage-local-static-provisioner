@@ -26,6 +26,7 @@ Glossary:
   * [Use a whole disk as a filesystem PV](#use-a-whole-disk-as-a-filesystem-pv)
   * [Sharing a disk filesystem by multiple filesystem PVs](#sharing-a-disk-filesystem-by-multiple-filesystem-pvs)
   * [Link devices into directory to be discovered as block PVs](#link-devices-into-directory-to-be-discovered-as-block-pvs)
+  * [Link devices into directory to be discovered as filesystem PVs](#link-devices-into-directory-to-be-discovered-as-filesystem-pvs)
   * [Separate disk into multiple partitions](#separate-disk-into-multiple-partitions)
 - [Deleting/removing the underlying volume](#deletingremoving-the-underlying-volume)
 
@@ -154,7 +155,10 @@ Link it into discovery directory:
 $ sudo ln -s /dev/disk/by-id/lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf /mnt/disks
 ```
 
-### Link devices into directory to be discovered as Filesystem PVs
+Note that in provisioner configuration, you must have `volumeMode` in storage
+class map set to "Block".
+
+### Link devices into directory to be discovered as filesystem PVs
 
 Similar to the above instruction for 
 [block PVs](#link-devices-into-directory-to-be-discovered-as-block-pvs), if you
@@ -182,9 +186,8 @@ Link it into discovery directory:
 $ sudo ln -s /dev/disk/by-id/lvm-pv-uuid-yyTnct-TpUS-U93g-JoFs-6seh-Yy29-Dn6Irf /mnt/disks
 ```
 
-Additional notes: Your storage class must have VolumeMode set to "Filesystem"
-and fsType set (for example "ext4"). If fsType is unset, it will use Block
-mode.
+Note that in provisioner configuration, you must have `volumeMode` in storage
+class map set to "Filesystem" (default if unspecified).
 
 ### Separate disk into multiple partitions
 
