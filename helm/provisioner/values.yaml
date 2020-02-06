@@ -42,6 +42,10 @@ common:
   # 2*minResyncPeriod. Default: 5m0s.
   #
   #minResyncPeriod: 5m0s
+  #
+  # Defines the name of configmap used by Provisioner
+  #
+  configMapName: "local-provisioner-config"
 #
 # Configure storage classes.
 #
@@ -73,7 +77,7 @@ classes:
   # or blkdiscard utility by uncommenting the line below.
   #  - "/scripts/blkdiscard.sh"
   # Uncomment to create storage class object with default configuration.
-  # storageClass: true
+  storageClass: true
   # Uncomment to create storage class object and configure it.
   # storageClass:
     # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
@@ -121,7 +125,7 @@ daemonset:
   #
   # If configured, resources will set the requests/limits field to the Daemonset PodSpec.
   # Ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  resources: {}
+  resources: []
     # limits:
     #   memory: "512Mi"
     #   cpu: "1000m"
