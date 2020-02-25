@@ -1,5 +1,18 @@
 # HEAD
 
+# [v2.3.4](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.4)
+
+Image updates:
+
+- A readiness check is added to expose discovery state
+  Refer to [docs](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/blob/v2.3.4/docs/provisioner.md#readiness) for more information.
+  ([#135](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/135))
+- A new metric `local_volume_provisioner_persistentvolume_capacity_bytes` is
+  added to report the capacity in bytes of the local volumes discovered
+  ([#160](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/160))
+- Fix an issue that may cause released PVs not to be recycled
+  ([#174](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/174))
+
 # [v2.3.3](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.3)
 
 Image updates:

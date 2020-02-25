@@ -8,7 +8,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 data:
   storageClassMap: |
     local-storage:
@@ -28,7 +28,7 @@ metadata:
     app: local-volume-provisioner
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 spec:
   selector:
     matchLabels:
@@ -40,7 +40,7 @@ spec:
     spec:
       serviceAccountName: local-storage-admin
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           name: provisioner
           securityContext:
             privileged: true
@@ -54,7 +54,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           ports:
           - containerPort: 8080
             name: http
@@ -85,7 +85,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -99,7 +99,7 @@ metadata:
     app: local-volume-provisioner
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 spec:
   type: ClusterIP
   ports:
@@ -118,7 +118,7 @@ metadata:
     app: local-volume-provisioner
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
     prometheus: kube-prometheus
 spec:
   jobLabel: app
@@ -145,7 +145,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 
 ---
 # Source: provisioner/templates/provisioner-cluster-role-binding.yaml
@@ -157,7 +157,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 subjects:
 - kind: ServiceAccount
   name: local-storage-admin
@@ -174,7 +174,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 rules:
 - apiGroups: [""]
   resources: ["nodes"]
@@ -187,7 +187,7 @@ metadata:
   labels:
     heritage: "Tiller"
     release: "RELEASE-NAME"
-    chart: provisioner-2.3.3
+    chart: provisioner-2.3.4
 subjects:
 - kind: ServiceAccount
   name: local-storage-admin
