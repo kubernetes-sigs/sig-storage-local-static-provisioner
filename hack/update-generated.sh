@@ -53,6 +53,7 @@ for f in $FILES; do
     generated="generated_examples/$f"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     printf "Generating with helm v${HELM_VERSION} %s from %s\n" $generated $input
     $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
 =======
@@ -66,6 +67,10 @@ for f in $FILES; do
 >>>>>>> c380ca3... changed update- and verify-generated.sh to create and check helm v2/v3. Set helm v3 as default
 =======
 >>>>>>> b8dc4e7... added release-name and namespace to template generator script
+=======
+    printf "Generating with helm v${HELM_VERSION} %s from %s\n" $generated $input
+    $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
+>>>>>>> e68cf7d... changed update- and verify-generated.sh to create and check helm v2/v3. Set helm v3 as default
 done
 
 echo "Done."
