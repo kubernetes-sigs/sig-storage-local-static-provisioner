@@ -37,6 +37,9 @@ spec:
   jobLabel: app.kubernetes.io/name
   endpoints:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4c34ee8... added servicemonitor relabeling ability
   - port: metrics
     interval: {{ .Values.serviceMonitor.interval }}
     scheme: http
@@ -44,11 +47,14 @@ spec:
     relabelings:
 {{ toYaml .Values.serviceMonitor.relabelings | indent 4 }}
 {{- end }}
+<<<<<<< HEAD
 =======
     - port: metrics
       interval: {{ .Values.serviceMonitor.interval }}
       scheme: http
 >>>>>>> a79c45b... removed unnecessary values and added release namespace template value
+=======
+>>>>>>> 4c34ee8... added servicemonitor relabeling ability
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}
