@@ -1,4 +1,16 @@
 ---
+# Source: provisioner/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-static-provisioner
+  namespace: default
+  labels:
+    helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+---
 # Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -17,7 +29,7 @@ metadata:
     helm.sh/chart: provisioner-3.0.0
 >>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 >>>>>>> generated new example files from helm hack/generated_examples.sh
 data:
@@ -29,40 +41,36 @@ data:
          - "/scripts/shred.sh"
          - "2"
        volumeMode: Block
-
 ---
 # Source: provisioner/templates/storageclass.yaml
-
----
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    app.kubernetes.io/managed-by: "Tiller"
+    app.kubernetes.io/managed-by: "Helm"
     app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
-
 ---
-# Source: provisioner/templates/serviceaccount.yaml
-
-apiVersion: v1
-kind: ServiceAccount
+# Source: provisioner/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: local-static-provisioner
-  namespace: default
+  name: local-static-provisioner-node-clusterrole
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
-
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
 ---
 # Source: provisioner/templates/rbac.yaml
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -70,7 +78,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -81,20 +89,7 @@ roleRef:
   name: system:persistent-volume-provisioner
   apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: local-static-provisioner-node-clusterrole
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
-    app.kubernetes.io/instance: local-static-provisioner
-rules:
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get"]
----
+# Source: provisioner/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -102,7 +97,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -112,10 +107,8 @@ roleRef:
   kind: ClusterRole
   name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
-
 ---
 # Source: provisioner/templates/daemonset.yaml
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -134,7 +127,7 @@ metadata:
     helm.sh/chart: provisioner-3.0.0
 >>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 >>>>>>> generated new example files from helm hack/generated_examples.sh
 spec:
@@ -191,6 +184,7 @@ spec:
         - name: local-storage
           hostPath:
             path: /mnt/disks
+<<<<<<< HEAD
 <<<<<<< HEAD
 ---
 apiVersion: storage.k8s.io/v1
@@ -278,3 +272,5 @@ roleRef:
 # Source: provisioner/templates/servicemonitor.yaml
 
 
+=======
+>>>>>>> changed generated_examples to helm v3

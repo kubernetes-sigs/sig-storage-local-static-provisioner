@@ -1,5 +1,42 @@
 ---
+# Source: provisioner/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-static-provisioner-config
+  namespace: default
+  labels:
+    helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+data:
+  useAlphaAPI: "true"
+  useNodeNameOnly: "true"
+  storageClassMap: |
+    local-scsi:
+       hostDir: /mnt/disks
+       mountDir: /mnt/disks
+
+---
+# Source: provisioner/templates/storageclass.yaml
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-scsi
+  labels:
+    app.kubernetes.io/managed-by: "Tiller"
+    app.kubernetes.io/instance: "local-static-provisioner"
+    helm.sh/chart: provisioner-3.0.0
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
 # Source: provisioner/templates/serviceaccount.yaml
+
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -8,74 +45,75 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
+
 ---
-# Source: provisioner/templates/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
+# Source: provisioner/templates/rbac.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
-  name: local-static-provisioner-config
-  namespace: default
+  name: local-static-provisioner-pv-binding
   labels:
-<<<<<<< HEAD
-<<<<<<< HEAD
-    heritage: "Tiller"
-    release: "RELEASE-NAME"
-    chart: provisioner-2.3.4
-=======
-    helm.sh/chart: provisioner-2.3.4
-=======
     helm.sh/chart: provisioner-3.0.0
->>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
->>>>>>> generated new example files from helm hack/generated_examples.sh
-data:
-  storageClassMap: |
-    local-storage:
-       hostDir: /mnt/disks
-       mountDir: /mnt/disks
-       blockCleanerCommand:
-         - "/scripts/quick_reset.sh"
-       volumeMode: Block
+subjects:
+- kind: ServiceAccount
+  name: local-static-provisioner
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: system:persistent-volume-provisioner
+  apiGroup: rbac.authorization.k8s.io
 ---
-# Source: provisioner/templates/storageclass.yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: local-storage
+  name: local-static-provisioner-node-clusterrole
   labels:
-    app.kubernetes.io/managed-by: "Helm"
-    app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-static-provisioner-node-binding
+  labels:
+    helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+subjects:
+- kind: ServiceAccount
+  name: local-static-provisioner
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: local-static-provisioner-node-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: provisioner/templates/daemonset.yaml
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-<<<<<<< HEAD
-<<<<<<< HEAD
-    app: local-volume-provisioner
-    heritage: "Tiller"
-    release: "RELEASE-NAME"
-    chart: provisioner-2.3.4
-=======
-    helm.sh/chart: provisioner-2.3.4
-=======
     helm.sh/chart: provisioner-3.0.0
->>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
->>>>>>> generated new example files from helm hack/generated_examples.sh
 spec:
   selector:
     matchLabels:
@@ -89,7 +127,7 @@ spec:
     spec:
       serviceAccountName: local-static-provisioner
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
+        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
           name: provisioner
           securityContext:
             privileged: true
@@ -103,7 +141,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
+            value: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
           volumeMounts:
             - mountPath: /etc/provisioner/config
               name: provisioner-config
@@ -111,7 +149,7 @@ spec:
             - mountPath: /dev
               name: provisioner-dev
             - mountPath: /mnt/disks
-              name: local-storage
+              name: local-scsi
               mountPropagation: "HostToContainer"
       volumes:
         - name: provisioner-config
@@ -120,41 +158,15 @@ spec:
         - name: provisioner-dev
           hostPath:
             path: /dev
-        - name: local-storage
+        - name: local-scsi
           hostPath:
             path: /mnt/disks
-<<<<<<< HEAD
-<<<<<<< HEAD
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: local-storage
-  labels:
-    heritage: "Tiller"
-    release: "RELEASE-NAME"
-    chart: provisioner-2.3.4
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
-
----
-# Source: provisioner/templates/namespace.yaml
-
-=======
->>>>>>> generated new example files from helm hack/generated_examples.sh
 
 ---
 # Source: provisioner/templates/psp.yaml
 
 
 ---
-# Source: provisioner/templates/rbac.yaml
-
-
----
 # Source: provisioner/templates/servicemonitor.yaml
 
 
-=======
->>>>>>> changed generated_examples to helm v3
