@@ -51,8 +51,13 @@ FILES=$(ls examples/)
 for f in $FILES; do
     input="examples/$f"
     generated="generated_examples/$f"
+<<<<<<< HEAD
     printf "Generating with helm v${HELM_VERSION} %s from %s\n" $generated $input
     $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
+=======
+    printf "Generating %s from %s\n" $generated $input
+    $HELM_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > generated_examples/$f
+>>>>>>> 9a269d5... added release-name and namespace to template generator script
 done
 
 echo "Done."
