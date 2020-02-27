@@ -3,21 +3,17 @@
 #
 common:
   #
-  # Defines whether to generate rbac roles
+  # Defines whether to generate service account and role bindings.
   #
-  rbac:
-    # rbac.create: `true` if rbac resources should be created
-    create: true
-    # rbac.pspEnabled: `true` if PodSecurityPolicy resources should be created
-    pspEnabled: false
+  rbac: true
   #
-  # Defines whether to generate a serviceAccount
+  # Defines the namespace where provisioner runs
   #
-  serviceAccount:
-    # serviceAccount.create: Whether to create a service account or not
-    create: true
-    # serviceAccount.name: The name of the service account to create or use
-    name: ""
+  namespace: default
+  #
+  # Defines whether to create provisioner namespace
+  #
+  createNamespace: false
   #
   # Beta PV.NodeAffinity field is used by default. If running against pre-1.10
   # k8s version, the `useAlphaAPI` flag must be enabled in the configMap.
@@ -46,6 +42,10 @@ common:
   # Defines the name of configmap used by Provisioner
   #
   configMapName: "local-provisioner-config"
+  #
+  # Enables or disables Pod Security Policy creation and binding
+  #
+  podSecurityPolicy: false
 #
 # Configure storage classes.
 #
@@ -77,15 +77,20 @@ classes:
   # or blkdiscard utility by uncommenting the line below.
   #  - "/scripts/blkdiscard.sh"
   # Uncomment to create storage class object with default configuration.
-  storageClass: true
+  # storageClass: true
   # Uncomment to create storage class object and configure it.
   # storageClass:
     # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
     # isDefaultClass: true # set as default class
+
 #
 # Configure DaemonSet for provisioner.
 #
 daemonset:
+  #
+  # Defines the name of a Provisioner
+  #
+  name: "local-volume-provisioner"
   #
   # Defines Provisioner's image name including container registry.
   #
@@ -94,6 +99,10 @@ daemonset:
   # Defines Image download policy, see kubernetes documentation for available values.
   #
   #imagePullPolicy: Always
+  #
+  # Defines a name of the service account which Provisioner will use to communicate with API server.
+  #
+  serviceAccount: local-storage-admin
   #
   # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
   #
@@ -125,23 +134,24 @@ daemonset:
   #
   # If configured, resources will set the requests/limits field to the Daemonset PodSpec.
   # Ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  resources: []
-    # limits:
-    #   memory: "512Mi"
-    #   cpu: "1000m"
-    # requests:
-    #   memory: "32Mi"
-    #   cpu: "10m"
+  resources: {}
 #
 # Configure Prometheus monitoring
 #
-serviceMonitor:
-  enabled: false
-  ## Interval at which Prometheus scrapes the provisioner
-  interval: 10s
-  # Namespace Prometheus is installed in defaults to release namespace
-  namespace:
-  ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
-  ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
-  ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
-  additionalLabels: {}
+prometheus:
+  operator:
+    ## Are you using Prometheus Operator?
+    enabled: false
+
+    serviceMonitor:
+      ## Interval at which Prometheus scrapes the provisioner
+      interval: 10s
+
+      # Namespace Prometheus is installed in
+      namespace: monitoring
+
+      ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
+      ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
+      ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
+      selector:
+        prometheus: kube-prometheus
