@@ -23,7 +23,7 @@ OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 OUTPUT=${ROOT}/_output
 OUTPUT_BIN=${OUTPUT}/${OS}/${ARCH}
-HELM_VERSION=2.7.2
+HELM_VERSION=2.16.1
 DEP_VERSION=0.5.0
 DEP_BIN=$OUTPUT_BIN/dep
 HELM_BIN=$OUTPUT_BIN/helm
@@ -47,7 +47,7 @@ function hack::install_helm() {
     fi
     local OS=$(uname | tr A-Z a-z)
     local ARCH=amd64
-    local HELM_URL=http://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
+    local HELM_URL=https://get.helm.sh/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
     curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm
 }
 
