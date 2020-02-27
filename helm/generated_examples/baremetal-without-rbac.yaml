@@ -1,14 +1,21 @@
 ---
-# Source: provisioner/templates/provisioner.yaml
+# Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: local-provisioner-config
+  name: local-static-provisioner-config
   namespace: default
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 data:
   storageClassMap: |
     local-storage:
@@ -17,27 +24,69 @@ data:
        blockCleanerCommand:
          - "/scripts/quick_reset.sh"
        volumeMode: Block
+
+---
+# Source: provisioner/templates/storageclass.yaml
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+  labels:
+    app.kubernetes.io/managed-by: "Tiller"
+    app.kubernetes.io/instance: "local-static-provisioner"
+    helm.sh/chart: provisioner-2.3.4
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
+# Source: provisioner/templates/serviceaccount.yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-static-provisioner
+  namespace: default
+  labels:
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+
+---
+# Source: provisioner/templates/daemonset.yaml
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: local-volume-provisioner
+  name: local-static-provisioner
   namespace: default
   labels:
+<<<<<<< HEAD
     app: local-volume-provisioner
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 spec:
   selector:
     matchLabels:
-      app: local-volume-provisioner
+      app.kubernetes.io/name: provisioner
+      app.kubernetes.io/instance: local-static-provisioner
   template:
     metadata:
       labels:
-        app: local-volume-provisioner
+        app.kubernetes.io/name: provisioner
+        app.kubernetes.io/instance: local-static-provisioner
     spec:
-      serviceAccountName: local-storage-admin
+      serviceAccountName: local-static-provisioner
       containers:
         - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           name: provisioner
@@ -66,13 +115,14 @@ spec:
       volumes:
         - name: provisioner-config
           configMap:
-            name: local-provisioner-config
+            name: local-static-provisioner-config
         - name: provisioner-dev
           hostPath:
             path: /dev
         - name: local-storage
           hostPath:
             path: /mnt/disks
+<<<<<<< HEAD
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -89,16 +139,18 @@ reclaimPolicy: Delete
 ---
 # Source: provisioner/templates/namespace.yaml
 
+=======
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 
 ---
-# Source: provisioner/templates/pod-security-policy.yaml
-
-
----
-# Source: provisioner/templates/provisioner-cluster-role-binding.yaml
+# Source: provisioner/templates/psp.yaml
 
 
 ---
-# Source: provisioner/templates/provisioner-service-account.yaml
+# Source: provisioner/templates/rbac.yaml
+
+
+---
+# Source: provisioner/templates/servicemonitor.yaml
 
 

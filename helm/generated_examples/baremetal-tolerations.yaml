@@ -1,14 +1,21 @@
 ---
-# Source: provisioner/templates/provisioner.yaml
+# Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: local-provisioner-config
+  name: local-static-provisioner-config
   namespace: default
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 data:
   storageClassMap: |
     local-storage:
@@ -18,7 +25,9 @@ data:
          - "/scripts/shred.sh"
          - "2"
        volumeMode: Block
+
 ---
+<<<<<<< HEAD
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -77,46 +86,70 @@ spec:
         - name: local-storage
           hostPath:
             path: /mnt/disks
+=======
+# Source: provisioner/templates/storageclass.yaml
+
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    app.kubernetes.io/managed-by: "Tiller"
+    app.kubernetes.io/instance: "local-static-provisioner"
+    helm.sh/chart: provisioner-2.3.4
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 
 ---
-# Source: provisioner/templates/provisioner-service-account.yaml
+# Source: provisioner/templates/serviceaccount.yaml
 
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: local-storage-admin
+  name: local-static-provisioner
   namespace: default
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 
 ---
-# Source: provisioner/templates/provisioner-cluster-role-binding.yaml
+# Source: provisioner/templates/rbac.yaml
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: local-storage-provisioner-pv-binding
+  name: local-static-provisioner-pv-binding
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 subjects:
 - kind: ServiceAccount
-  name: local-storage-admin
+  name: local-static-provisioner
   namespace: default
 roleRef:
   kind: ClusterRole
@@ -126,11 +159,18 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: local-storage-provisioner-node-clusterrole
+  name: local-static-provisioner-node-clusterrole
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 rules:
 - apiGroups: [""]
   resources: ["nodes"]
@@ -139,25 +179,96 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: local-storage-provisioner-node-binding
+  name: local-static-provisioner-node-binding
   labels:
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+>>>>>>> generated new example files from helm hack/generated_examples.sh
 subjects:
 - kind: ServiceAccount
-  name: local-storage-admin
+  name: local-static-provisioner
   namespace: default
 roleRef:
   kind: ClusterRole
-  name: local-storage-provisioner-node-clusterrole
+  name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
 
 ---
-# Source: provisioner/templates/namespace.yaml
+# Source: provisioner/templates/daemonset.yaml
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-static-provisioner
+  namespace: default
+  labels:
+    helm.sh/chart: provisioner-2.3.4
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: provisioner
+      app.kubernetes.io/instance: local-static-provisioner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: provisioner
+        app.kubernetes.io/instance: local-static-provisioner
+    spec:
+      serviceAccountName: local-static-provisioner
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+      containers:
+        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+          name: provisioner
+          securityContext:
+            privileged: true
+          env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: JOB_CONTAINER_IMAGE
+            value: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+          volumeMounts:
+            - mountPath: /etc/provisioner/config
+              name: provisioner-config
+              readOnly: true
+            - mountPath: /dev
+              name: provisioner-dev
+            - mountPath: /mnt/disks
+              name: local-storage
+              mountPropagation: "HostToContainer"
+      volumes:
+        - name: provisioner-config
+          configMap:
+            name: local-static-provisioner-config
+        - name: provisioner-dev
+          hostPath:
+            path: /dev
+        - name: local-storage
+          hostPath:
+            path: /mnt/disks
+
+---
+# Source: provisioner/templates/psp.yaml
 
 
 ---
-# Source: provisioner/templates/pod-security-policy.yaml
+# Source: provisioner/templates/servicemonitor.yaml
 
 
