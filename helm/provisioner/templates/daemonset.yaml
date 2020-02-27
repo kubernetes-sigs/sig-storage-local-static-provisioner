@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "provisioner.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ template "provisioner.chart" . }}
+    app.kubernetes.io/name: {{ template "provisioner.name" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "provisioner.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ template "provisioner.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ template "provisioner.serviceAccountName" . }}
+{{- if .Values.daemonset.priorityClassName }}
+      priorityClassName: {{.Values.daemonset.priorityClassName}}
+{{- end }}
+{{- if .Values.daemonset.nodeSelector }}
+      nodeSelector:
+{{ .Values.daemonset.nodeSelector | toYaml | trim | indent 8 }}
+{{- end }}
+{{- if .Values.daemonset.tolerations }}
+      tolerations:
+{{ .Values.daemonset.tolerations | toYaml | trim | indent 8 }}
+{{- end }}
+      containers:
+        - image: "{{ .Values.daemonset.image }}"
+          {{- if .Values.daemonset.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.daemonset.imagePullPolicy | quote }}
+          {{- end }}
+          name: provisioner
+          securityContext:
+            privileged: true
+{{- if .Values.daemonset.resources }}
+          resources:
+{{ .Values.daemonset.resources | toYaml | trim | indent 12 }}
+{{- end }}
+          env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: JOB_CONTAINER_IMAGE
+            value: "{{ .Values.daemonset.image }}"
+          {{- if .Values.daemonset.kubeConfigEnv }}
+            - name: KUBECONFIG
+              value: {{.Values.daemonset.kubeConfigEnv}}
+          {{- end }}
+          {{- if .Values.serviceMonitor.enabled }}
+          ports:
+          - containerPort: 8080
+            name: metrics
+          {{- end }}
+          volumeMounts:
+            - mountPath: /etc/provisioner/config
+              name: provisioner-config
+              readOnly: true
+            - mountPath: /dev
+              name: provisioner-dev
+            {{- range $classConfig := .Values.classes }}
+            - mountPath: {{ if $classConfig.mountDir }} {{- $classConfig.mountDir -}} {{ else }} {{- $classConfig.hostDir -}} {{ end }}
+              name: {{ $classConfig.name }}
+              mountPropagation: "HostToContainer"
+            {{- end }}
+      volumes:
+        - name: provisioner-config
+          configMap:
+            name: {{ template "provisioner.fullname" . }}-config
+        - name: provisioner-dev
+          hostPath:
+            path: /dev
+        {{- range $classConfig := .Values.classes }}
+        - name: {{ $classConfig.name }}
+          hostPath:
+            path: {{ $classConfig.hostDir }}
+        {{- end }}
