@@ -7,11 +7,15 @@ metadata:
   namespace: default
   labels:
 <<<<<<< HEAD
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
 =======
     helm.sh/chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -97,8 +101,12 @@ metadata:
 =======
     app.kubernetes.io/managed-by: "Tiller"
     app.kubernetes.io/instance: "local-static-provisioner"
+<<<<<<< HEAD
     helm.sh/chart: provisioner-2.3.4
 >>>>>>> generated new example files from helm hack/generated_examples.sh
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -113,11 +121,15 @@ metadata:
   namespace: default
   labels:
 <<<<<<< HEAD
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
 =======
     helm.sh/chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -132,11 +144,15 @@ metadata:
   name: local-static-provisioner-pv-binding
   labels:
 <<<<<<< HEAD
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
 =======
     helm.sh/chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -156,11 +172,15 @@ metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
 <<<<<<< HEAD
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
 =======
     helm.sh/chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -176,11 +196,15 @@ metadata:
   name: local-static-provisioner-node-binding
   labels:
 <<<<<<< HEAD
+<<<<<<< HEAD
     heritage: "Tiller"
     release: "RELEASE-NAME"
     chart: provisioner-2.3.4
 =======
     helm.sh/chart: provisioner-2.3.4
+=======
+    helm.sh/chart: provisioner-3.0.0
+>>>>>>> generated new example files as chart version changed
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -203,7 +227,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.3.4
+    helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
