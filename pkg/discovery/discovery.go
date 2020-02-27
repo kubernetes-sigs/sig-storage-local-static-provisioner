@@ -307,6 +307,13 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			continue
 		}
 
+		// remove old cleanup status
+		_, _, err = d.CleanupTracker.RemoveStatus(pvName, usejob)
+		if err != nil {
+			klog.Errorf("expected status exists and fail to remove cleanup status for pv %s", pvName)
+			continue
+		}
+
 		mountOptions, err := d.getMountOptionsFromStorageClass(class)
 		if err != nil {
 			discoErrors = append(discoErrors, fmt.Errorf("failed to get mount options from storage class %s: %v", class, err))
