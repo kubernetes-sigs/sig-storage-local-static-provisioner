@@ -206,7 +206,10 @@ provisioner chart and their default values.
 | serviceMonitor.interval                      | Interval at which Prometheus scrapes the provisioner                                                  | str      | `10s`                                                      |
 | serviceMonitor.namespace                     | The namespace Prometheus servicemonitor will be installed                                             | str      | `.Release.Namespace`                                       |
 | serviceMonitor.additionalLabels              | Additional labels for the servicemonitor                                                              | map      | `-`                                                        |
+<<<<<<< HEAD
 | serviceMonitor.relabelings                   | Additional metrics relabel_config                                                                     | lists    | `-`                                                        |
+=======
+>>>>>>> c18d567... adjust README to match the new helm values
 | nameOverride                                 | Override default chartname                                                                            | str      | `""`                                                       |
 | fullnameOverride                             | Override default releasename                                                                          | str      | `""`                                                       |
 
