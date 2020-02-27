@@ -1,16 +1,4 @@
 ---
-# Source: provisioner/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: local-static-provisioner
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
----
 # Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -20,7 +8,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 data:
   storageClassMap: |
@@ -31,36 +19,40 @@ data:
          - "/scripts/shred.sh"
          - "2"
        volumeMode: Block
+
 ---
 # Source: provisioner/templates/storageclass.yaml
+
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/managed-by: "Tiller"
     app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
+
 ---
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+# Source: provisioner/templates/serviceaccount.yaml
+
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: local-static-provisioner-node-clusterrole
+  name: local-static-provisioner
+  namespace: default
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
-rules:
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get"]
+
 ---
 # Source: provisioner/templates/rbac.yaml
+
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -68,7 +60,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -79,7 +71,20 @@ roleRef:
   name: system:persistent-volume-provisioner
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: provisioner/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-static-provisioner-node-clusterrole
+  labels:
+    helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -87,7 +92,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -97,29 +102,10 @@ roleRef:
   kind: ClusterRole
   name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
----
-# Source: provisioner/templates/servicemonitor.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: local-static-provisioner
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-spec:
-  type: ClusterIP
-  ports:
-    - port: 8080
-      targetPort: 8080
-      name: metrics
-  selector:
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/instance: local-static-provisioner
+
 ---
 # Source: provisioner/templates/daemonset.yaml
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -128,7 +114,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
@@ -147,6 +133,13 @@ spec:
           name: provisioner
           securityContext:
             privileged: true
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi
           env:
           - name: MY_NODE_NAME
             valueFrom:
@@ -158,9 +151,6 @@ spec:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
             value: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
-          ports:
-          - containerPort: 8080
-            name: metrics
           volumeMounts:
             - mountPath: /etc/provisioner/config
               name: provisioner-config
@@ -180,28 +170,12 @@ spec:
         - name: local-storage
           hostPath:
             path: /mnt/disks
+
+---
+# Source: provisioner/templates/psp.yaml
+
+
 ---
 # Source: provisioner/templates/servicemonitor.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: local-static-provisioner
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-spec:
-  jobLabel: app.kubernetes.io/name
-  endpoints:
-  - port: metrics
-    interval: 10s
-    scheme: http
-  namespaceSelector:
-    matchNames:
-      - default
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: provisioner
-      app.kubernetes.io/instance: local-static-provisioner
+
+
