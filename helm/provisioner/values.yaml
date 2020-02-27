@@ -3,17 +3,21 @@
 #
 common:
   #
-  # Defines whether to generate service account and role bindings.
+  # Defines whether to generate rbac roles
   #
-  rbac: true
+  rbac:
+    # rbac.create: `true` if rbac resources should be created
+    create: true
+    # rbac.pspEnabled: `true` if PodSecurityPolicy resources should be created
+    pspEnabled: false
   #
-  # Defines the namespace where provisioner runs
+  # Defines whether to generate a serviceAccount
   #
-  namespace: default
-  #
-  # Defines whether to create provisioner namespace
-  #
-  createNamespace: false
+  serviceAccount:
+    # serviceAccount.create: Whether to create a service account or not
+    create: true
+    # serviceAccount.name: The name of the service account to create or use
+    name: ""
   #
   # Beta PV.NodeAffinity field is used by default. If running against pre-1.10
   # k8s version, the `useAlphaAPI` flag must be enabled in the configMap.
@@ -38,14 +42,6 @@ common:
   # 2*minResyncPeriod. Default: 5m0s.
   #
   #minResyncPeriod: 5m0s
-  #
-  # Defines the name of configmap used by Provisioner
-  #
-  configMapName: "local-provisioner-config"
-  #
-  # Enables or disables Pod Security Policy creation and binding
-  #
-  podSecurityPolicy: false
 #
 # Configure storage classes.
 #
@@ -82,27 +78,18 @@ classes:
   # storageClass:
     # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
     # isDefaultClass: true # set as default class
-
 #
 # Configure DaemonSet for provisioner.
 #
 daemonset:
   #
-  # Defines the name of a Provisioner
-  #
-  name: "local-volume-provisioner"
-  #
   # Defines Provisioner's image name including container registry.
   #
-  image: quay.io/external_storage/local-volume-provisioner:v2.3.4
+  image: quay.io/external_storage/local-volume-provisioner:v2.3.3
   #
   # Defines Image download policy, see kubernetes documentation for available values.
   #
   #imagePullPolicy: Always
-  #
-  # Defines a name of the service account which Provisioner will use to communicate with API server.
-  #
-  serviceAccount: local-storage-admin
   #
   # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
   #
@@ -135,23 +122,35 @@ daemonset:
   # If configured, resources will set the requests/limits field to the Daemonset PodSpec.
   # Ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   resources: {}
+    # limits:
+    #   memory: "512Mi"
+    #   cpu: "1000m"
+    # requests:
+    #   memory: "32Mi"
+    #   cpu: "10m"
 #
 # Configure Prometheus monitoring
 #
-prometheus:
-  operator:
-    ## Are you using Prometheus Operator?
-    enabled: false
+serviceMonitor:
+  enabled: false
+  ## Interval at which Prometheus scrapes the provisioner
+  interval: 10s
+  # Namespace Prometheus is installed in defaults to release namespace
+  namespace:
+  ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
+  ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
+  ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
+  additionalLabels: {}
+  relabelings: []
+  # - sourceLabels: [__meta_kubernetes_pod_node_name]
+  #   separator: ;
+  #   regex: ^(.*)$
+  #   targetLabel: nodename
+  #   replacement: $1
+  #   action: replace
 
-    serviceMonitor:
-      ## Interval at which Prometheus scrapes the provisioner
-      interval: 10s
-
-      # Namespace Prometheus is installed in
-      namespace: monitoring
-
-      ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
-      ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
-      ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
-      selector:
-        prometheus: kube-prometheus
+#
+# Overrice the default chartname or releasename
+#
+nameOverride: ""
+fullnameOverride: ""
