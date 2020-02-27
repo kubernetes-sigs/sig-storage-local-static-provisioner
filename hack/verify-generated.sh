@@ -41,7 +41,7 @@ function test_values_file() {
     local expected="generated_examples/$1"
     local tmpfile=$(mktemp)
     trap "test -f $tmpfile && rm $tmpfile || true" EXIT
-    $HELM_BIN template ./provisioner -f examples/$f > $tmpfile
+    $HELM_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > $tmpfile
     echo -n "Checking $input "
     local diff=$(diff -u $expected $tmpfile 2>&1) || true
     if [[ -n "${diff}" ]]; then
