@@ -36,6 +36,7 @@ metadata:
 spec:
   jobLabel: app.kubernetes.io/name
   endpoints:
+<<<<<<< HEAD
   - port: metrics
     interval: {{ .Values.serviceMonitor.interval }}
     scheme: http
@@ -43,6 +44,11 @@ spec:
     relabelings:
 {{ toYaml .Values.serviceMonitor.relabelings | indent 4 }}
 {{- end }}
+=======
+    - port: metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+      scheme: http
+>>>>>>> a79c45b... removed unnecessary values and added release namespace template value
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}
