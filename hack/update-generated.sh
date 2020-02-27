@@ -35,12 +35,24 @@ sure generated files are what you expected.
 EOF
 echo "*** IMPORTANT NOTE ***"
 
+echo "====== HELM v2 ========"
+
+FILES=$(ls examples/)
+for f in $FILES; do
+    input="examples/$f"
+    generated="generated_examples/helm2/$f"
+    printf "Generating with helm v${HELM2_VERSION} %s from %s\n" $generated $input
+    $HELM2_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > $generated
+done
+
+echo "====== HELM v3 ========"
+
 FILES=$(ls examples/)
 for f in $FILES; do
     input="examples/$f"
     generated="generated_examples/$f"
-    printf "Generating %s from %s\n" $generated $input
-    $HELM_BIN template ./provisioner -f examples/$f > generated_examples/$f
+    printf "Generating with helm v${HELM_VERSION} %s from %s\n" $generated $input
+    $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
 done
 
 echo "Done."
