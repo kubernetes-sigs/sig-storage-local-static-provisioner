@@ -207,9 +207,13 @@ provisioner chart and their default values.
 | serviceMonitor.namespace                     | The namespace Prometheus servicemonitor will be installed                                             | str      | `.Release.Namespace`                                       |
 | serviceMonitor.additionalLabels              | Additional labels for the servicemonitor                                                              | map      | `-`                                                        |
 <<<<<<< HEAD
+<<<<<<< HEAD
 | serviceMonitor.relabelings                   | Additional metrics relabel_config                                                                     | lists    | `-`                                                        |
 =======
 >>>>>>> c18d567... adjust README to match the new helm values
+=======
+| serviceMonitor.relabelings                   | Additional metrics relabel_config                                                                     | lists    | `-`                                                        |
+>>>>>>> 4c93048... added servicemonitor relabeling ability
 | nameOverride                                 | Override default chartname                                                                            | str      | `""`                                                       |
 | fullnameOverride                             | Override default releasename                                                                          | str      | `""`                                                       |
 
