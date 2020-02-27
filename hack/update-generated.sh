@@ -40,7 +40,7 @@ for f in $FILES; do
     input="examples/$f"
     generated="generated_examples/$f"
     printf "Generating %s from %s\n" $generated $input
-    $HELM_BIN template ./provisioner -f examples/$f > generated_examples/$f
+    $HELM_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > generated_examples/$f
 done
 
 echo "Done."
