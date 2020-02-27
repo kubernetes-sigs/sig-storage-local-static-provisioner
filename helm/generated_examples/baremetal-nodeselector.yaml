@@ -124,7 +124,7 @@ spec:
       nodeSelector:
         localVolume: present
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           name: provisioner
           securityContext:
             privileged: true
@@ -138,7 +138,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.3"
+            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           volumeMounts:
             - mountPath: /etc/provisioner/config
               name: provisioner-config
