@@ -138,20 +138,19 @@ daemonset:
 #
 # Configure Prometheus monitoring
 #
-prometheus:
-  operator:
-    ## Are you using Prometheus Operator?
-    enabled: false
+serviceMonitor:
+  enabled: false
+  ## Interval at which Prometheus scrapes the provisioner
+  interval: 10s
+  # Namespace Prometheus is installed in defaults to release namespace
+  namespace:
+  ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
+  ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
+  ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
+  additionalLabels: {}
 
-    serviceMonitor:
-      ## Interval at which Prometheus scrapes the provisioner
-      interval: 10s
-
-      # Namespace Prometheus is installed in
-      namespace: monitoring
-
-      ## Defaults to whats used if you follow CoreOS [Prometheus Install Instructions](https://github.com/coreos/prometheus-operator/tree/master/helm#tldr)
-      ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
-      ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
-      selector:
-        prometheus: kube-prometheus
+#
+# Overrice the default chartname or releasename
+#
+nameOverride: ""
+fullnameOverride: ""
