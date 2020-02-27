@@ -304,9 +304,9 @@ metadata:
 spec:
   jobLabel: app.kubernetes.io/name
   endpoints:
-    - port: metrics
-      interval: 10s
-      scheme: http
+  - port: metrics
+    interval: 10s
+    scheme: http
   namespaceSelector:
     matchNames:
       - default
