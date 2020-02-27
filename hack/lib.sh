@@ -24,11 +24,16 @@ ARCH=$(go env GOARCH)
 OUTPUT=${ROOT}/_output
 OUTPUT_BIN=${OUTPUT}/${OS}/${ARCH}
 <<<<<<< HEAD
+<<<<<<< HEAD
 HELM2_VERSION=2.16.1
 HELM_VERSION=3.1.0
 =======
 HELM_VERSION=2.16.1
 >>>>>>> 0bfde20... changed helm url and version to latest v2.16.1
+=======
+HELM2_VERSION=2.16.1
+HELM_VERSION=3.1.0
+>>>>>>> c380ca3... changed update- and verify-generated.sh to create and check helm v2/v3. Set helm v3 as default
 DEP_VERSION=0.5.0
 DEP_BIN=$OUTPUT_BIN/dep
 HELM2_BIN=$OUTPUT_BIN/helm2
@@ -59,12 +64,18 @@ function hack::install_helm() {
     local OS=$(uname | tr A-Z a-z)
     local ARCH=amd64
 <<<<<<< HEAD
+<<<<<<< HEAD
     local HELM_URL=https://get.helm.sh/helm-v${HELM2_VERSION}-${OS}-${ARCH}.tar.gz
     curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm && mv $OUTPUT_BIN/helm $OUTPUT_BIN/helm2
 		local HELM_URL=https://get.helm.sh/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
 =======
     local HELM_URL=https://get.helm.sh/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
 >>>>>>> 0bfde20... changed helm url and version to latest v2.16.1
+=======
+    local HELM_URL=https://get.helm.sh/helm-v${HELM2_VERSION}-${OS}-${ARCH}.tar.gz
+    curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm && mv $OUTPUT_BIN/helm $OUTPUT_BIN/helm2
+		local HELM_URL=https://get.helm.sh/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
+>>>>>>> c380ca3... changed update- and verify-generated.sh to create and check helm v2/v3. Set helm v3 as default
     curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm
 }
 

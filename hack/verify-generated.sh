@@ -60,11 +60,16 @@ function test_values_file() {
     local tmpfile=$(mktemp)
     trap "test -f $tmpfile && rm $tmpfile || true" EXIT
 <<<<<<< HEAD
+<<<<<<< HEAD
     #echo "$HELM_BIN"
     $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $tmpfile
 =======
     $HELM_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > $tmpfile
 >>>>>>> 7236d38... added helm release-name and namespace to verify-generated.sh
+=======
+    #echo "$HELM_BIN"
+    $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $tmpfile
+>>>>>>> c380ca3... changed update- and verify-generated.sh to create and check helm v2/v3. Set helm v3 as default
     echo -n "Checking $input "
     local diff=$(diff -u $expected $tmpfile 2>&1) || true
     if [[ -n "${diff}" ]]; then
