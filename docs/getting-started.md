@@ -13,6 +13,7 @@ on older versions, please see version links under
   * [Option 2: GKE](#option-2-gke)
   * [Option 3: Baremetal environments](#option-3-baremetal-environments)
   * [Option 4: Local test cluster](#option-4-local-test-cluster)
+  * [Option 5: EKS (experimental)](#option-5-eks-experimental)
 - [Step 2: Creating a StorageClass (1.9+)](#step-2-creating-a-storageclass-19)
 - [Step 3: Creating local persistent volumes](#step-3-creating-local-persistent-volumes)
   * [Option 1: Using the local volume static provisioner](#option-1-using-the-local-volume-static-provisioner)
@@ -104,6 +105,16 @@ $ ALLOW_PRIVILEGED=true LOG_LEVEL=5 FEATURE_GATES=$KUBE_FEATURE_GATES hack/local
 See [running Kubernetes
 locally](https://github.com/kubernetes/community/blob/master/contributors/devel/running-locally.md)
 for more information.
+
+#### Option 5: EKS (experimental)
+
+[eks-nvme-ssd-provisioner](https://github.com/brunsgaard/eks-nvme-ssd-provisioner)
+runs as a DaemonSet and will automatically format and mount the requested local
+NVMe SSDs. 
+
+**Note:** This project mounts disks in `/pv-disks/$uuid`. There is a
+working example of storage local static provisioner resources in the
+eks-nvme-ssd-provisioner repo.
 
 ### Step 2: Creating a StorageClass (1.9+)
 
