@@ -23,7 +23,8 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-hack::install_helm
+hack::install_helm2
+hack::install_helm3
 
 cd helm
 
@@ -51,8 +52,8 @@ FILES=$(ls examples/)
 for f in $FILES; do
     input="examples/$f"
     generated="generated_examples/$f"
-    printf "Generating with helm v${HELM_VERSION} %s from %s\n" $generated $input
-    $HELM_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
+    printf "Generating with helm v${HELM3_VERSION} %s from %s\n" $generated $input
+    $HELM3_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $generated
 done
 
 echo "Done."
