@@ -14,7 +14,5 @@ classes:
   # - "/scripts/blkdiscard.sh"
   volumeMode: Block
   storageClass: true
-common:
-  namespace: kube-system
 daemonset:
   priorityClassName: system-node-critical

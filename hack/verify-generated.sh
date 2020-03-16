@@ -23,25 +23,44 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-hack::install_helm
+hack::install_helm2
+hack::install_helm3
 
 cd helm
 
 # lint first
 ret=0
-$HELM_BIN lint ./provisioner || ret=$?
+$HELM3_BIN lint ./provisioner || ret=$?
 if [ $ret -ne 0 ]; then
     echo "helm lint failed"
     exit 2
 fi
 
-# check examples
+# check examples helm2
+function test_values_helm2_file() {
+    local input="examples/$1"
+    local expected="generated_examples/helm2/$1"
+    local tmpfile=$(mktemp)
+    trap "test -f $tmpfile && rm $tmpfile || true" EXIT
+    $HELM2_BIN template -f examples/$f --name local-static-provisioner --namespace default ./provisioner > $tmpfile
+    echo -n "Checking $input "
+    local diff=$(diff -u $expected $tmpfile 2>&1) || true
+    if [[ -n "${diff}" ]]; then
+        echo "failed, diff: "
+        echo "$diff"
+        exit 1
+    else
+        echo "passed."
+    fi
+}
+
+# check examples helm3
 function test_values_file() {
     local input="examples/$1"
     local expected="generated_examples/$1"
     local tmpfile=$(mktemp)
     trap "test -f $tmpfile && rm $tmpfile || true" EXIT
-    $HELM_BIN template ./provisioner -f examples/$f > $tmpfile
+    $HELM3_BIN template --dry-run -f examples/$f local-static-provisioner --namespace default ./provisioner > $tmpfile
     echo -n "Checking $input "
     local diff=$(diff -u $expected $tmpfile 2>&1) || true
     if [[ -n "${diff}" ]]; then
@@ -54,6 +73,11 @@ function test_values_file() {
 }
 
 FILES=$(ls examples/)
+echo "==== HELM v2===="
+for f in $FILES; do
+    test_values_helm2_file $f
+done
+echo "==== HELM v3===="
 for f in $FILES; do
     test_values_file $f
 done

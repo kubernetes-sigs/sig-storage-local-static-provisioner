@@ -23,33 +23,56 @@ OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 OUTPUT=${ROOT}/_output
 OUTPUT_BIN=${OUTPUT}/${OS}/${ARCH}
-HELM_VERSION=2.7.2
+HELM2_VERSION=2.16.1
+HELM3_VERSION=3.1.2
 DEP_VERSION=0.5.0
 DEP_BIN=$OUTPUT_BIN/dep
-HELM_BIN=$OUTPUT_BIN/helm
+HELM2_BIN=$OUTPUT_BIN/helm2
+HELM3_BIN=$OUTPUT_BIN/helm3
 MISSPELL_VERSION=0.3.4
 MISSPELL_BIN=$OUTPUT_BIN/misspell
 
 test -d "$OUTPUT_BIN" || mkdir -p "$OUTPUT_BIN"
 
-function hack::verify_helm() {
-    if test -x "$HELM_BIN"; then
-        local v=$($HELM_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
-        [[ "$v" == "$HELM_VERSION" ]]
+# helm 2 verify and install
+function hack::verify_helm2() {
+		if test -x "$HELM2_BIN"; then
+        local v=$($HELM2_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
+        [[ "$v" == "$HELM2_VERSION" ]]
         return
     fi
     return 1
 }
-
-function hack::install_helm() {
-    if hack::verify_helm; then
+function hack::install_helm2() {
+    if hack::verify_helm2; then
         return 0
     fi
     local OS=$(uname | tr A-Z a-z)
     local ARCH=amd64
-    local HELM_URL=http://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-${OS}-${ARCH}.tar.gz
-    curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm
+    local HELM_URL=https://get.helm.sh/helm-v${HELM2_VERSION}-${OS}-${ARCH}.tar.gz
+    curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm && mv $OUTPUT_BIN/helm $OUTPUT_BIN/helm2
 }
+
+# helm 3 verify and install
+function hack::verify_helm3() {
+    if test -x "$HELM3_BIN"; then
+        local v=$($HELM3_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
+        [[ "$v" == "$HELM3_VERSION" ]]
+        return
+		fi
+		return 1
+}
+function hack::install_helm3() {
+    if hack::verify_helm3; then
+        return 0
+    fi
+    local OS=$(uname | tr A-Z a-z)
+    local ARCH=amd64
+    local HELM_URL=https://get.helm.sh/helm-v${HELM3_VERSION}-${OS}-${ARCH}.tar.gz
+    curl -s "$HELM_URL" | tar --strip-components 1 -C $OUTPUT_BIN -zxf - ${OS}-${ARCH}/helm && mv $OUTPUT_BIN/helm $OUTPUT_BIN/helm3
+}
+
+
 
 function hack::verify_dep() {
     if test -x "$DEP_BIN"; then
