@@ -1,0 +1,28 @@
+{{- $release := .Release }}
+{{- $chart := .Chart }}
+{{- range $val := .Values.classes }}
+{{- if $val.storageClass }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ $val.name }}
+  {{- if kindIs "map" $val.storageClass }}
+  {{- if $val.storageClass.isDefaultClass }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  {{- end }}
+  {{- end }}
+  labels:
+    app.kubernetes.io/managed-by: {{ $release.Service | quote }}
+    app.kubernetes.io/instance: {{ $release.Name | quote }}
+    helm.sh/chart: {{ replace "+" "_" $chart.Version | printf "%s-%s" $chart.Name }}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+{{- if kindIs "map" $val.storageClass }}
+reclaimPolicy: {{ $val.storageClass.reclaimPolicy | default "Delete" }}
+{{- else }}
+reclaimPolicy: Delete
+{{- end }}
+{{- end }}
+{{- end }}

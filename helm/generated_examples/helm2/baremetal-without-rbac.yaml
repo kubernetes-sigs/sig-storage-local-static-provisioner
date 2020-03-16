@@ -1,16 +1,4 @@
 ---
-# Source: provisioner/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: local-static-provisioner
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
----
 # Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -20,7 +8,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 data:
   storageClassMap: |
@@ -28,77 +16,42 @@ data:
        hostDir: /mnt/disks
        mountDir: /mnt/disks
        blockCleanerCommand:
-         - "/scripts/shred.sh"
-         - "2"
+         - "/scripts/quick_reset.sh"
        volumeMode: Block
+
 ---
 # Source: provisioner/templates/storageclass.yaml
+
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/managed-by: "Tiller"
     app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
+
 ---
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+# Source: provisioner/templates/serviceaccount.yaml
+
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: local-static-provisioner-node-clusterrole
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-rules:
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get"]
----
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: local-static-provisioner-pv-binding
-  labels:
-    helm.sh/chart: provisioner-3.0.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-subjects:
-- kind: ServiceAccount
   name: local-static-provisioner
   namespace: default
-roleRef:
-  kind: ClusterRole
-  name: system:persistent-volume-provisioner
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: local-static-provisioner-node-binding
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
-subjects:
-- kind: ServiceAccount
-  name: local-static-provisioner
-  namespace: default
-roleRef:
-  kind: ClusterRole
-  name: local-static-provisioner-node-clusterrole
-  apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: provisioner/templates/daemonset.yaml
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -107,7 +60,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-3.0.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
@@ -121,7 +74,6 @@ spec:
         app.kubernetes.io/instance: local-static-provisioner
     spec:
       serviceAccountName: local-static-provisioner
-      priorityClassName: priority-important
       containers:
         - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
           name: provisioner
@@ -157,3 +109,16 @@ spec:
         - name: local-storage
           hostPath:
             path: /mnt/disks
+
+---
+# Source: provisioner/templates/psp.yaml
+
+
+---
+# Source: provisioner/templates/rbac.yaml
+
+
+---
+# Source: provisioner/templates/servicemonitor.yaml
+
+
