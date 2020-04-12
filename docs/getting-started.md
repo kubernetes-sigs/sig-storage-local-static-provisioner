@@ -132,7 +132,7 @@ $ kubectl create -f deployment/kubernetes/example/default_example_storageclass.y
 
 1. Generate Provisioner's ServiceAccount, Roles, DaemonSet, and ConfigMap spec, and customize it.
 
-    This step uses helm templates to generate the specs.  See the [helm README](helm) for setup instructions.
+    This step uses helm templates to generate the specs.  See the [helm README](/helm/README.md) for setup instructions.
     To generate the provisioner's specs using the [default values](../helm/provisioner/values.yaml), run:
 
     ``` console
