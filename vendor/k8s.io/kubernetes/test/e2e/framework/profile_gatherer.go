@@ -25,10 +25,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	// TODO: Remove the following imports (ref: https://github.com/kubernetes/kubernetes/issues/81245)
+	e2essh "k8s.io/kubernetes/test/e2e/framework/ssh"
 )
 
 const (
-	// Default value for how long the CPU profile is gathered for.
+	// DefaultCPUProfileSeconds is default value for how long the CPU profile is gathered for.
 	DefaultCPUProfileSeconds = 30
 )
 
@@ -93,7 +96,7 @@ func gatherProfile(componentName, profileBaseName, profileKind string) error {
 
 	// Get the profile data over SSH.
 	getCommand := fmt.Sprintf("curl -s localhost:%v/debug/pprof/%s", profilePort, profileKind)
-	sshResult, err := SSH(getCommand, GetMasterHost()+":22", TestContext.Provider)
+	sshResult, err := e2essh.SSH(getCommand, GetMasterHost()+":22", TestContext.Provider)
 	if err != nil {
 		return fmt.Errorf("Failed to execute curl command on master through SSH: %v", err)
 	}
@@ -168,10 +171,12 @@ func gatherProfile(componentName, profileBaseName, profileKind string) error {
 // that the function finishes. There's also a polling-based gatherer utility for
 // CPU profiles available below.
 
+// GatherCPUProfile gathers CPU profile.
 func GatherCPUProfile(componentName string, profileBaseName string, wg *sync.WaitGroup) {
 	GatherCPUProfileForSeconds(componentName, profileBaseName, DefaultCPUProfileSeconds, wg)
 }
 
+// GatherCPUProfileForSeconds gathers CPU profile for specified seconds.
 func GatherCPUProfileForSeconds(componentName string, profileBaseName string, seconds int, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
@@ -181,6 +186,7 @@ func GatherCPUProfileForSeconds(componentName string, profileBaseName string, se
 	}
 }
 
+// GatherMemoryProfile gathers memory profile.
 func GatherMemoryProfile(componentName string, profileBaseName string, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()

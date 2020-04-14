@@ -20,30 +20,33 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
+
+	"k8s.io/klog"
+	utilexec "k8s.io/utils/exec"
+	"k8s.io/utils/mount"
+	utilstrings "k8s.io/utils/strings"
 
 	v1 "k8s.io/api/core/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/pkg/util/mount"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util/types"
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
-	utilstrings "k8s.io/utils/strings"
 )
 
 const (
@@ -58,6 +61,10 @@ const (
 	// that decides if pod volumes are unmounted when pod is terminated
 	KeepTerminatedPodVolumesAnnotation string = "volumes.kubernetes.io/keep-terminated-pod-volumes"
 
+	// MountsInGlobalPDPath is name of the directory appended to a volume plugin
+	// name to create the place for volume mounts in the global PD path.
+	MountsInGlobalPDPath = "mounts"
+
 	// VolumeGidAnnotationKey is the of the annotation on the PersistentVolume
 	// object that specifies a supplemental GID.
 	VolumeGidAnnotationKey = "pv.beta.kubernetes.io/gid"
@@ -71,7 +78,7 @@ const (
 // called 'ready' in the given directory and returns
 // true if that file exists.
 func IsReady(dir string) bool {
-	readyFile := path.Join(dir, readyFileName)
+	readyFile := filepath.Join(dir, readyFileName)
 	s, err := os.Stat(readyFile)
 	if err != nil {
 		return false
@@ -94,7 +101,7 @@ func SetReady(dir string) {
 		return
 	}
 
-	readyFile := path.Join(dir, readyFileName)
+	readyFile := filepath.Join(dir, readyFileName)
 	file, err := os.Create(readyFile)
 	if err != nil {
 		klog.Errorf("Can't touch %s: %v", readyFile, err)
@@ -192,7 +199,7 @@ func LoadPodFromFile(filePath string) (*v1.Pod, error) {
 	pod := &v1.Pod{}
 
 	codec := legacyscheme.Codecs.UniversalDecoder()
-	if err := runtime.DecodeInto(codec, podDef, pod); err != nil {
+	if err := apiruntime.DecodeInto(codec, podDef, pod); err != nil {
 		return nil, fmt.Errorf("failed decoding file: %v", err)
 	}
 	return pod, nil
@@ -420,14 +427,6 @@ func GetVolumeMode(volumeSpec *volume.Spec) (v1.PersistentVolumeMode, error) {
 	return "", fmt.Errorf("cannot get volumeMode for volume: %v", volumeSpec.Name())
 }
 
-// GetPersistentVolumeClaimVolumeMode retrieves VolumeMode from pvc.
-func GetPersistentVolumeClaimVolumeMode(claim *v1.PersistentVolumeClaim) (v1.PersistentVolumeMode, error) {
-	if claim.Spec.VolumeMode != nil {
-		return *claim.Spec.VolumeMode, nil
-	}
-	return "", fmt.Errorf("cannot get volumeMode from pvc: %v", claim.Name)
-}
-
 // GetPersistentVolumeClaimQualifiedName returns a qualified name for pvc.
 func GetPersistentVolumeClaimQualifiedName(claim *v1.PersistentVolumeClaim) string {
 	return utilstrings.JoinQualifiedName(claim.GetNamespace(), claim.GetName())
@@ -504,29 +503,144 @@ func MakeAbsolutePath(goos, path string) string {
 	return "c:\\" + path
 }
 
-// MapBlockVolume is a utility function to provide a common way of mounting
+// MapBlockVolume is a utility function to provide a common way of mapping
 // block device path for a specified volume and pod.  This function should be
 // called by volume plugins that implements volume.BlockVolumeMapper.Map() method.
 func MapBlockVolume(
+	blkUtil volumepathhandler.BlockVolumePathHandler,
 	devicePath,
 	globalMapPath,
 	podVolumeMapPath,
 	volumeMapName string,
 	podUID utypes.UID,
 ) error {
-	blkUtil := volumepathhandler.NewBlockVolumePathHandler()
-
-	// map devicePath to global node path
-	mapErr := blkUtil.MapDevice(devicePath, globalMapPath, string(podUID))
+	// map devicePath to global node path as bind mount
+	mapErr := blkUtil.MapDevice(devicePath, globalMapPath, string(podUID), true /* bindMount */)
 	if mapErr != nil {
-		return mapErr
+		return fmt.Errorf("blkUtil.MapDevice failed. devicePath: %s, globalMapPath:%s, podUID: %s, bindMount: %v: %v",
+			devicePath, globalMapPath, string(podUID), true, mapErr)
 	}
 
 	// map devicePath to pod volume path
-	mapErr = blkUtil.MapDevice(devicePath, podVolumeMapPath, volumeMapName)
+	mapErr = blkUtil.MapDevice(devicePath, podVolumeMapPath, volumeMapName, false /* bindMount */)
 	if mapErr != nil {
-		return mapErr
+		return fmt.Errorf("blkUtil.MapDevice failed. devicePath: %s, podVolumeMapPath:%s, volumeMapName: %s, bindMount: %v: %v",
+			devicePath, podVolumeMapPath, volumeMapName, false, mapErr)
 	}
 
+	// Take file descriptor lock to keep a block device opened. Otherwise, there is a case
+	// that the block device is silently removed and attached another device with the same name.
+	// Container runtime can't handle this problem. To avoid unexpected condition fd lock
+	// for the block device is required.
+	_, mapErr = blkUtil.AttachFileDevice(filepath.Join(globalMapPath, string(podUID)))
+	if mapErr != nil {
+		return fmt.Errorf("blkUtil.AttachFileDevice failed. globalMapPath:%s, podUID: %s: %v",
+			globalMapPath, string(podUID), mapErr)
+	}
+
+	return nil
+}
+
+// UnmapBlockVolume is a utility function to provide a common way of unmapping
+// block device path for a specified volume and pod.  This function should be
+// called by volume plugins that implements volume.BlockVolumeMapper.Map() method.
+func UnmapBlockVolume(
+	blkUtil volumepathhandler.BlockVolumePathHandler,
+	globalUnmapPath,
+	podDeviceUnmapPath,
+	volumeMapName string,
+	podUID utypes.UID,
+) error {
+	// Release file descriptor lock.
+	err := blkUtil.DetachFileDevice(filepath.Join(globalUnmapPath, string(podUID)))
+	if err != nil {
+		return fmt.Errorf("blkUtil.DetachFileDevice failed. globalUnmapPath:%s, podUID: %s: %v",
+			globalUnmapPath, string(podUID), err)
+	}
+
+	// unmap devicePath from pod volume path
+	unmapDeviceErr := blkUtil.UnmapDevice(podDeviceUnmapPath, volumeMapName, false /* bindMount */)
+	if unmapDeviceErr != nil {
+		return fmt.Errorf("blkUtil.DetachFileDevice failed. podDeviceUnmapPath:%s, volumeMapName: %s, bindMount: %v: %v",
+			podDeviceUnmapPath, volumeMapName, false, unmapDeviceErr)
+	}
+
+	// unmap devicePath from global node path
+	unmapDeviceErr = blkUtil.UnmapDevice(globalUnmapPath, string(podUID), true /* bindMount */)
+	if unmapDeviceErr != nil {
+		return fmt.Errorf("blkUtil.DetachFileDevice failed. globalUnmapPath:%s, podUID: %s, bindMount: %v: %v",
+			globalUnmapPath, string(podUID), true, unmapDeviceErr)
+	}
+	return nil
+}
+
+// GetPluginMountDir returns the global mount directory name appended
+// to the given plugin name's plugin directory
+func GetPluginMountDir(host volume.VolumeHost, name string) string {
+	mntDir := filepath.Join(host.GetPluginDir(name), MountsInGlobalPDPath)
+	return mntDir
+}
+
+// IsLocalEphemeralVolume determines whether the argument is a local ephemeral
+// volume vs. some other type
+func IsLocalEphemeralVolume(volume v1.Volume) bool {
+	return volume.GitRepo != nil ||
+		(volume.EmptyDir != nil && volume.EmptyDir.Medium != v1.StorageMediumMemory) ||
+		volume.ConfigMap != nil || volume.DownwardAPI != nil
+}
+
+// GetPodVolumeNames returns names of volumes that are used in a pod,
+// either as filesystem mount or raw block device.
+func GetPodVolumeNames(pod *v1.Pod) (mounts sets.String, devices sets.String) {
+	mounts = sets.NewString()
+	devices = sets.NewString()
+
+	podutil.VisitContainers(&pod.Spec, func(container *v1.Container) bool {
+		if container.VolumeMounts != nil {
+			for _, mount := range container.VolumeMounts {
+				mounts.Insert(mount.Name)
+			}
+		}
+		// TODO: remove feature gate check after no longer needed
+		if utilfeature.DefaultFeatureGate.Enabled(features.BlockVolume) &&
+			container.VolumeDevices != nil {
+			for _, device := range container.VolumeDevices {
+				devices.Insert(device.Name)
+			}
+		}
+		return true
+	})
+	return
+}
+
+// HasMountRefs checks if the given mountPath has mountRefs.
+// TODO: this is a workaround for the unmount device issue caused by gci mounter.
+// In GCI cluster, if gci mounter is used for mounting, the container started by mounter
+// script will cause additional mounts created in the container. Since these mounts are
+// irrelevant to the original mounts, they should be not considered when checking the
+// mount references. Current solution is to filter out those mount paths that contain
+// the string of original mount path.
+// Plan to work on better approach to solve this issue.
+func HasMountRefs(mountPath string, mountRefs []string) bool {
+	for _, ref := range mountRefs {
+		if !strings.Contains(ref, mountPath) {
+			return true
+		}
+	}
+	return false
+}
+
+//WriteVolumeCache flush disk data given the spcified mount path
+func WriteVolumeCache(deviceMountPath string, exec utilexec.Interface) error {
+	// If runtime os is windows, execute Write-VolumeCache powershell command on the disk
+	if runtime.GOOS == "windows" {
+		cmd := fmt.Sprintf("Get-Volume -FilePath %s | Write-Volumecache", deviceMountPath)
+		output, err := exec.Command("powershell", "/c", cmd).CombinedOutput()
+		klog.Infof("command (%q) execeuted: %v, output: %q", cmd, err, string(output))
+		if err != nil {
+			return fmt.Errorf("command (%q) failed: %v, output: %q", cmd, err, string(output))
+		}
+	}
+	// For linux runtime, it skips because unmount will automatically flush disk data
 	return nil
 }
