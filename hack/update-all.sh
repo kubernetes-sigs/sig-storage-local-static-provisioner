@@ -23,4 +23,4 @@ cd $ROOT
 
 hack/update-gofmt.sh
 hack/update-generated.sh
-hack/update-deps.sh
+hack/update-vendor.sh

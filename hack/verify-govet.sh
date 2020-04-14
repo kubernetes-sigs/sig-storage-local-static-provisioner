@@ -21,4 +21,4 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-vendor/k8s.io/repo-infra/verify/go-tools/verify-govet.sh
+go vet -v $(go list ./... | grep -v /vendor/)

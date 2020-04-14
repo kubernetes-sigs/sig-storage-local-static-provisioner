@@ -27,4 +27,4 @@ hack/verify-gofmt.sh
 hack/verify-govet.sh
 hack/verify-golint.sh
 hack/verify-generated.sh
-hack/verify-deps.sh
+hack/verify-vendor.sh

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2020 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,5 +21,14 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-hack/verify_boilerplate.py --rootdir "$ROOT" \
-    --boilerplate-dir hack/boilerplate
+source "${ROOT}/hack/lib.sh"
+
+tmpdir=$(mktemp -d -t vendor.XXXXXX)
+trap "test -d $tmpdir && rm -rf $tmpdir" EXIT
+
+echo "Backup vendor direcgtory to $tmpdir first"
+mv vendor $tmpdir/vendor
+
+hack/update-vendor.sh
+
+diff -r --no-dereference $tmpdir/vendor vendor
