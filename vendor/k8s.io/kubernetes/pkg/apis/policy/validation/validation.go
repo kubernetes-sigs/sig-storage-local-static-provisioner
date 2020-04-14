@@ -19,7 +19,6 @@ package validation
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -36,27 +35,16 @@ import (
 	psputil "k8s.io/kubernetes/pkg/security/podsecuritypolicy/util"
 )
 
+// ValidatePodDisruptionBudget validates a PodDisruptionBudget and returns an ErrorList
+// with any errors.
 func ValidatePodDisruptionBudget(pdb *policy.PodDisruptionBudget) field.ErrorList {
 	allErrs := ValidatePodDisruptionBudgetSpec(pdb.Spec, field.NewPath("spec"))
 	allErrs = append(allErrs, ValidatePodDisruptionBudgetStatus(pdb.Status, field.NewPath("status"))...)
 	return allErrs
 }
 
-func ValidatePodDisruptionBudgetUpdate(pdb, oldPdb *policy.PodDisruptionBudget) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	restoreGeneration := pdb.Generation
-	pdb.Generation = oldPdb.Generation
-
-	if !reflect.DeepEqual(pdb.Spec, oldPdb.Spec) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec"), "updates to poddisruptionbudget spec are forbidden."))
-	}
-	allErrs = append(allErrs, ValidatePodDisruptionBudgetStatus(pdb.Status, field.NewPath("status"))...)
-
-	pdb.Generation = restoreGeneration
-	return allErrs
-}
-
+// ValidatePodDisruptionBudgetSpec validates a PodDisruptionBudgetSpec and returns an ErrorList
+// with any errors.
 func ValidatePodDisruptionBudgetSpec(spec policy.PodDisruptionBudgetSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -79,6 +67,8 @@ func ValidatePodDisruptionBudgetSpec(spec policy.PodDisruptionBudgetSpec, fldPat
 	return allErrs
 }
 
+// ValidatePodDisruptionBudgetStatus validates a PodDisruptionBudgetStatus and returns an ErrorList
+// with any errors.
 func ValidatePodDisruptionBudgetStatus(status policy.PodDisruptionBudgetStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.PodDisruptionsAllowed), fldPath.Child("podDisruptionsAllowed"))...)
@@ -94,6 +84,8 @@ func ValidatePodDisruptionBudgetStatus(status policy.PodDisruptionBudgetStatus, 
 // trailing dashes are allowed.
 var ValidatePodSecurityPolicyName = apimachineryvalidation.NameIsDNSSubdomain
 
+// ValidatePodSecurityPolicy validates a PodSecurityPolicy and returns an ErrorList
+// with any errors.
 func ValidatePodSecurityPolicy(psp *policy.PodSecurityPolicy) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&psp.ObjectMeta, false, ValidatePodSecurityPolicyName, field.NewPath("metadata"))...)
@@ -102,6 +94,8 @@ func ValidatePodSecurityPolicy(psp *policy.PodSecurityPolicy) field.ErrorList {
 	return allErrs
 }
 
+// ValidatePodSecurityPolicySpec validates a PodSecurityPolicySpec and returns an ErrorList
+// with any errors.
 func ValidatePodSecurityPolicySpec(spec *policy.PodSecurityPolicySpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -125,10 +119,13 @@ func ValidatePodSecurityPolicySpec(spec *policy.PodSecurityPolicySpec, fldPath *
 	allErrs = append(allErrs, validatePodSecurityPolicySysctls(fldPath.Child("allowedUnsafeSysctls"), spec.AllowedUnsafeSysctls)...)
 	allErrs = append(allErrs, validatePodSecurityPolicySysctls(fldPath.Child("forbiddenSysctls"), spec.ForbiddenSysctls)...)
 	allErrs = append(allErrs, validatePodSecurityPolicySysctlListsDoNotOverlap(fldPath.Child("allowedUnsafeSysctls"), fldPath.Child("forbiddenSysctls"), spec.AllowedUnsafeSysctls, spec.ForbiddenSysctls)...)
+	allErrs = append(allErrs, validateRuntimeClassStrategy(fldPath.Child("runtimeClass"), spec.RuntimeClass)...)
 
 	return allErrs
 }
 
+// ValidatePodSecurityPolicySpecificAnnotations validates annotations and returns an ErrorList
+// with any errors.
 func ValidatePodSecurityPolicySpecificAnnotations(annotations map[string]string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -350,10 +347,13 @@ func validatePSPAllowedProcMountTypes(fldPath *field.Path, allowedProcMountTypes
 }
 
 const sysctlPatternSegmentFmt string = "([a-z0-9][-_a-z0-9]*)?[a-z0-9*]"
+
+// SysctlPatternFmt is a regex used for matching valid sysctl patterns.
 const SysctlPatternFmt string = "(" + apivalidation.SysctlSegmentFmt + "\\.)*" + sysctlPatternSegmentFmt
 
 var sysctlPatternRegexp = regexp.MustCompile("^" + SysctlPatternFmt + "$")
 
+// IsValidSysctlPattern checks if name is a valid sysctl pattern.
 func IsValidSysctlPattern(name string) bool {
 	if len(name) > apivalidation.SysctlMaxLength {
 		return false
@@ -473,6 +473,40 @@ func validatePSPCapsAgainstDrops(requiredDrops []core.Capability, capsToCheck []
 				fmt.Sprintf("capability is listed in %s and requiredDropCapabilities", fldPath.String())))
 		}
 	}
+	return allErrs
+}
+
+// validateRuntimeClassStrategy ensures all the RuntimeClass restrictions are valid.
+func validateRuntimeClassStrategy(fldPath *field.Path, rc *policy.RuntimeClassStrategyOptions) field.ErrorList {
+	if rc == nil {
+		return nil
+	}
+
+	var allErrs field.ErrorList
+
+	allowed := map[string]bool{}
+	for i, name := range rc.AllowedRuntimeClassNames {
+		if name != policy.AllowAllRuntimeClassNames {
+			allErrs = append(allErrs, apivalidation.ValidateRuntimeClassName(name, fldPath.Child("allowedRuntimeClassNames").Index(i))...)
+		}
+		if allowed[name] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("allowedRuntimeClassNames").Index(i), name))
+		}
+		allowed[name] = true
+	}
+
+	if rc.DefaultRuntimeClassName != nil {
+		allErrs = append(allErrs, apivalidation.ValidateRuntimeClassName(*rc.DefaultRuntimeClassName, fldPath.Child("defaultRuntimeClassName"))...)
+		if !allowed[*rc.DefaultRuntimeClassName] && !allowed[policy.AllowAllRuntimeClassNames] {
+			allErrs = append(allErrs, field.Required(fldPath.Child("allowedRuntimeClassNames"),
+				fmt.Sprintf("default %q must be allowed", *rc.DefaultRuntimeClassName)))
+		}
+	}
+
+	if allowed[policy.AllowAllRuntimeClassNames] && len(rc.AllowedRuntimeClassNames) > 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("allowedRuntimeClassNames"), rc.AllowedRuntimeClassNames, "if '*' is present, must not specify other RuntimeClass names"))
+	}
+
 	return allErrs
 }
 
