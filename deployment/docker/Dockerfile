@@ -13,14 +13,14 @@
 # limitations under the License.
 
 ARG ARCH=amd64
-ARG GOVERSION=1.11.1
+ARG GOVERSION=1.13.9
 FROM golang:$GOVERSION-alpine as builder
 ARG OS=linux
 ARG ARCH=amd64
 WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
 ADD . .
 RUN echo "OS: $OS ARCH: $ARCH"
-RUN CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-static"' -o _output/${OS}/${ARCH}/local-volume-provisioner ./cmd/local-volume-provisioner
+RUN GO111MODULE=off CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-static"' -o _output/${OS}/${ARCH}/local-volume-provisioner ./cmd/local-volume-provisioner
 
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
