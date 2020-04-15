@@ -42,6 +42,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
+	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
+	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
@@ -157,7 +160,8 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	BeforeEach(func() {
 		// Get all the schedulable nodes
-		nodes := framework.GetReadySchedulableNodesOrDie(f.ClientSet)
+		nodes, err := e2enode.GetReadySchedulableNodes(f.ClientSet)
+		framework.ExpectNoError(err)
 		Expect(len(nodes.Items)).NotTo(BeZero(), "No available nodes for scheduling")
 
 		// Cap max number of nodes
@@ -210,7 +214,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				By("Creating a persistent volume claim")
 				claim, err := config.client.CoreV1().PersistentVolumeClaims(config.ns).Create(newLocalClaim(config))
 				Expect(err).NotTo(HaveOccurred())
-				err = framework.WaitForPersistentVolumeClaimPhase(
+				err = e2epv.WaitForPersistentVolumeClaimPhase(
 					v1.ClaimBound, config.client, claim.Namespace, claim.Name, framework.Poll, 1*time.Minute)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -265,7 +269,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 			By("Examining provisioner logs for not an actual mountpoint message")
 			provisionerPodName := findProvisionerDaemonsetPodName(config)
-			logs, err := framework.GetPodLogs(config.client, config.ns, provisionerPodName, "" /*containerName*/)
+			logs, err := e2epod.GetPodLogs(config.client, config.ns, provisionerPodName, "" /*containerName*/)
 			Expect(err).NotTo(HaveOccurred(),
 				"Error getting logs from pod %s in namespace %s", provisionerPodName, config.ns)
 
@@ -350,13 +354,13 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				for i := 0; i < numConcurrentPods; i++ {
 					pvcs := []*v1.PersistentVolumeClaim{}
 					for j := 0; j < volsPerPod; j++ {
-						pvc := framework.MakePersistentVolumeClaim(makeLocalPVCConfig(config, DirectoryLocalVolumeType), config.ns)
-						pvc, err := framework.CreatePVC(config.client, config.ns, pvc)
+						pvc := e2epv.MakePersistentVolumeClaim(makeLocalPVCConfig(config, DirectoryLocalVolumeType), config.ns)
+						pvc, err := e2epv.CreatePVC(config.client, config.ns, pvc)
 						framework.ExpectNoError(err)
 						pvcs = append(pvcs, pvc)
 					}
 
-					pod := framework.MakeSecPod(config.ns, pvcs, false, "sleep 1", false, false, selinuxLabel, nil)
+					pod := e2epod.MakeSecPod(config.ns, pvcs, nil, false, "sleep 1", false, false, selinuxLabel, nil)
 					pod, err := config.client.CoreV1().Pods(config.ns).Create(pod)
 					Expect(err).NotTo(HaveOccurred())
 					pods[pod.Name] = pod
@@ -782,7 +786,7 @@ func createProvisionerDaemonset(config *localTestConfig) {
 	Expect(err).NotTo(HaveOccurred())
 
 	kind := schema.GroupKind{Group: appsv1.GroupName, Kind: "DaemonSet"}
-	framework.WaitForControlledPodsRunning(config.client, config.ns, daemonSetName, kind)
+	e2epod.WaitForControlledPodsRunning(config.client, config.ns, daemonSetName, kind)
 }
 
 // waitForLocalPersistentVolume waits a local persistent volume with 'volumePath' to be available.
@@ -871,7 +875,7 @@ func savePodLogs(client clientset.Interface, dir string, pods []v1.Pod) {
 		return
 	}
 	for _, pod := range pods {
-		logs, err := framework.GetPodLogs(client, pod.Namespace, pod.Name, "")
+		logs, err := e2epod.GetPodLogs(client, pod.Namespace, pod.Name, "")
 		Expect(err).NotTo(HaveOccurred())
 		if err != nil {
 			continue
@@ -963,8 +967,8 @@ func findProvisionerDaemonsetPodName(config *localTestConfig) string {
 	return ""
 }
 
-func makeLocalPVCConfig(config *localTestConfig, volumeType localVolumeType) framework.PersistentVolumeClaimConfig {
-	pvcConfig := framework.PersistentVolumeClaimConfig{
+func makeLocalPVCConfig(config *localTestConfig, volumeType localVolumeType) e2epv.PersistentVolumeClaimConfig {
+	pvcConfig := e2epv.PersistentVolumeClaimConfig{
 		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: &config.scName,
 	}
@@ -985,7 +989,7 @@ func deletePodAndPVCs(config *localTestConfig, pod *v1.Pod) error {
 	for _, vol := range pod.Spec.Volumes {
 		pvcSource := vol.VolumeSource.PersistentVolumeClaim
 		if pvcSource != nil {
-			if err := framework.DeletePersistentVolumeClaim(config.client, pvcSource.ClaimName, config.ns); err != nil {
+			if err := e2epv.DeletePersistentVolumeClaim(config.client, pvcSource.ClaimName, config.ns); err != nil {
 				return err
 			}
 		}
@@ -995,8 +999,8 @@ func deletePodAndPVCs(config *localTestConfig, pod *v1.Pod) error {
 
 func handleFlags() {
 	// Register framework flags, then handle flags and Viper config.
-	framework.RegisterCommonFlags()
-	framework.RegisterClusterFlags()
+	framework.RegisterCommonFlags(flag.CommandLine)
+	framework.RegisterClusterFlags(flag.CommandLine)
 	flag.Parse()
 }
 

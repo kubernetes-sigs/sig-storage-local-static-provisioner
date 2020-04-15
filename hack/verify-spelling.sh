@@ -26,7 +26,7 @@ source "${ROOT}/hack/lib.sh"
 hack::install_misspell
 
 ret=0
-find . -mindepth 1 -maxdepth 1 | grep -v -P '/(vendor)$' | xargs ${MISSPELL_BIN} -error -o stderr || ret=$?
+find . -mindepth 1 -maxdepth 1 | grep -v -P '/(vendor|repo-infra)$' | xargs ${MISSPELL_BIN} -error -o stderr || ret=$?
 if [ $ret -eq 0 ]; then
     echo "Spellings all good!"
 else
