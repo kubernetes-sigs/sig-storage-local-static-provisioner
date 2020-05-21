@@ -81,6 +81,9 @@ const (
 
 	// DefaultVolumeMode is the default volume mode of created PV object.
 	DefaultVolumeMode = "Filesystem"
+
+	// DefaultNamePattern is the default name pattern of in PV discovery.
+	DefaultNamePattern = "*"
 )
 
 // UserConfig stores all the user-defined parameters to the provisioner
@@ -127,6 +130,9 @@ type MountConfig struct {
 	// and desire volume mode is Filesystem.
 	// Must be a filesystem type supported by the host operating system.
 	FsType string `json:"fsType" yaml:"fsType"`
+	// NamePattern name pattern check
+	// only discover file name matching pattern("*" by default)
+	NamePattern string `json:"namePattern" yaml:"namePattern"`
 }
 
 // RuntimeConfig stores all the objects that the provisioner needs to run
@@ -325,19 +331,24 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		if config.VolumeMode == "" {
 			config.VolumeMode = DefaultVolumeMode
 		}
+
+		if config.NamePattern == "" {
+			config.NamePattern = DefaultNamePattern
+		}
 		volumeMode := v1.PersistentVolumeMode(config.VolumeMode)
 		if volumeMode != v1.PersistentVolumeBlock && volumeMode != v1.PersistentVolumeFilesystem {
 			return fmt.Errorf("unsupported volume mode %s", config.VolumeMode)
 		}
 
 		provisionerConfig.StorageClassConfig[class] = config
-		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q",
+		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q, NamePattern %q",
 			class,
 			config.MountDir,
 			config.HostDir,
 			config.VolumeMode,
 			config.FsType,
-			config.BlockCleanerCommand)
+			config.BlockCleanerCommand,
+			config.NamePattern)
 	}
 	return nil
 }
