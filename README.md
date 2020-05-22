@@ -1,4 +1,7 @@
-# sig-storage-local-static-provisioner
+# Local Persistence Volume Static Privsioner
+
+[![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/sig-storage-local-static-provisioner/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/sig-storage-local-static-provisioner?branch=master)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fsig-storage-local-static-provisioner.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fsig-storage-local-static-provisioner?ref=badge_shield)
 
 The local volume static provisioner manages the PersistentVolume lifecycle for
 pre-allocated disks by detecting and creating PVs for each local disk on the
