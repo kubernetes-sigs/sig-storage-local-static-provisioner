@@ -61,6 +61,8 @@ classes:
   # and desire volume mode is Filesystem.
   # Must be a filesystem type supported by the host operating system.
   fsType: ext4
+  # File name pattern to discover. By default, discover all file names.
+  namePattern: "*"
   blockCleanerCommand:
   #  Do a quick reset of the block device during its cleanup.
   #  - "/scripts/quick_reset.sh"
