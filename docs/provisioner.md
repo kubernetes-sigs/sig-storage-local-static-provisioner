@@ -132,6 +132,9 @@ data:
   #       # only when the volume source is a device and mode is Filesystem.
   #       # The default value is to auto-select a fileystem in Kubernetes if unspecified.
   #       fsType: ext4
+  #       # name pattern check
+  #       # only discover file name matching pattern("*" by default).
+  #       namePattern: "*"
   #
   # By default, no configuration is configured for any storage class. In
   # production, you must configure for at least one storage class.
