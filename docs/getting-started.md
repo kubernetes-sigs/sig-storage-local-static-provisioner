@@ -14,6 +14,7 @@ on older versions, please see version links under
   * [Option 3: Baremetal environments](#option-3-baremetal-environments)
   * [Option 4: Local test cluster](#option-4-local-test-cluster)
   * [Option 5: EKS (experimental)](#option-5-eks-experimental)
+  * [Option 6: AKS](#option-6-aks)  
 - [Step 2: Creating a StorageClass (1.9+)](#step-2-creating-a-storageclass-19)
 - [Step 3: Creating local persistent volumes](#step-3-creating-local-persistent-volumes)
   * [Option 1: Using the local volume static provisioner](#option-1-using-the-local-volume-static-provisioner)
@@ -115,6 +116,9 @@ NVMe SSDs.
 **Note:** This project mounts disks in `/pv-disks/$uuid`. There is a
 working example of storage local static provisioner resources in the
 eks-nvme-ssd-provisioner repo.
+
+#### Option 6: AKS
+See [Local Persistent Volume support on Azure](https://github.com/Azure/kubernetes-volume-drivers/tree/master/local) for more information.
 
 ### Step 2: Creating a StorageClass (1.9+)
 
