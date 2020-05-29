@@ -1,4 +1,4 @@
-# Local Persistence Volume Static Privsioner
+# Local Persistence Volume Static Provisioner
 
 [![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/sig-storage-local-static-provisioner/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/sig-storage-local-static-provisioner?branch=master)
 
