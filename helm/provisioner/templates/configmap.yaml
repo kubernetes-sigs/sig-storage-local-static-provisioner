@@ -47,6 +47,6 @@ data:
        fsType: {{ $classConfig.fsType }}
        {{- end }}
        {{- if $classConfig.namePattern }}
-       namePattern: {{ $classConfig.namePattern }}
+       namePattern: "{{ $classConfig.namePattern }}"
        {{- end }}
     {{- end }}
