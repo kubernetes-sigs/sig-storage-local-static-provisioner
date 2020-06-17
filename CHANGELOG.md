@@ -4,6 +4,11 @@ helm chart refactoring:
 - **Action required**\
   As the helm-chart structure changed the already running pod will be recreated during upgrade. Documentation can be found under [helm/README.md](./helm/README.md). Compare your existing values with the new chart parameter before upgrade.  [#171](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/171)
 
+- blkdiscard.sh no longer zeros disks.
+  This script was passing the -z option to blkdiscard which meant it was not
+  performing discards. This has been fixed. If you desire zeroing, rather than
+  block discarding, please switch to dd_zero.sh.
+
 # [v2.3.4](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.4)
 
 Image updates:
