@@ -32,6 +32,10 @@ spec:
       tolerations:
 {{ .Values.daemonset.tolerations | toYaml | trim | indent 8 }}
 {{- end }}
+{{- if .Values.daemonset.affinity }}
+      affinity:
+{{ .Values.daemonset.affinity | toYaml | trim | indent 8 }}
+{{- end }}
       containers:
         - image: "{{ .Values.daemonset.image }}"
           {{- if .Values.daemonset.imagePullPolicy }}
