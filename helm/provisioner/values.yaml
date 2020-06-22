@@ -121,6 +121,10 @@ daemonset:
   # Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
   #
+  # If configured, affinity will add a affinity filed to the DeamonSet PodSpec.
+  # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+  #
   # If configured, resources will set the requests/limits field to the Daemonset PodSpec.
   # Ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
   resources: {}
