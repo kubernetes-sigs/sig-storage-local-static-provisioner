@@ -41,12 +41,14 @@ Environments:
 
     REGISTRY                    container registry without repo name (default: quay.io/external_storage)
     VERSION                     if set, use given version as image tag
+    PULL_BASE_REF               if set, detect version from this git ref instead of "git describe"
     DOCKER_CONFIG               optional docker config location
     CONFIRM                     set this to skip confirmation
     ALLOW_UNSTABLE              by default, only master branch and tags that matches v<major>.<minor>.<patch> format are allowed, set this to skip this check (debug only)
     ALLOW_DIRTY                 by default, git repo must be clean, set this to skip this check (debug only)
     ALLOW_OVERRIDE              by default, stable image is not allowed to override, set this to skip (debug only)
     SKIP_BUILD                  set this to skip build phase (debug only)
+    SKIP_PUSH_LATEST            set this to skip pushing the latest stable image as the latest image
 
 Examples:
 
@@ -77,18 +79,32 @@ done
 
 REGISTRY=${REGISTRY:-quay.io/external_storage}
 VERSION=${VERSION:-}
+PULL_BASE_REF=${PULL_BASE_REF:-}
 CONFIRM=${CONFIRM:-}
 DOCKER_CONFIG=${DOCKER_CONFIG:-}
 ALLOW_UNSTABLE=${ALLOW_UNSTABLE:-}
 ALLOW_DIRTY=${ALLOW_DIRTY:-}
 ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
+SKIP_PUSH_LATEST=${SKIP_PUSH_LATEST:-}
 # There is a problem in building multi-arch images in prow environment. Enable non-amd64
 # arches when we have a reliable way, see https://github.com/kubernetes/test-infra/issues/13937.
 # In the meantime, you may set the ALL_ARCH environment variable to name the architectures you'd
 # like to target.
 #ALL_ARCH="amd64 arm arm64 ppc64le s390x"
 ALL_ARCH=${ALL_ARCH:-amd64}
+
+echo "REGISTRY: $REGISTRY"
+echo "VERSION: $VERSION"
+echo "PULL_BASE_REF: $PULL_BASE_REF"
+echo "CONFIRM: $CONFIRM"
+echo "DOCKER_CONFIG: $DOCKER_CONFIG"
+echo "ALLOW_UNSTABLE: $ALLOW_UNSTABLE"
+echo "ALLOW_DIRTY: $ALLOW_DIRTY"
+echo "ALLOW_OVERRIDE: $ALLOW_OVERRIDE"
+echo "SKIP_BUILD: $SKIP_BUILD"
+echo "SKIP_PUSH_LATEST: $SKIP_PUSH_LATEST"
+
 IMAGE="$REGISTRY/local-volume-provisioner"
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
@@ -103,26 +119,39 @@ fi
 # remove trailing `/` if present
 REGISTRY=${REGISTRY%/}
 
-GIT_DIRTY=$(test -n "`git status --porcelain`" && echo "dirty" || echo "clean")
-
-if [ -z "$ALLOW_DIRTY" -a "$GIT_DIRTY" != "clean" ]; then
-    echo "error: repo status is not clean, skipped"
-    exit 1
+if [ -z "$ALLOW_DIRTY" ]; then
+    GIT_DIRTY=$(test -n "`git status --porcelain`" && echo "dirty" || echo "clean")
+    if [ "$GIT_DIRTY" != "clean" ]; then
+        echo "error: repo status is not clean, skipped"
+        exit 1
+    fi
 fi
-
-# our logic depends repo tags, make sure all tags are fetched
-echo "info: fetching all tags from official upstream"
-git fetch --tags https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner.git
 
 if [ -z "$VERSION" ]; then
     echo "info: VERSION is not specified, detect automatically"
-    # get version from tag
-    VERSION=$(git describe --tags --abbrev=0 --exact-match 2>/dev/null || true)
+    if [ -n "$PULL_BASE_REF" ]; then
+        echo "info: detecting version from PULL_BASE_REF '$PULL_BASE_REF'"
+        if [[ "$PULL_BASE_REF" == "master" ]]; then
+            VERSION=canary
+        elif [[ "$PULL_BASE_REF" =~ release-\d+ ]]; then
+            # release-2.0
+            VERSION=$(echo "$PULL_BASE_REF" | cut -f2 -d '-')-canary
+        elif [[ "$PULL_BASE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            # stable release: v1.2.3
+            # or pre-release: v1.2.3-rc1
+            VERSION="$PULL_BASE_REF"
+        fi
+    else
+        echo "info: detecting version from 'git describe'"
+        VERSION=$(git describe --tags --abbrev=0 --exact-match 2>/dev/null || true)
+    fi
     if [ -z "$VERSION" ]; then
         echo "error: failed to detect version"
         exit 1
     fi
 fi
+
+echo "info: VERSION is $VERSION and will be used as image tag"
 
 # By default, only v<major>.<minor>.<patch> version are allowed.
 function is_stable_version() {
@@ -214,10 +243,13 @@ function docker_create_multi_arch() {
 
 docker_create_multi_arch "$VERSION"
 
-if ! is_stable_version "$VERSION"; then
-    echo "info: VERSION '$VERSION' is not stable version, skip pushing as latest image"
+if ! is_stable_version "$VERSION" || [ -n "$SKIP_PUSH_LATEST" ]; then
+    echo "info: VERSION '$VERSION' is not stable version or SKIP_PUSH_LATEST is set, skip pushing $VERSION as the latest image"
     exit 0
 fi
+
+echo "info: fetching all tags from official upstream"
+git fetch --tags https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner.git
 
 latest_stable_version=$(git tag -l | grep -P '^v\d\.\d+\.\d+$' | sort --version-sort | tail -n -1)
 if [ -z "$latest_stable_version" ]; then
