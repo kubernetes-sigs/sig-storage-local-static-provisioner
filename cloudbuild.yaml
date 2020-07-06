@@ -1,0 +1,28 @@
+# See https://cloud.google.com/cloud-build/docs/build-config
+# 
+# Test locally:
+#
+#    gcloud builds submit --verbosity info --substitutions _STAGING_PROJECT=<your-project>,_PULL_BASE_REF=master [SOURCE]
+#
+timeout: 1800s
+options:
+  substitution_option: ALLOW_LOOSE
+steps:
+- name: gcr.io/k8s-testimages/gcb-docker-gcloud:v20200421-a2bf5f8
+  entrypoint: hack/release.sh
+  env:
+  - REGISTRY=gcr.io/${_STAGING_PROJECT}
+  - ALL_ARCH=${_ALL_ARCH}
+  - ALLOW_DIRTY=yes
+  - ALLOW_UNSTABLE=yes
+  - CONFIRM=yes
+  - SKIP_PUSH_LATEST=yes
+  - PULL_BASE_REF=${_PULL_BASE_REF}
+substitutions:
+  # _PULL_BASE_REF will contain the ref that was pushed to trigger this build -
+  # a branch like 'master' or 'release-0.2', or a tag like 'v0.2'.
+  _PULL_BASE_REF: 'master'
+  # The default gcr.io staging project for Kubernetes sig-storage.
+  _STAGING_PROJECT: 'k8s-staging-sig-storage'
+  # All arches to build
+  _ALL_ARCH: 'amd64 arm arm64 ppc64le s390x'
