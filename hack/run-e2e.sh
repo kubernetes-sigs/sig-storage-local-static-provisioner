@@ -25,16 +25,27 @@ KUBE_ROOT=$(pwd)
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-source "${KUBE_ROOT}/cluster/common.sh"
-source "${KUBE_ROOT}/cluster/kube-util.sh"
-
-KUBERNETES_SRC=${KUBE_ROOT}
-KUBECTL=${KUBE_ROOT}/cluster/kubectl.sh
+PROVIDER=${PROVIDER:-}
+if [ "$PROVIDER" == "gke" ]; then
+    KUBERNETES_SRC=
+    KUBERNETES_PROVIDER=gke
+    KUBERNETES_CONFORMANCE_PROVIDER=gke
+    KUBE_GCE_ZONE=${GCP_ZONE:-}
+    PROJECT=${GCP_PROJECT:-}
+    DEFAULT_KUBECONFIG=$HOME/.kube/config
+    KUBECTL=${KUBECTL:-kubectl}
+else
+    # legacy path
+    source "${KUBE_ROOT}/cluster/common.sh"
+    source "${KUBE_ROOT}/cluster/kube-util.sh"
+    KUBERNETES_SRC=${KUBE_ROOT}
+    KUBECTL=${KUBE_ROOT}/cluster/kubectl.sh
+fi
 KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER:-} # e.g. local, gce
 KUBERNETES_CONFORMANCE_TEST=${KUBERNETES_CONFORMANCE_TEST:-}
 KUBERNETES_CONFORMANCE_PROVIDER=${KUBERNETES_CONFORMANCE_PROVIDER:-}
-KUBE_GCE_ZONE=${KUBE_GCE_ZONE:-} # Available when provider is gce
-PROJECT=${PROJECT:-} # Available when provider is gce
+KUBE_GCE_ZONE=${KUBE_GCE_ZONE:-} # Available when provider is gce/gke
+PROJECT=${PROJECT:-} # Available when provider is gce/gke
 KUBECONFIG=${KUBECONFIG:-$DEFAULT_KUBECONFIG}
 # In prow, ARTIFACTS environment indicates an existent directory where job
 # artifacts can be dumped for automatic upload to GCS upon job completion.
@@ -60,9 +71,11 @@ fi
 if [ -n "$KUBERNETES_CONFORMANCE_TEST" ]; then
     echo "Conformance test: not doing test setup."
 else
-    echo "Setting up for KUBERNETES_PROVIDER=\"${KUBERNETES_PROVIDER}\"."
-    prepare-e2e
-    detect-master >/dev/null
+    if [ "$PROVIDER" != "gke" ]; then
+        echo "Setting up for KUBERNETES_PROVIDER=\"${KUBERNETES_PROVIDER}\"."
+        prepare-e2e
+        detect-master >/dev/null
+    fi
 fi
 
 # build image if not specified
@@ -77,8 +90,12 @@ fi
 # https://github.com/kubernetes/test-infra/blob/5475440d76f9039f7e1a5fa86c2f85ea8414b093/kubetest/gke.go#L210-L229.
 if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "gke" ]; then
     if [ -z "$PROJECT" ]; then
-        echo "error: PROJECT is required" >&2
-        exit 1
+        echo "info: PROJECT is not set, detect it automatically"
+        PROJECT=$(gcloud config get-value project)
+        if [ -z "$PROJECT" ]; then
+            echo "error: PROJECT is required" >&2
+            exit 1
+        fi
     fi
     VERSION=$(git describe --tags --abbrev=8 --always)
     PROVISIONER_IMAGE_NAME=gcr.io/$PROJECT/local-volume-provisioner:$VERSION
@@ -88,17 +105,6 @@ if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "g
     gcloud auth configure-docker
     docker push $PROVISIONER_IMAGE_NAME
     PROVISIONER_IMAGE_PULL_POLICY=Always
-    if [ "$KUBERNETES_CONFORMANCE_PROVIDER" == "gke" ]; then
-        GCLOUD_ACCOUNT=$(gcloud config get-value account)
-        if [ -z "$GCLOUD_ACCOUNT" ]; then
-            echo "error: failed to get gcloud account"
-            exit 1
-        fi
-        echo "GCLOUD_ACCOUNT: $GCLOUD_ACCOUNT"
-        # Grant gcloud user the ability to create roles.
-        # https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control#prerequisites_for_using_role-based_access_control
-        $KUBECTL create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user "$GCLOUD_ACCOUNT"
-    fi
 elif [ "$KUBERNETES_PROVIDER" == "local" ]; then
     KUBECONFIG=/var/run/kubernetes/admin.kubeconfig
     PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
