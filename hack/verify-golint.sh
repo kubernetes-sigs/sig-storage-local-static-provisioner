@@ -21,9 +21,14 @@ set -o pipefail
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
 
-if ! which golint > /dev/null; then
-    go get -u golang.org/x/lint/golint
-fi
+# run the go get in a temporary directory to avoid touching go.{mod,sum} files
+TMP_DIR=$(mktemp -d)
+trap "rm -rf ${TMP_DIR}" EXIT
+
+pushd "${TMP_DIR}" &>/dev/null
+GO111MODULE=on GOBIN=${TMP_DIR} go get golang.org/x/lint/golint@v0.0.0-20200302205851-738671d3881b
+popd &>/dev/null
+export PATH="${TMP_DIR}:${PATH}"
 
 PKGS=($(go list ./... | grep -v /vendor/))
 
