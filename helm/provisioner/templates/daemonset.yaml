@@ -65,11 +65,9 @@ spec:
           - name: KUBECONFIG
             value: {{.Values.daemonset.kubeConfigEnv}}
           {{- end }}
-          {{- if .Values.serviceMonitor.enabled }}
           ports:
           - name: metrics
             containerPort: 8080
-          {{- end }}
           volumeMounts:
             - name: provisioner-config
               mountPath: /etc/provisioner/config
