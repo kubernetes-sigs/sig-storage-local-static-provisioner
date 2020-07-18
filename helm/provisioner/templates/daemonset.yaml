@@ -19,6 +19,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ template "provisioner.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ template "provisioner.serviceAccountName" . }}
 {{- if .Values.daemonset.priorityClassName }}
@@ -26,27 +28,27 @@ spec:
 {{- end }}
 {{- if .Values.daemonset.nodeSelector }}
       nodeSelector:
-{{ .Values.daemonset.nodeSelector | toYaml | trim | indent 8 }}
+        {{ toYaml .Values.daemonset.nodeSelector | nindent 8 }}
 {{- end }}
 {{- if .Values.daemonset.tolerations }}
       tolerations:
-{{ .Values.daemonset.tolerations | toYaml | trim | indent 8 }}
+        {{ toYaml .Values.daemonset.tolerations | nindent 8 }}
 {{- end }}
 {{- if .Values.daemonset.affinity }}
       affinity:
-{{ .Values.daemonset.affinity | toYaml | trim | indent 8 }}
+        {{ toYaml .Values.daemonset.affinity | nindent 8 }}
 {{- end }}
       containers:
-        - image: "{{ .Values.daemonset.image }}"
+        - name: provisioner
+          image: "{{ .Values.daemonset.image }}"
           {{- if .Values.daemonset.imagePullPolicy }}
           imagePullPolicy: {{ .Values.daemonset.imagePullPolicy | quote }}
           {{- end }}
-          name: provisioner
           securityContext:
             privileged: true
 {{- if .Values.daemonset.resources }}
           resources:
-{{ .Values.daemonset.resources | toYaml | trim | indent 12 }}
+            {{ toYaml .Values.daemonset.resources | nindent 12 }}
 {{- end }}
           env:
           - name: MY_NODE_NAME
@@ -60,23 +62,23 @@ spec:
           - name: JOB_CONTAINER_IMAGE
             value: "{{ .Values.daemonset.image }}"
           {{- if .Values.daemonset.kubeConfigEnv }}
-            - name: KUBECONFIG
-              value: {{.Values.daemonset.kubeConfigEnv}}
+          - name: KUBECONFIG
+            value: {{.Values.daemonset.kubeConfigEnv}}
           {{- end }}
           {{- if .Values.serviceMonitor.enabled }}
           ports:
-          - containerPort: 8080
-            name: metrics
+          - name: metrics
+            containerPort: 8080
           {{- end }}
           volumeMounts:
-            - mountPath: /etc/provisioner/config
-              name: provisioner-config
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
               readOnly: true
-            - mountPath: /dev
-              name: provisioner-dev
+            - name: provisioner-dev
+              mountPath: /dev
             {{- range $classConfig := .Values.classes }}
-            - mountPath: {{ if $classConfig.mountDir }} {{- $classConfig.mountDir -}} {{ else }} {{- $classConfig.hostDir -}} {{ end }}
-              name: {{ $classConfig.name }}
+            - name: {{ $classConfig.name }}
+              mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
               mountPropagation: "HostToContainer"
             {{- end }}
       volumes:
