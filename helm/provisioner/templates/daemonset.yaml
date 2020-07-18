@@ -40,9 +40,9 @@ spec:
 {{- end }}
       containers:
         - name: provisioner
-          image: "{{ .Values.daemonset.image }}"
+          image: {{ .Values.daemonset.image }}
           {{- if .Values.daemonset.imagePullPolicy }}
-          imagePullPolicy: {{ .Values.daemonset.imagePullPolicy | quote }}
+          imagePullPolicy: {{ .Values.daemonset.imagePullPolicy }}
           {{- end }}
           securityContext:
             privileged: true
@@ -60,7 +60,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "{{ .Values.daemonset.image }}"
+            value: {{ .Values.daemonset.image }}
           {{- if .Values.daemonset.kubeConfigEnv }}
           - name: KUBECONFIG
             value: {{.Values.daemonset.kubeConfigEnv}}
@@ -79,7 +79,7 @@ spec:
             {{- range $classConfig := .Values.classes }}
             - name: {{ $classConfig.name }}
               mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
-              mountPropagation: "HostToContainer"
+              mountPropagation: HostToContainer
             {{- end }}
       volumes:
         - name: provisioner-config
