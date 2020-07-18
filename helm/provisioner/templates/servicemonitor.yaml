@@ -41,7 +41,7 @@ spec:
     scheme: http
 {{- if .Values.serviceMonitor.relabelings }}
     relabelings:
-{{ toYaml .Values.serviceMonitor.relabelings | indent 4 }}
+      {{ toYaml .Values.serviceMonitor.relabelings | nindent 4 }}
 {{- end }}
   namespaceSelector:
     matchNames:

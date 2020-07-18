@@ -1,5 +1,3 @@
-{{- $release := .Release }}
-{{- $chart := .Chart }}
 {{- range $val := .Values.classes }}
 {{- if $val.storageClass }}
 ---
@@ -14,9 +12,10 @@ metadata:
   {{- end }}
   {{- end }}
   labels:
-    app.kubernetes.io/managed-by: {{ $release.Service | quote }}
-    app.kubernetes.io/instance: {{ $release.Name | quote }}
-    helm.sh/chart: {{ replace "+" "_" $chart.Version | printf "%s-%s" $chart.Name }}
+    helm.sh/chart: {{ template "provisioner.chart" $ }}
+    app.kubernetes.io/name: {{ template "provisioner.name" $ }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 {{- if kindIs "map" $val.storageClass }}
