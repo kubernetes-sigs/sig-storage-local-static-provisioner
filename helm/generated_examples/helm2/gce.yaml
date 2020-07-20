@@ -14,11 +14,11 @@ data:
   useNodeNameOnly: "true"
   storageClassMap: |
     local-scsi:
-       hostDir: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
-       mountDir: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
+      hostDir: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
+      mountDir: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
     local-nvme:
-       hostDir: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
-       mountDir: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
+      hostDir: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
+      mountDir: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
 
 ---
 # Source: provisioner/templates/storageclass.yaml
@@ -29,9 +29,10 @@ kind: StorageClass
 metadata:
   name: local-scsi
   labels:
-    app.kubernetes.io/managed-by: "Tiller"
-    app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -41,9 +42,10 @@ kind: StorageClass
 metadata:
   name: local-nvme
   labels:
-    app.kubernetes.io/managed-by: "Tiller"
-    app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -138,11 +140,13 @@ spec:
       labels:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
+      annotations:
+        checksum/config: af44bb9a640648862cb7f266436fa2c8787862089c237bdff0b02b06ea8a52eb
     spec:
       serviceAccountName: local-static-provisioner
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
-          name: provisioner
+        - name: provisioner
+          image: quay.io/external_storage/local-volume-provisioner:v2.3.4
           securityContext:
             privileged: true
           env:
@@ -155,19 +159,22 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
+            value: quay.io/external_storage/local-volume-provisioner:v2.3.4
+          ports:
+          - name: metrics
+            containerPort: 8080
           volumeMounts:
-            - mountPath: /etc/provisioner/config
-              name: provisioner-config
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
               readOnly: true
-            - mountPath: /dev
-              name: provisioner-dev
-            - mountPath: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
-              name: local-scsi
-              mountPropagation: "HostToContainer"
-            - mountPath: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
-              name: local-nvme
-              mountPropagation: "HostToContainer"
+            - name: provisioner-dev
+              mountPath: /dev
+            - name: local-scsi
+              mountPath: /mnt/disks/by-uuid/google-local-ssds-scsi-fs
+              mountPropagation: HostToContainer
+            - name: local-nvme
+              mountPath: /mnt/disks/by-uuid/google-local-ssds-nvme-fs
+              mountPropagation: HostToContainer
       volumes:
         - name: provisioner-config
           configMap:

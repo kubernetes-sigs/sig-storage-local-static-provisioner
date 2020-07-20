@@ -14,11 +14,11 @@ data:
   minResyncPeriod: "1h"
   storageClassMap: |
     local-storage:
-       hostDir: /mnt/disks
-       mountDir: /mnt/disks
-       blockCleanerCommand:
-         - "/scripts/quick_reset.sh"
-       volumeMode: Block
+      hostDir: /mnt/disks
+      mountDir: /mnt/disks
+      blockCleanerCommand:
+        - "/scripts/quick_reset.sh"
+      volumeMode: Block
 
 ---
 # Source: provisioner/templates/storageclass.yaml
@@ -29,9 +29,10 @@ kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    app.kubernetes.io/managed-by: "Tiller"
-    app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -126,11 +127,13 @@ spec:
       labels:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
+      annotations:
+        checksum/config: 51171db3643743fdb44cb799fb194cd975c656e6a6a98f268a2147687ba10703
     spec:
       serviceAccountName: local-static-provisioner
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
-          name: provisioner
+        - name: provisioner
+          image: quay.io/external_storage/local-volume-provisioner:v2.3.4
           securityContext:
             privileged: true
           env:
@@ -143,16 +146,19 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
+            value: quay.io/external_storage/local-volume-provisioner:v2.3.4
+          ports:
+          - name: metrics
+            containerPort: 8080
           volumeMounts:
-            - mountPath: /etc/provisioner/config
-              name: provisioner-config
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
               readOnly: true
-            - mountPath: /dev
-              name: provisioner-dev
-            - mountPath: /mnt/disks
-              name: local-storage
-              mountPropagation: "HostToContainer"
+            - name: provisioner-dev
+              mountPath: /dev
+            - name: local-storage
+              mountPath: /mnt/disks
+              mountPropagation: HostToContainer
       volumes:
         - name: provisioner-config
           configMap:

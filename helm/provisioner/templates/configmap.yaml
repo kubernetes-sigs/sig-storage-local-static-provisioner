@@ -33,7 +33,7 @@ data:
   storageClassMap: |
     {{- range $classConfig := .Values.classes }}
     {{ $classConfig.name }}:
-      hostDir:  {{ $classConfig.hostDir }}
+      hostDir: {{ $classConfig.hostDir }}
       mountDir: {{ $classConfig.mountDir | default $classConfig.hostDir }}
       {{- if $classConfig.blockCleanerCommand }}
       blockCleanerCommand:
