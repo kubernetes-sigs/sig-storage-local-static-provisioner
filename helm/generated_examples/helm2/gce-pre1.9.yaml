@@ -15,8 +15,8 @@ data:
   useNodeNameOnly: "true"
   storageClassMap: |
     local-scsi:
-       hostDir: /mnt/disks
-       mountDir: /mnt/disks
+      hostDir: /mnt/disks
+      mountDir: /mnt/disks
 
 ---
 # Source: provisioner/templates/storageclass.yaml
@@ -27,9 +27,10 @@ kind: StorageClass
 metadata:
   name: local-scsi
   labels:
-    app.kubernetes.io/managed-by: "Tiller"
-    app.kubernetes.io/instance: "local-static-provisioner"
     helm.sh/chart: provisioner-3.0.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -124,11 +125,13 @@ spec:
       labels:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
+      annotations:
+        checksum/config: 83b3e4df32592668f74399cc86912e672daae341381cfc4b633f75dc2c4d345b
     spec:
       serviceAccountName: local-static-provisioner
       containers:
-        - image: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
-          name: provisioner
+        - name: provisioner
+          image: quay.io/external_storage/local-volume-provisioner:v2.3.4
           securityContext:
             privileged: true
           env:
@@ -141,16 +144,19 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: "quay.io/external_storage/local-volume-provisioner:v2.3.4"
+            value: quay.io/external_storage/local-volume-provisioner:v2.3.4
+          ports:
+          - name: metrics
+            containerPort: 8080
           volumeMounts:
-            - mountPath: /etc/provisioner/config
-              name: provisioner-config
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
               readOnly: true
-            - mountPath: /dev
-              name: provisioner-dev
-            - mountPath: /mnt/disks
-              name: local-scsi
-              mountPropagation: "HostToContainer"
+            - name: provisioner-dev
+              mountPath: /dev
+            - name: local-scsi
+              mountPath: /mnt/disks
+              mountPropagation: HostToContainer
       volumes:
         - name: provisioner-config
           configMap:
