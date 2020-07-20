@@ -15,8 +15,8 @@
 # limitations under the License.
 
 if [ -z "$ROOT" ]; then
-	echo "error: ROOT should be initialized"
-	exit 1
+    echo "error: ROOT should be initialized"
+    exit 1
 fi
 
 OS=$(go env GOOS)
@@ -36,7 +36,7 @@ test -d "$OUTPUT_BIN" || mkdir -p "$OUTPUT_BIN"
 
 # helm 2 verify and install
 function hack::verify_helm2() {
-		if test -x "$HELM2_BIN"; then
+        if test -x "$HELM2_BIN"; then
         local v=$($HELM2_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
         [[ "$v" == "$HELM2_VERSION" ]]
         return
@@ -59,8 +59,8 @@ function hack::verify_helm3() {
         local v=$($HELM3_BIN version --short --client | grep -o -P '\d+.\d+.\d+')
         [[ "$v" == "$HELM3_VERSION" ]]
         return
-		fi
-		return 1
+        fi
+        return 1
 }
 function hack::install_helm3() {
     if hack::verify_helm3; then
@@ -111,4 +111,13 @@ function hack::install_misspell() {
     echo "Install misspell $MISSPELL_VERSION..."
     local TARURL=https://github.com/client9/misspell/releases/download/v${MISSPELL_VERSION}/misspell_${MISSPELL_VERSION}_linux_64bit.tar.gz
     wget -q $TARURL -O - | tar -zxf - -C "$OUTPUT_BIN"
+}
+
+function hack::install_kubetest2() {
+    local provider="$1"
+    tmpdir=$(mktemp -d)
+    trap "rm -rf ${tmpdir}" EXIT
+    pushd ${tmpdir} &>/dev/null
+    GOBIN=$OUTPUT_BIN GO111MODULE=on go get sigs.k8s.io/kubetest2/kubetest2-$provider@latest
+    popd &>/dev/null
 }

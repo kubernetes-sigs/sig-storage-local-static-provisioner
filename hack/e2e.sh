@@ -107,7 +107,6 @@ Examples:
     export GCP_PROJECT=<your-gcp-project>
     export PROVIDER=gke
     export GKE_ENVIRONMENT=prod
-    export EXTRACT_STRATEGY=gke-default
     ./hack/e2e.sh
 
 6) To run against cluster with GCE/GKE provider in test-infra/prow job
@@ -286,6 +285,35 @@ if [ "${1:-}" == "--" ]; then
     shift
 fi
 
+if [ "$PROVIDER" == "gke" ]; then
+    kubetest2_args+=(
+        --up
+        --down
+        --test exec
+        -v 1
+        --cluster-name "$CLUSTER"
+        --gcp-service-account "$GOOGLE_APPLICATION_CREDENTIALS"
+        --environment "$GKE_ENVIRONMENT"
+    )
+    if [ -n "$GCP_PROJECT" ]; then
+        kubetest2_args+=(
+            --project "$GCP_PROJECT"
+        )
+    fi
+    if [ -n "$GCP_ZONE" ]; then
+        kubetest2_args+=(
+            --zone "$GCP_ZONE"
+        )
+    fi
+    hack::install_kubetest2 $PROVIDER
+    export PROVIDER
+    export GCP_ZONE
+    export GCP_PROJECT
+    $OUTPUT_BIN/kubetest2-gke "${kubetest2_args[@]}" -- $ROOT/hack/run-e2e.sh "$@"
+    exit
+fi
+
+# legacy path
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
     --deployment "$DEPLOYMENT" \
     --up \
