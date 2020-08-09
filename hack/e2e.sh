@@ -305,11 +305,11 @@ if [ "$PROVIDER" == "gke" ]; then
             --zone "$GCP_ZONE"
         )
     fi
-    hack::install_kubetest2 $PROVIDER
+    hack::install_kubetest2
     export PROVIDER
     export GCP_ZONE
     export GCP_PROJECT
-    $OUTPUT_BIN/kubetest2-gke "${kubetest2_args[@]}" -- $ROOT/hack/run-e2e.sh "$@"
+    PATH=$OUTPUT_BIN:$PATH kubetest2-gke "${kubetest2_args[@]}" -- $ROOT/hack/run-e2e.sh "$@"
     exit
 fi
 
