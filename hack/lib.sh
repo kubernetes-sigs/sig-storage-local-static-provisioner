@@ -114,10 +114,9 @@ function hack::install_misspell() {
 }
 
 function hack::install_kubetest2() {
-    local provider="$1"
     tmpdir=$(mktemp -d)
     trap "rm -rf ${tmpdir}" EXIT
     pushd ${tmpdir} &>/dev/null
-    GOBIN=$OUTPUT_BIN GO111MODULE=on go get sigs.k8s.io/kubetest2/kubetest2-$provider@latest
+    GOBIN=$OUTPUT_BIN GO111MODULE=on go get sigs.k8s.io/kubetest2/...
     popd &>/dev/null
 }
