@@ -292,6 +292,7 @@ if [ "$PROVIDER" == "gke" ]; then
         --test exec
         -v 1
         --cluster-name "$CLUSTER"
+        --network "$CLUSTER"
         --gcp-service-account "$GOOGLE_APPLICATION_CREDENTIALS"
         --environment "$GKE_ENVIRONMENT"
     )
