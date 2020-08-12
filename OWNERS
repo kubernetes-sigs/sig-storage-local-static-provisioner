@@ -5,5 +5,7 @@ approvers:
   - saad-ali
   - wongma7
   - jsafrane
-  - dhirajh
   - cofyc
+
+emeritus_approvers:
+  - dhirajh
