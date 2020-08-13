@@ -19,8 +19,14 @@ spec:
       labels:
         app.kubernetes.io/name: {{ template "provisioner.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Values.daemonset.podLabels }}
+{{ .Values.daemonset.podLabels | toYaml | trim | indent 8 }}
+{{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+{{- if .Values.daemonset.podAnnotations }}
+{{ .Values.daemonset.podAnnotations | toYaml | trim | indent 8 }}
+{{- end }}
     spec:
       serviceAccountName: {{ template "provisioner.serviceAccountName" . }}
 {{- if .Values.daemonset.priorityClassName }}
