@@ -85,6 +85,14 @@ classes:
 #
 daemonset:
   #
+  # Defines annotations for each Pod in the DaemonSet.
+  #
+  podAnnotations: {}
+  #
+  # Defines labels for each Pod in the DaemonSet.
+  #
+  podLabels: {}
+  #
   # Defines Provisioner's image name including container registry.
   #
   image: quay.io/external_storage/local-volume-provisioner:v2.3.4
