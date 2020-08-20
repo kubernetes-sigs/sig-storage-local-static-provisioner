@@ -195,3 +195,7 @@ them to be discovered again.
 Another solution is to add a bind in the kubelet deployment configuration to
 mount the parent directory of local volumes into the kubelet container at the
 same path. This requires restarting the kubelet container.
+
+For [Rancher](https://rancher.com) clusters, users must configure additional
+local volumes (or the parent directory) via [Extra
+Binds](https://rancher.com/docs/rke/latest/en/config-options/services/services-extras/#extra-binds).
