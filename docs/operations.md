@@ -58,7 +58,7 @@ can format and mount it into discovery directory with the following commands:
 
 ```
 $ sudo mkfs.ext4 /dev/path/to/disk
-$ DISK_UUID=$(blkid -s UUID -o value /dev/path/to/disk) 
+$ DISK_UUID=$(sudo blkid -s UUID -o value /dev/path/to/disk) 
 $ sudo mkdir /mnt/disks/$DISK_UUID
 $ sudo mount -t ext4 /dev/path/to/disk /mnt/disks/$DISK_UUID
 ```
