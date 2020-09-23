@@ -42,6 +42,11 @@ common:
   # 2*minResyncPeriod. Default: 5m0s.
   #
   #minResyncPeriod: 5m0s
+  #
+  # Mount the host's `/dev/` by default so that block device symlinks can be
+  # resolved by the containers
+  #
+  mountDevVolume: true
 #
 # Configure storage classes.
 #
