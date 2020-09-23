@@ -78,8 +78,10 @@ spec:
             - name: provisioner-config
               mountPath: /etc/provisioner/config
               readOnly: true
+            {{- if .Values.common.mountDevVolume }}
             - name: provisioner-dev
               mountPath: /dev
+            {{- end }}
             {{- range $classConfig := .Values.classes }}
             - name: {{ $classConfig.name }}
               mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
@@ -89,9 +91,11 @@ spec:
         - name: provisioner-config
           configMap:
             name: {{ template "provisioner.fullname" . }}-config
+        {{- if .Values.common.mountDevVolume }}
         - name: provisioner-dev
           hostPath:
             path: /dev
+        {{- end }}
         {{- range $classConfig := .Values.classes }}
         - name: {{ $classConfig.name }}
           hostPath:
