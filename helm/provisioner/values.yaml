@@ -147,6 +147,9 @@ daemonset:
     # requests:
     #   memory: "32Mi"
     #   cpu: "10m"
+  #
+  # If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
+  privileged: true
 #
 # Configure Prometheus monitoring
 #
