@@ -19,7 +19,7 @@ spec:
   {{- end }}
   fsGroup:
     rule: RunAsAny
-  privileged: true
+  privileged: {{ .Values.daemonset.privileged }}
   requiredDropCapabilities:
   - ALL
   runAsUser:

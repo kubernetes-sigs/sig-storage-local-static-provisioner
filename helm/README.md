@@ -207,6 +207,7 @@ provisioner chart and their default values.
 | daemonset.tolerations                        | List of tolerations to be applied to the Provisioner DaemonSet.                                       | list     | `-`                                                        |
 | daemonset.resources                          | Map of resource request and limits to be applied to the Provisioner Daemonset.                        | map      | `-`                                                 |
 | daemonset.affinity                           | List of affinity to be applied to the provisioner Daemonset.                                                 | list     | `-`
+| daemonset.privileged                         | If set to false, containers created by the Provisioner Daemonset will run without extra privileges.   | bool     | `true`                                                     |
 | serviceMonitor.enabled                       | If set to true, Prometheus servicemonitor will be applied                                             | bool     | `false`                                                    |
 | serviceMonitor.interval                      | Interval at which Prometheus scrapes the provisioner                                                  | str      | `10s`                                                      |
 | serviceMonitor.namespace                     | The namespace Prometheus servicemonitor will be installed                                             | str      | `.Release.Namespace`                                       |

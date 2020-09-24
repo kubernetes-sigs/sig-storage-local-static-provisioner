@@ -51,7 +51,7 @@ spec:
           imagePullPolicy: {{ .Values.daemonset.imagePullPolicy }}
           {{- end }}
           securityContext:
-            privileged: true
+            privileged: {{ .Values.daemonset.privileged }}
 {{- if .Values.daemonset.resources }}
           resources:
             {{ toYaml .Values.daemonset.resources | nindent 12 }}
