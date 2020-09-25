@@ -53,8 +53,21 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 		DeleteFunc: func(obj interface{}) {
 			pv, ok := obj.(*v1.PersistentVolume)
 			if !ok {
-				klog.Errorf("Added object is not a v1.PersistentVolume type")
-				return
+				klog.Warningf("Deleted object is not a v1.PersistentVolume type")
+
+				// When a delete is dropped, the relist will notice a pv in the local cache but not
+				// in the list, leading to the insertion of a tombstone object which contains
+				// the deleted pv.
+				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+				if !ok {
+					klog.Errorf("Unknown object type in delete event %+v", obj)
+					return
+				}
+				pv, ok = tombstone.Obj.(*v1.PersistentVolume)
+				if !ok {
+					klog.Errorf("Tombstone contained object is not a v1.PersistentVolume %+v", obj)
+					return
+				}
 			}
 			p.handlePVDelete(pv)
 		},
