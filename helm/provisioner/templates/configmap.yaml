@@ -15,6 +15,12 @@ data:
     - {{$label}}
    {{- end }}
 {{- end }}
+{{- if .Values.common.labelsForPV }}
+  labelsForPV: |
+   {{- range $label, $value := .Values.common.labelsForPV }}
+    {{$label}} : {{$value}}
+   {{- end }}
+{{- end }}
 {{- if .Values.common.useAlphaAPI }}
   useAlphaAPI: "true"
 {{- end }}

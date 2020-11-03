@@ -47,6 +47,12 @@ common:
   # resolved by the containers
   #
   mountDevVolume: true
+  #
+  # Map of label key-value pairs to apply to the PVs created by the
+  # provisioner. Uncomment to add labels to the list.
+  #
+  #labelsForPV:
+  #  pv-labels: can-be-selected
 #
 # Configure storage classes.
 #
