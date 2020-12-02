@@ -14,6 +14,13 @@ Image updates:
 - handle DeletedFinalStateUnknown object when receiving PV delete event
   ([222](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/222))
 
+- We start to push multi-arch images to Kubernetes main image-serving system,
+  our repository is hosted at k8s.gcr.io/sig-storage/local-volume-provisioner.
+  Our legacy repository quay.io/external_storage/local-volume-provisioner is
+  deprecated but still maintained. Note that only amd64 images will be pushed
+  to this repository.
+  ([206](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/206))
+
 Helm updates:
 
 - **Action required**: As the helm-chart structure changed the already running
