@@ -1,13 +1,45 @@
 # HEAD
 
-helm chart refactoring:
-- **Action required**\
-  As the helm-chart structure changed the already running pod will be recreated during upgrade. Documentation can be found under [helm/README.md](./helm/README.md). Compare your existing values with the new chart parameter before upgrade.  [#171](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/171)
+Image updates:
 
-- blkdiscard.sh no longer zeros disks.
-  This script was passing the -z option to blkdiscard which meant it was not
-  performing discards. This has been fixed. If you desire zeroing, rather than
-  block discarding, please switch to dd_zero.sh.
+- add `namePattern` field to filter volumes
+  ([#187](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/187))
+
+- blkdiscard.sh no longer zeros disks. This script was passing the -z option to
+  blkdiscard which meant it was not performing discards. This has been fixed.
+  If you desire zeroing, rather than block discarding, please switch to
+  dd_zero.sh.
+  ([#200](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/200))
+
+- handle DeletedFinalStateUnknown object when receiving PV delete event
+  ([222](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/222))
+
+- We start to push multi-arch images to Kubernetes main image-serving system,
+  our repository is hosted at k8s.gcr.io/sig-storage/local-volume-provisioner.
+  Our legacy repository quay.io/external_storage/local-volume-provisioner is
+  deprecated but still maintained. Note that only amd64 images will be pushed
+  to this repository.
+  ([206](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/206))
+
+Helm updates:
+
+- **Action required**: As the helm-chart structure changed the already running
+  pod will be recreated during upgrade. Documentation can be found under
+  [helm/README.md](./helm/README.md). Compare your existing values with the new
+  chart parameter before upgrade.
+  ([#179](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/179))
+
+- Added daemonset.podAnnotations and daemonset.podLabels to Helm chart values.
+  ([#213](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/213))
+
+- Add opt-out for `/dev` volume in the chart
+  ([#219](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/219))
+
+- Accept `labelsForPV` elements in the chart
+  ([220](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/220))
+
+- Allow unprivileged provisioner in chart
+  ([221](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/221))
 
 # [v2.3.4](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.3.4)
 
