@@ -106,10 +106,7 @@ daemonset:
   #
   # Defines Provisioner's image name including container registry.
   #
-  # Since 2.4.0 we push multi-arch image to gcr.io/k8s-staging-sig-storage/local-volume-provisioner.
-  # Use it when you deploy in non-amd64 environment.
-  #
-  image: quay.io/external_storage/local-volume-provisioner:v2.4.0
+  image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
   #
   # Defines Image download policy, see kubernetes documentation for available values.
   #
