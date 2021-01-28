@@ -14,7 +14,8 @@ on older versions, please see version links under
   * [Option 3: Baremetal environments](#option-3-baremetal-environments)
   * [Option 4: Local test cluster](#option-4-local-test-cluster)
   * [Option 5: EKS (experimental)](#option-5-eks-experimental)
-  * [Option 6: AKS](#option-6-aks)  
+  * [Option 6: AKS](#option-6-aks)
+  * [Option 7: LKE](#option-7-lke)
 - [Step 2: Creating a StorageClass (1.9+)](#step-2-creating-a-storageclass-19)
 - [Step 3: Creating local persistent volumes](#step-3-creating-local-persistent-volumes)
   * [Option 1: Using the local volume static provisioner](#option-1-using-the-local-volume-static-provisioner)
@@ -111,7 +112,7 @@ for more information.
 
 [eks-nvme-ssd-provisioner](https://github.com/brunsgaard/eks-nvme-ssd-provisioner)
 runs as a DaemonSet and will automatically format and mount the requested local
-NVMe SSDs. 
+NVMe SSDs.
 
 **Note:** This project mounts disks in `/pv-disks/$uuid`. There is a
 working example of storage local static provisioner resources in the
@@ -119,6 +120,10 @@ eks-nvme-ssd-provisioner repo.
 
 #### Option 6: AKS
 See [Local Persistent Volume support on Azure](https://github.com/Azure/kubernetes-volume-drivers/tree/master/local) for more information.
+
+### Option 7: LKE
+
+LKE clusters can be created with custom Node Pools using the [Linode API](https://www.linode.com/docs/products/tools/linode-api/). For more information, see the [LKE Endpoints Collection](https://www.linode.com/docs/api/linode-kubernetes-engine-lke).
 
 ### Step 2: Creating a StorageClass (1.9+)
 
