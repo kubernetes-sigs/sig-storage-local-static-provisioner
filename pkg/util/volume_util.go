@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/kubernetes/pkg/volume/util/fs"
