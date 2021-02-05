@@ -284,7 +284,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				return err
 			}
 			if !matched {
-				klog.Infof("file(%s) under(%s) does not match pattern(%s)", file, config.MountDir, config.NamePattern)
+				klog.V(5).Infof("file(%s) under(%s) does not match pattern(%s)", file, config.MountDir, config.NamePattern)
 				continue
 			}
 		}
