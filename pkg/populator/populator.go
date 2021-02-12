@@ -17,8 +17,12 @@ limitations under the License.
 package populator
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	coreinformers "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -32,8 +36,21 @@ type Populator struct {
 // NewPopulator returns a Populator object to update the PV cache
 func NewPopulator(config *common.RuntimeConfig) *Populator {
 	p := &Populator{RuntimeConfig: config}
-	sharedInformer := config.InformerFactory.Core().V1().PersistentVolumes()
-	sharedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+
+	pvOptionModifier := func(options *metav1.ListOptions) {
+		options.LabelSelector = common.NodeLabelKey + "=" + config.UserConfig.Node.Name
+	}
+	sharedInformer := config.InformerFactory.InformerFor(&v1.PersistentVolume{},
+		func(k kubernetes.Interface, duration time.Duration) cache.SharedIndexInformer {
+			return coreinformers.NewFilteredPersistentVolumeInformer(
+				k,
+				duration,
+				nil,
+				pvOptionModifier,
+			)
+		},
+	)
+	sharedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pv, ok := obj.(*v1.PersistentVolume)
 			if !ok {

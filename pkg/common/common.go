@@ -363,6 +363,26 @@ func insertSpaces(original string) string {
 	return spaced
 }
 
+// SetupProvisionerConfigs is a wrapper for LoadProvisionerConfigs, always set hostname label for PV, for saving cache of informer
+func SetupProvisionerConfigs(configPath string, configuration *ProvisionerConfiguration) error {
+	if err := LoadProvisionerConfigs(configPath, configuration); err != nil {
+		return err
+	}
+
+	// ensure kubernetes.io/hostname label configured for pv
+	hostLabelExist := false
+	for _, label := range configuration.NodeLabelsForPV {
+		if label == NodeLabelKey {
+			hostLabelExist = true
+			break
+		}
+	}
+	if !hostLabelExist {
+		configuration.NodeLabelsForPV = append(configuration.NodeLabelsForPV, NodeLabelKey)
+	}
+	return nil
+}
+
 // LoadProvisionerConfigs loads all configuration into a string and unmarshal it into ProvisionerConfiguration struct.
 // The configuration is stored in the configmap which is mounted as a volume.
 func LoadProvisionerConfigs(configPath string, provisionerConfig *ProvisionerConfiguration) error {

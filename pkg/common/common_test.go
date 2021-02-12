@@ -75,7 +75,7 @@ func TestSetupClientByInCluster(t *testing.T) {
 	}
 }
 
-func TestLoadProvisionerConfigs(t *testing.T) {
+func TestSetupProvisionerConfigs(t *testing.T) {
 	tmpConfigPath, err := ioutil.TempDir("", "local-provisioner-config")
 	if err != nil {
 		t.Fatalf("create temp dir error: %v", err)
@@ -89,14 +89,17 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 	}{
 		{
 			nil,
-			ProvisionerConfiguration{},
+			ProvisionerConfiguration{
+				NodeLabelsForPV: []string{NodeLabelKey},
+			},
 		},
 		{
 			map[string]string{
 				"useAlphaAPI": "true",
 			},
 			ProvisionerConfiguration{
-				UseAlphaAPI: true,
+				UseAlphaAPI:     true,
+				NodeLabelsForPV: []string{NodeLabelKey},
 			},
 		},
 		{
@@ -129,6 +132,7 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 				MinResyncPeriod: metav1.Duration{
 					Duration: time.Hour + time.Minute*30,
 				},
+				NodeLabelsForPV: []string{NodeLabelKey},
 			},
 		},
 	}
@@ -140,7 +144,7 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 			}
 		}
 		provisionerConfig := ProvisionerConfiguration{}
-		err = LoadProvisionerConfigs(tmpConfigPath, &provisionerConfig)
+		err = SetupProvisionerConfigs(tmpConfigPath, &provisionerConfig)
 		if err != nil {
 			t.Fatalf("LoadProvisionerConfigs error: %v", err)
 		}

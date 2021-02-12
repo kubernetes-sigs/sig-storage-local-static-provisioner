@@ -57,7 +57,7 @@ func main() {
 		StorageClassConfig: make(map[string]common.MountConfig),
 		MinResyncPeriod:    metav1.Duration{Duration: 5 * time.Minute},
 	}
-	if err := common.LoadProvisionerConfigs(common.ProvisionerConfigPath, &provisionerConfig); err != nil {
+	if err := common.SetupProvisionerConfigs(common.ProvisionerConfigPath, &provisionerConfig); err != nil {
 		klog.Fatalf("Error parsing Provisioner's configuration: %#v. Exiting...\n", err)
 	}
 	klog.Infof("Loaded configuration: %+v", provisionerConfig)
