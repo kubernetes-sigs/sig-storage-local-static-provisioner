@@ -19,7 +19,7 @@ require (
 	k8s.io/apiserver v0.17.0
 	k8s.io/client-go v0.17.0
 	k8s.io/component-base v0.17.0
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.5.0
 	k8s.io/kubernetes v1.17.0
 	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
 	sigs.k8s.io/sig-storage-lib-external-provisioner v4.1.0+incompatible
