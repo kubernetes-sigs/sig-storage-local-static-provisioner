@@ -19,9 +19,9 @@ package cache
 import (
 	"sync"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // VolumeCache keeps all the PersistentVolumes that have been created by this provisioner.

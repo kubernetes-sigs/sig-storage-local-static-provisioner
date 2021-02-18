@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
