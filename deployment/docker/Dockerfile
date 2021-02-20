@@ -36,6 +36,7 @@ RUN apt-get update \
     e2fsprogs \
     bash
 
+ENV LISTEN_ADDRESS=:8080 LOG_LEVEL_VALUE=0
 COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/${OS}/${ARCH}/local-volume-provisioner /local-provisioner
 ADD deployment/docker/scripts /scripts
-ENTRYPOINT ["/local-provisioner"]
+ENTRYPOINT /local-provisioner -listen-address=$LISTEN_ADDRESS -v=$LOG_LEVEL_VALUE
