@@ -79,7 +79,7 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	var jobController deleter.JobController
 	var err error
 	if runtimeConfig.UseJobForCleaning {
-		labels := map[string]string{common.NodeNameLabel: config.Node.Name}
+		labels := map[string]string{common.NodeLabelKey: config.Node.Name}
 		jobController, err = deleter.NewJobController(labels, runtimeConfig)
 		if err != nil {
 			klog.Fatalf("Error initializing jobController: %v", err)

@@ -309,9 +309,9 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 	}
 	// Make job query-able by some useful labels for admins.
 	labels := map[string]string{
-		common.NodeNameLabel: nodeName,
-		PVLabel:              pv.Name,
-		PVUuidLabel:          string(pv.UID),
+		common.NodeLabelKey: nodeName,
+		PVLabel:             pv.Name,
+		PVUuidLabel:         string(pv.UID),
 	}
 
 	// Annotate job with useful information that cannot be set as labels due to label name restrictions.
@@ -324,7 +324,7 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 	podTemplate.Spec = apiv1.PodSpec{
 		Containers:   []apiv1.Container{jobContainer},
 		Volumes:      volumes,
-		NodeSelector: map[string]string{common.NodeNameLabel: nodeName},
+		NodeSelector: map[string]string{common.NodeLabelKey: nodeName},
 	}
 	podTemplate.ObjectMeta = meta_v1.ObjectMeta{
 		Name:        generateCleaningJobName(pv.Name),

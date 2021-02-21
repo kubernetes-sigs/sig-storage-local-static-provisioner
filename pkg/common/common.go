@@ -76,9 +76,6 @@ const (
 	// KubeConfigEnv will (optionally) specify the location of kubeconfig file on the node.
 	KubeConfigEnv = "KUBECONFIG"
 
-	// NodeNameLabel is the name of the label that holds the nodename
-	NodeNameLabel = "kubernetes.io/hostname"
-
 	// DefaultVolumeMode is the default volume mode of created PV object.
 	DefaultVolumeMode = "Filesystem"
 
