@@ -23,8 +23,8 @@ RUN echo "OS: $OS ARCH: $ARCH"
 RUN GO111MODULE=off CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-static"' -o _output/${OS}/${ARCH}/local-volume-provisioner ./cmd/local-volume-provisioner
 
 # For security, we use kubernetes community maintained debian base image.
-# https://github.com/kubernetes/kubernetes/blob/master/build/debian-base/
-FROM k8s.gcr.io/debian-base-${ARCH}:v1.0.0
+# https://github.com/kubernetes/release/tree/master/images/build/debian-base
+FROM k8s.gcr.io/build-image/debian-base-${ARCH}:buster-v1.4.0
 ARG OS=linux
 ARG ARCH=amd64
 
