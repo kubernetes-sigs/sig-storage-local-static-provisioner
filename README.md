@@ -121,7 +121,7 @@ Also see [known issues](KNOWN_ISSUES.md) and [CHANGELOG](CHANGELOG.md).
 
 * New PV.NodeAffinity field added.
 * **Important:** Alpha PV NodeAffinity annotation is deprecated. Users must manually update
-  their PVs to use the new NodeAffinity field or run a [one-time update job](utils/update-pv-to-beta).
+  their PVs to use the new NodeAffinity field or run a [one-time update job](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/cmd/utils/update-pv-to-beta).
 * Alpha: Raw block support added.
 
 ### 1.9: Alpha
