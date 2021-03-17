@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REGISTRY ?= quay.io/external_storage
+REGISTRY ?= k8s.gcr.io/sig-storage
 VERSION ?= latest
 GOVERSION ?= 1.13.9
 ARCH ?= amd64

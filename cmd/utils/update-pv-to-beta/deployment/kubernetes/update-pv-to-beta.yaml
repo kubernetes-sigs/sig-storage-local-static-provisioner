@@ -12,7 +12,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: updater
-        image: quay.io/external_storage/local-volume-update-pv-to-beta:latest
+        image: k8s.gcr.io/sig-storage/local-volume-update-pv-to-beta:latest
         env:
         # If you want provisioner to use a kubeconfig file to access API server, instead of the default
               #  in-cluster config, then specify the following environment variable:
