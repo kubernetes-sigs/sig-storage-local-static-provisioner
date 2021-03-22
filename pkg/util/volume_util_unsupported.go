@@ -32,3 +32,11 @@ func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
 func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
+
+func (u *volumeUtil) IsSymLink(fullPath string) (bool, error) {
+	return false, fmt.Errorf("IsBlock is unsupported in this build")
+}
+
+func (u *volumeUtil) IsMount(fullPath string) (bool, error) {
+	return false, fmt.Errorf("IsBlock is unsupported in this build")
+}
