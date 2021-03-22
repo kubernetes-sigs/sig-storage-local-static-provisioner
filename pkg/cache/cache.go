@@ -84,3 +84,23 @@ func (cache *VolumeCache) ListPVs() []*v1.PersistentVolume {
 	}
 	return pvs
 }
+
+// LookupPVsByPath returns a list of all of the PVs in the cache with a given local path
+// Note: The PVs in the cache have been filtered by the populator so that the cache only
+// contains volumes created by the local-static-provisioner running on this knode.
+func (cache *VolumeCache) LookupPVsByPath(filePath string) []string {
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+	var matches = make([]string, 0, 1)
+
+	for _, pv := range cache.pvs {
+		lvs := pv.Spec.Local
+		if lvs != nil {
+			if lvs.Path == filePath {
+				matches = append(matches, pv.ObjectMeta.Name)
+			}
+		}
+	}
+
+	return matches
+}
