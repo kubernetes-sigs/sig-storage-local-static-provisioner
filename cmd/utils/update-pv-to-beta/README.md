@@ -98,7 +98,7 @@ Pod Template:
   Service Account:  local-storage-update
   Containers:
    updater:
-    Image:        quay.io/external_storage/local-volume-update-pv-to-beta:latest
+    Image:        k8s.gcr.io/sig-storage/local-volume-update-pv-to-beta:latest
     Port:         <none>
     Host Port:    <none>
     Environment:  <none>
