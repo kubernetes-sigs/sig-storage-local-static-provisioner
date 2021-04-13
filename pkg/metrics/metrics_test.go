@@ -19,7 +19,7 @@ package metrics
 import (
 	"testing"
 
-	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/util"
 )
 
 func TestCapacityBreakDown(t *testing.T) {

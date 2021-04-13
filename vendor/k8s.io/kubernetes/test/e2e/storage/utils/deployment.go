@@ -23,8 +23,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/kubernetes/test/e2e/framework"
+	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 )
 
 // PatchCSIDeployment modifies the CSI driver deployment:
@@ -41,7 +41,6 @@ import (
 // that follow these conventions:
 // - driver and provisioner names are identical
 // - the driver binary accepts a --drivername parameter
-// - the provisioner binary accepts a --provisioner parameter
 // - the paths inside the container are either fixed
 //   and don't need to be patch (for example, --csi-address=/csi/csi.sock is
 //   okay) or are specified directly in a parameter (for example,
@@ -86,10 +85,6 @@ func PatchCSIDeployment(f *framework.Framework, o PatchCSIOptions, object interf
 			switch container.Name {
 			case o.DriverContainerName:
 				container.Args = append(container.Args, o.DriverContainerArguments...)
-			case o.ProvisionerContainerName:
-				// Driver name is expected to be the same
-				// as the provisioner here.
-				container.Args = append(container.Args, "--provisioner="+o.NewDriverName)
 			}
 		}
 	}
@@ -98,7 +93,7 @@ func PatchCSIDeployment(f *framework.Framework, o PatchCSIOptions, object interf
 		patchContainers(spec.Containers)
 		patchVolumes(spec.Volumes)
 		if o.NodeName != "" {
-			spec.NodeName = o.NodeName
+			e2epod.SetNodeSelection(spec, e2epod.NodeSelection{Name: o.NodeName})
 		}
 	}
 
@@ -117,18 +112,30 @@ func PatchCSIDeployment(f *framework.Framework, o PatchCSIOptions, object interf
 			// as the provisioner name here.
 			object.Provisioner = o.NewDriverName
 		}
-	case *storagev1beta1.CSIDriver:
+	case *storagev1.CSIDriver:
 		if o.NewDriverName != "" {
 			object.Name = o.NewDriverName
 		}
 		if o.PodInfo != nil {
 			object.Spec.PodInfoOnMount = o.PodInfo
 		}
+		if o.StorageCapacity != nil {
+			object.Spec.StorageCapacity = o.StorageCapacity
+		}
 		if o.CanAttach != nil {
 			object.Spec.AttachRequired = o.CanAttach
 		}
 		if o.VolumeLifecycleModes != nil {
 			object.Spec.VolumeLifecycleModes = *o.VolumeLifecycleModes
+		}
+		if o.TokenRequests != nil {
+			object.Spec.TokenRequests = o.TokenRequests
+		}
+		if o.RequiresRepublish != nil {
+			object.Spec.RequiresRepublish = o.RequiresRepublish
+		}
+		if o.FSGroupPolicy != nil {
+			object.Spec.FSGroupPolicy = o.FSGroupPolicy
 		}
 	}
 
@@ -169,8 +176,24 @@ type PatchCSIOptions struct {
 	// field *if* the driver deploys a CSIDriver object. Ignored
 	// otherwise.
 	CanAttach *bool
+	// If not nil, the value to use for the CSIDriver.Spec.StorageCapacity
+	// field *if* the driver deploys a CSIDriver object. Ignored
+	// otherwise.
+	StorageCapacity *bool
 	// If not nil, the value to use for the CSIDriver.Spec.VolumeLifecycleModes
 	// field *if* the driver deploys a CSIDriver object. Ignored
 	// otherwise.
-	VolumeLifecycleModes *[]storagev1beta1.VolumeLifecycleMode
+	VolumeLifecycleModes *[]storagev1.VolumeLifecycleMode
+	// If not nil, the value to use for the CSIDriver.Spec.TokenRequests
+	// field *if* the driver deploys a CSIDriver object. Ignored
+	// otherwise.
+	TokenRequests []storagev1.TokenRequest
+	// If not nil, the value to use for the CSIDriver.Spec.RequiresRepublish
+	// field *if* the driver deploys a CSIDriver object. Ignored
+	// otherwise.
+	RequiresRepublish *bool
+	// If not nil, the value to use for the CSIDriver.Spec.FSGroupPolicy
+	// field *if* the driver deploys a CSIDriver object. Ignored
+	// otherwise.
+	FSGroupPolicy *storagev1.FSGroupPolicy
 }

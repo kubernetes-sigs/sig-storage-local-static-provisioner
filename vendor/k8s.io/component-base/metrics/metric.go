@@ -23,7 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 /*
@@ -63,6 +63,7 @@ implements kubeCollector to get deferred registration behavior. You must call la
 with the kubeCollector itself as an argument.
 */
 type lazyMetric struct {
+	fqName              string
 	isDeprecated        bool
 	isHidden            bool
 	isCreated           bool
@@ -81,14 +82,29 @@ func (r *lazyMetric) IsCreated() bool {
 // lazyInit provides the lazyMetric with a reference to the kubeCollector it is supposed
 // to allow lazy initialization for. It should be invoked in the factory function which creates new
 // kubeCollector type objects.
-func (r *lazyMetric) lazyInit(self kubeCollector) {
+func (r *lazyMetric) lazyInit(self kubeCollector, fqName string) {
+	r.fqName = fqName
 	r.self = self
 }
 
-// determineDeprecationStatus figures out whether the lazy metric should be deprecated or not.
+// preprocessMetric figures out whether the lazy metric should be hidden or not.
 // This method takes a Version argument which should be the version of the binary in which
-// this code is currently being executed.
-func (r *lazyMetric) determineDeprecationStatus(version semver.Version) {
+// this code is currently being executed. A metric can be hidden under two conditions:
+//      1.  if the metric is deprecated and is outside the grace period (i.e. has been
+// 			deprecated for more than one release
+//		2. if the metric is manually disabled via a CLI flag.
+//
+// Disclaimer:  disabling a metric via a CLI flag has higher precedence than
+// 			  	deprecation and will override show-hidden-metrics for the explicitly
+//				disabled metric.
+func (r *lazyMetric) preprocessMetric(version semver.Version) {
+	disabledMetricsLock.RLock()
+	defer disabledMetricsLock.RUnlock()
+	// disabling metrics is higher in precedence than showing hidden metrics
+	if _, ok := disabledMetrics[r.fqName]; ok {
+		r.isHidden = true
+		return
+	}
 	selfVersion := r.self.DeprecatedVersion()
 	if selfVersion == nil {
 		return
@@ -97,8 +113,9 @@ func (r *lazyMetric) determineDeprecationStatus(version semver.Version) {
 		if selfVersion.LTE(version) {
 			r.isDeprecated = true
 		}
+
 		if ShouldShowHidden() {
-			klog.Warningf("Hidden metrics have been manually overridden, showing this very deprecated metric.")
+			klog.Warningf("Hidden metrics (%s) have been manually overridden, showing this very deprecated metric.", r.fqName)
 			return
 		}
 		if shouldHide(&version, selfVersion) {
@@ -124,7 +141,7 @@ func (r *lazyMetric) IsDeprecated() bool {
 // created.
 func (r *lazyMetric) Create(version *semver.Version) bool {
 	if version != nil {
-		r.determineDeprecationStatus(*version)
+		r.preprocessMetric(*version)
 	}
 	// let's not create if this metric is slated to be hidden
 	if r.IsHidden() {
@@ -156,6 +173,11 @@ func (r *lazyMetric) ClearState() {
 	r.createOnce = *(new(sync.Once))
 }
 
+// FQName returns the fully-qualified metric name of the collector.
+func (r *lazyMetric) FQName() string {
+	return r.fqName
+}
+
 /*
 This code is directly lifted from the prometheus codebase. It's a convenience struct which
 allows you satisfy the Collector interface automatically if you already satisfy the Metric interface.
@@ -181,7 +203,6 @@ func (c *selfCollector) Collect(ch chan<- prometheus.Metric) {
 // no-op vecs for convenience
 var noopCounterVec = &prometheus.CounterVec{}
 var noopHistogramVec = &prometheus.HistogramVec{}
-var noopSummaryVec = &prometheus.SummaryVec{}
 var noopGaugeVec = &prometheus.GaugeVec{}
 var noopObserverVec = &noopObserverVector{}
 

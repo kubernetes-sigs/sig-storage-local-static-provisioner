@@ -17,6 +17,7 @@ limitations under the License.
 package gce
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -35,12 +36,12 @@ func RecreateNodes(c clientset.Interface, nodes []v1.Node) error {
 	for i := range nodes {
 		node := &nodes[i]
 
-		if zone, ok := node.Labels[v1.LabelZoneFailureDomain]; ok {
+		if zone, ok := node.Labels[v1.LabelFailureDomainBetaZone]; ok {
 			nodeNamesByZone[zone] = append(nodeNamesByZone[zone], node.Name)
 			continue
 		}
 
-		if zone, ok := node.Labels[v1.LabelZoneFailureDomainStable]; ok {
+		if zone, ok := node.Labels[v1.LabelTopologyZone]; ok {
 			nodeNamesByZone[zone] = append(nodeNamesByZone[zone], node.Name)
 			continue
 		}
@@ -84,7 +85,7 @@ func WaitForNodeBootIdsToChange(c clientset.Interface, nodes []v1.Node, timeout 
 	for i := range nodes {
 		node := &nodes[i]
 		if err := wait.Poll(30*time.Second, timeout, func() (bool, error) {
-			newNode, err := c.CoreV1().Nodes().Get(node.Name, metav1.GetOptions{})
+			newNode, err := c.CoreV1().Nodes().Get(context.TODO(), node.Name, metav1.GetOptions{})
 			if err != nil {
 				framework.Logf("Could not get node info: %s. Retrying in %v.", err, 30*time.Second)
 				return false, nil

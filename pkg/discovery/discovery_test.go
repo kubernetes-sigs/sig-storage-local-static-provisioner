@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"k8s.io/klog/v2"
-	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"

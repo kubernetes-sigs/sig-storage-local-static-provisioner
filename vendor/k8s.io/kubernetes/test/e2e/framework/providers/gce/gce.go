@@ -17,7 +17,9 @@ limitations under the License.
 package gce
 
 import (
+	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os/exec"
 	"regexp"
@@ -46,6 +48,21 @@ func factory() (framework.ProviderInterface, error) {
 	framework.Logf("Fetching cloud provider for %q\r", framework.TestContext.Provider)
 	zone := framework.TestContext.CloudConfig.Zone
 	region := framework.TestContext.CloudConfig.Region
+	allowedZones := framework.TestContext.CloudConfig.Zones
+
+	// ensure users don't specify a zone outside of the requested zones
+	if len(zone) > 0 && len(allowedZones) > 0 {
+		var found bool
+		for _, allowedZone := range allowedZones {
+			if zone == allowedZone {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("the provided zone %q must be included in the list of allowed zones %v", zone, allowedZones)
+		}
+	}
 
 	var err error
 	if region == "" {
@@ -57,6 +74,9 @@ func factory() (framework.ProviderInterface, error) {
 	managedZones := []string{} // Manage all zones in the region
 	if !framework.TestContext.CloudConfig.MultiZone {
 		managedZones = []string{zone}
+	}
+	if len(allowedZones) > 0 {
+		managedZones = allowedZones
 	}
 
 	gceCloud, err := gcecloud.CreateGCECloud(&gcecloud.CloudConfig{
@@ -78,7 +98,10 @@ func factory() (framework.ProviderInterface, error) {
 		return nil, fmt.Errorf("Error building GCE/GKE provider: %v", err)
 	}
 
-	// Arbitrarily pick one of the zones we have nodes in
+	// Arbitrarily pick one of the zones we have nodes in, looking at prepopulated zones first.
+	if framework.TestContext.CloudConfig.Zone == "" && len(managedZones) > 0 {
+		framework.TestContext.CloudConfig.Zone = managedZones[rand.Intn(len(managedZones))]
+	}
 	if framework.TestContext.CloudConfig.Zone == "" && framework.TestContext.CloudConfig.MultiZone {
 		zones, err := gceCloud.GetAllZonesFromCloudProvider()
 		if err != nil {
@@ -187,7 +210,7 @@ func (p *Provider) EnsureLoadBalancerResourcesDeleted(ip, portRange string) erro
 
 func getGCEZoneForGroup(group string) (string, error) {
 	output, err := exec.Command("gcloud", "compute", "instance-groups", "managed", "list",
-		"--project="+framework.TestContext.CloudConfig.ProjectID, "--format=value(zone)", "--filter=name="+group).CombinedOutput()
+		"--project="+framework.TestContext.CloudConfig.ProjectID, "--format=value(zone)", "--filter=name="+group).Output()
 	if err != nil {
 		return "", fmt.Errorf("Failed to get zone for node group %s: %s", group, output)
 	}
@@ -215,7 +238,7 @@ func (p *Provider) CreatePD(zone string) (string, error) {
 	}
 
 	tags := map[string]string{}
-	if err := p.gceCloud.CreateDisk(pdName, gcecloud.DiskTypeStandard, zone, 2 /* sizeGb */, tags); err != nil {
+	if _, err := p.gceCloud.CreateDisk(pdName, gcecloud.DiskTypeStandard, zone, 2 /* sizeGb */, tags); err != nil {
 		return "", err
 	}
 	return pdName, nil
@@ -371,7 +394,7 @@ func GetGCECloud() (*gcecloud.Cloud, error) {
 
 // GetClusterID returns cluster ID
 func GetClusterID(c clientset.Interface) (string, error) {
-	cm, err := c.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(gcecloud.UIDConfigMapName, metav1.GetOptions{})
+	cm, err := c.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(context.TODO(), gcecloud.UIDConfigMapName, metav1.GetOptions{})
 	if err != nil || cm == nil {
 		return "", fmt.Errorf("error getting cluster ID: %v", err)
 	}

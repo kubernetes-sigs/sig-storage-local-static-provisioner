@@ -21,7 +21,7 @@ import (
 	"math"
 
 	"github.com/prometheus/client_golang/prometheus"
-	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/util"
 )
 
 const (

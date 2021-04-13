@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -270,7 +271,7 @@ func GetContainerPath(pv *v1.PersistentVolume, config MountConfig) (string, erro
 
 // GetVolumeConfigFromConfigMap gets volume configuration from given configmap.
 func GetVolumeConfigFromConfigMap(client *kubernetes.Clientset, namespace, name string, provisionerConfig *ProvisionerConfiguration) error {
-	configMap, err := client.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	configMap, err := client.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

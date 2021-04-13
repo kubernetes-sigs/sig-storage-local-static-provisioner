@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -119,7 +120,7 @@ func getNode(client *kubernetes.Clientset, name string) *v1.Node {
 	var retries int
 
 	for {
-		node, err := client.CoreV1().Nodes().Get(name, metav1.GetOptions{})
+		node, err := client.CoreV1().Nodes().Get(context.TODO(), name, metav1.GetOptions{})
 		if err == nil {
 			return node
 		}
