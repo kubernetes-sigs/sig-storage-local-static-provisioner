@@ -17,6 +17,8 @@ limitations under the License.
 package populator
 
 import (
+	"strings"
+
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 
@@ -88,6 +90,21 @@ func (p *Populator) handlePVUpdate(pv *v1.PersistentVolume) {
 			if provisioner == p.Name {
 				// This PV was created by this provisioner
 				p.Cache.AddPV(pv)
+				return
+			}
+			if p.UseNodeNameOnly {
+				nodeLabel, ok := pv.ObjectMeta.Labels[common.NodeNameLabel]
+				if !ok {
+					return
+				}
+				if nodeLabel != p.Node.Name {
+					return
+				}
+				if strings.HasPrefix(provisioner, p.Name+"-") {
+					// This PV was created by this provisioner with useNodeNameOnly disabled
+					klog.Infof("cacheing pv %q (useNodeNameOnly mode)", pv.Name)
+					p.Cache.AddPV(pv)
+				}
 			}
 		}
 	}

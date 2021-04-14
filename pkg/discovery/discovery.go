@@ -23,6 +23,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -305,6 +306,16 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, err)
 				d.Recorder.Eventf(pv, v1.EventTypeWarning, common.EventVolumeFailedDelete, err.Error())
 			}
+			continue
+		}
+
+		// Check that the local filePath is not already in use in any other local volume
+		// note: this check relies on the cache only containing PVs from this node and no others
+		outsidePath := filepath.Join(config.HostDir, file)
+		existingPVNames := d.Cache.LookupPVsByPath(outsidePath)
+		if len(existingPVNames) > 0 {
+			errStr := fmt.Sprintf("Volume path already in use: PV %q wants path %q which was already found in %q.", pvName, outsidePath, strings.Join(existingPVNames, ","))
+			klog.Errorf(errStr)
 			continue
 		}
 
