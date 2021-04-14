@@ -3,7 +3,9 @@
 approvers:
 - sig-instrumentation-approvers
 - logicalhan
+- RainbowMango
 reviewers:
 - sig-instrumentation-reviewers
+- YoyinZyc
 labels:
 - sig/instrumentation

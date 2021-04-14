@@ -17,6 +17,7 @@ limitations under the License.
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -28,13 +29,26 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/component-base/metrics/testutil"
-	dockermetrics "k8s.io/kubernetes/pkg/kubelet/dockershim/metrics"
-	kubeletmetrics "k8s.io/kubernetes/pkg/kubelet/metrics"
 	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
 )
 
 const (
 	proxyTimeout = 2 * time.Minute
+	// dockerOperationsLatencyKey is the key for the operation latency metrics.
+	// Taken from k8s.io/kubernetes/pkg/kubelet/dockershim/metrics
+	dockerOperationsLatencyKey = "docker_operations_duration_seconds"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	kubeletSubsystem = "kubelet"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	podWorkerDurationKey = "pod_worker_duration_seconds"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	podStartDurationKey = "pod_start_duration_seconds"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	cgroupManagerOperationsKey = "cgroup_manager_duration_seconds"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	podWorkerStartDurationKey = "pod_worker_start_duration_seconds"
+	// Taken from k8s.io/kubernetes/pkg/kubelet/metrics
+	plegRelistDurationKey = "pleg_relist_duration_seconds"
 )
 
 // KubeletMetrics is metrics for kubelet
@@ -85,7 +99,7 @@ func (g *Grabber) getMetricsFromNode(nodeName string, kubeletPort int) (string, 
 			SubResource("proxy").
 			Name(fmt.Sprintf("%v:%v", nodeName, kubeletPort)).
 			Suffix("metrics").
-			Do().Raw()
+			Do(context.TODO()).Raw()
 		finished <- struct{}{}
 	}()
 	select {
@@ -142,7 +156,7 @@ func GetKubeletMetrics(c clientset.Interface, nodeName string) (KubeletMetrics, 
 
 	kubeletMetrics := make(KubeletMetrics)
 	for name, samples := range ms {
-		const prefix = kubeletmetrics.KubeletSubsystem + "_"
+		const prefix = kubeletSubsystem + "_"
 		if !strings.HasPrefix(name, prefix) {
 			// Not a kubelet metric.
 			continue
@@ -158,13 +172,13 @@ func GetKubeletMetrics(c clientset.Interface, nodeName string) (KubeletMetrics, 
 // Note that the KubeletMetrics passed in should not contain subsystem prefix.
 func GetDefaultKubeletLatencyMetrics(ms KubeletMetrics) KubeletLatencyMetrics {
 	latencyMetricNames := sets.NewString(
-		kubeletmetrics.PodWorkerDurationKey,
-		kubeletmetrics.PodWorkerStartDurationKey,
-		kubeletmetrics.PodStartDurationKey,
-		kubeletmetrics.CgroupManagerOperationsKey,
-		dockermetrics.DockerOperationsLatencyKey,
-		kubeletmetrics.PodWorkerStartDurationKey,
-		kubeletmetrics.PLEGRelistDurationKey,
+		podWorkerDurationKey,
+		podWorkerStartDurationKey,
+		podStartDurationKey,
+		cgroupManagerOperationsKey,
+		dockerOperationsLatencyKey,
+		podWorkerStartDurationKey,
+		plegRelistDurationKey,
 	)
 	return GetKubeletLatencyMetrics(ms, latencyMetricNames)
 }

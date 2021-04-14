@@ -19,12 +19,17 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	v1alpha1 "k8s.io/api/flowcontrol/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
+	flowcontrolv1alpha1 "k8s.io/client-go/applyconfigurations/flowcontrol/v1alpha1"
 	testing "k8s.io/client-go/testing"
 )
 
@@ -38,7 +43,7 @@ var flowschemasResource = schema.GroupVersionResource{Group: "flowcontrol.apiser
 var flowschemasKind = schema.GroupVersionKind{Group: "flowcontrol.apiserver.k8s.io", Version: "v1alpha1", Kind: "FlowSchema"}
 
 // Get takes name of the flowSchema, and returns the corresponding flowSchema object, and an error if there is any.
-func (c *FakeFlowSchemas) Get(name string, options v1.GetOptions) (result *v1alpha1.FlowSchema, err error) {
+func (c *FakeFlowSchemas) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.FlowSchema, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(flowschemasResource, name), &v1alpha1.FlowSchema{})
 	if obj == nil {
@@ -48,7 +53,7 @@ func (c *FakeFlowSchemas) Get(name string, options v1.GetOptions) (result *v1alp
 }
 
 // List takes label and field selectors, and returns the list of FlowSchemas that match those selectors.
-func (c *FakeFlowSchemas) List(opts v1.ListOptions) (result *v1alpha1.FlowSchemaList, err error) {
+func (c *FakeFlowSchemas) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.FlowSchemaList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(flowschemasResource, flowschemasKind, opts), &v1alpha1.FlowSchemaList{})
 	if obj == nil {
@@ -69,13 +74,13 @@ func (c *FakeFlowSchemas) List(opts v1.ListOptions) (result *v1alpha1.FlowSchema
 }
 
 // Watch returns a watch.Interface that watches the requested flowSchemas.
-func (c *FakeFlowSchemas) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeFlowSchemas) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(flowschemasResource, opts))
 }
 
 // Create takes the representation of a flowSchema and creates it.  Returns the server's representation of the flowSchema, and an error, if there is any.
-func (c *FakeFlowSchemas) Create(flowSchema *v1alpha1.FlowSchema) (result *v1alpha1.FlowSchema, err error) {
+func (c *FakeFlowSchemas) Create(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.CreateOptions) (result *v1alpha1.FlowSchema, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(flowschemasResource, flowSchema), &v1alpha1.FlowSchema{})
 	if obj == nil {
@@ -85,7 +90,7 @@ func (c *FakeFlowSchemas) Create(flowSchema *v1alpha1.FlowSchema) (result *v1alp
 }
 
 // Update takes the representation of a flowSchema and updates it. Returns the server's representation of the flowSchema, and an error, if there is any.
-func (c *FakeFlowSchemas) Update(flowSchema *v1alpha1.FlowSchema) (result *v1alpha1.FlowSchema, err error) {
+func (c *FakeFlowSchemas) Update(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.UpdateOptions) (result *v1alpha1.FlowSchema, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(flowschemasResource, flowSchema), &v1alpha1.FlowSchema{})
 	if obj == nil {
@@ -96,7 +101,7 @@ func (c *FakeFlowSchemas) Update(flowSchema *v1alpha1.FlowSchema) (result *v1alp
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeFlowSchemas) UpdateStatus(flowSchema *v1alpha1.FlowSchema) (*v1alpha1.FlowSchema, error) {
+func (c *FakeFlowSchemas) UpdateStatus(ctx context.Context, flowSchema *v1alpha1.FlowSchema, opts v1.UpdateOptions) (*v1alpha1.FlowSchema, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(flowschemasResource, "status", flowSchema), &v1alpha1.FlowSchema{})
 	if obj == nil {
@@ -106,24 +111,67 @@ func (c *FakeFlowSchemas) UpdateStatus(flowSchema *v1alpha1.FlowSchema) (*v1alph
 }
 
 // Delete takes name of the flowSchema and deletes it. Returns an error if one occurs.
-func (c *FakeFlowSchemas) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeFlowSchemas) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(flowschemasResource, name), &v1alpha1.FlowSchema{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeFlowSchemas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(flowschemasResource, listOptions)
+func (c *FakeFlowSchemas) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(flowschemasResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.FlowSchemaList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched flowSchema.
-func (c *FakeFlowSchemas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.FlowSchema, err error) {
+func (c *FakeFlowSchemas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.FlowSchema, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(flowschemasResource, name, pt, data, subresources...), &v1alpha1.FlowSchema{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.FlowSchema), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied flowSchema.
+func (c *FakeFlowSchemas) Apply(ctx context.Context, flowSchema *flowcontrolv1alpha1.FlowSchemaApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.FlowSchema, err error) {
+	if flowSchema == nil {
+		return nil, fmt.Errorf("flowSchema provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(flowSchema)
+	if err != nil {
+		return nil, err
+	}
+	name := flowSchema.Name
+	if name == nil {
+		return nil, fmt.Errorf("flowSchema.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(flowschemasResource, *name, types.ApplyPatchType, data), &v1alpha1.FlowSchema{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.FlowSchema), err
+}
+
+// ApplyStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
+func (c *FakeFlowSchemas) ApplyStatus(ctx context.Context, flowSchema *flowcontrolv1alpha1.FlowSchemaApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.FlowSchema, err error) {
+	if flowSchema == nil {
+		return nil, fmt.Errorf("flowSchema provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(flowSchema)
+	if err != nil {
+		return nil, err
+	}
+	name := flowSchema.Name
+	if name == nil {
+		return nil, fmt.Errorf("flowSchema.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(flowschemasResource, *name, types.ApplyPatchType, data, "status"), &v1alpha1.FlowSchema{})
 	if obj == nil {
 		return nil, err
 	}

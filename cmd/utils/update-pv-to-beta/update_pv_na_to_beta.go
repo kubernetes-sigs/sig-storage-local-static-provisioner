@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,7 +25,7 @@ import (
 	"github.com/golang/glog"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -56,7 +57,7 @@ func updateLocalPVAlphaAnn(client *kubernetes.Clientset, pv *v1.PersistentVolume
 		}
 
 		glog.Infof("Updating local PV(%s), node affinity is: %v", pv.Name, pv.Annotations[common.AlphaStorageNodeAffinityAnnotation])
-		_, err = client.CoreV1().PersistentVolumes().Update(pvClone)
+		_, err = client.CoreV1().PersistentVolumes().Update(context.TODO(), pvClone, metav1.UpdateOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				glog.Errorf("PV(%s) seems to have been deleted", pv.Name)
@@ -69,7 +70,7 @@ func updateLocalPVAlphaAnn(client *kubernetes.Clientset, pv *v1.PersistentVolume
 }
 
 func startSwitchingLocalPVAlphaAnn(client *kubernetes.Clientset) error {
-	pvs, err := client.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+	pvs, err := client.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		glog.Errorf("list PVs error: %v", err)
 	}

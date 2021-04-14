@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
-	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/util"
+	esUtil "sigs.k8s.io/sig-storage-lib-external-provisioner/v6/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 )
 

@@ -19,6 +19,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -38,8 +39,8 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/test/e2e/framework"
+	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
-	testutils "k8s.io/kubernetes/test/utils"
 
 	// enable client-go GCP auth plugin, xref: http://issues.k8s.io/63743
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -47,6 +48,8 @@ import (
 	// ensure that cloud providers are loaded
 	_ "k8s.io/kubernetes/test/e2e/framework/providers/gce"
 )
+
+const namespaceCleanupTimeout = time.Minute * 15
 
 // waitForDaemonSets for all daemonsets in the given namespace to be ready
 // (defined as all but 'allowedNotReadyNodes' pods associated with that
@@ -57,12 +60,9 @@ func waitForDaemonSets(c clientset.Interface, ns string, allowedNotReadyNodes in
 		timeout, ns)
 
 	return wait.PollImmediate(framework.Poll, timeout, func() (bool, error) {
-		dsList, err := c.AppsV1().DaemonSets(ns).List(metav1.ListOptions{})
+		dsList, err := c.AppsV1().DaemonSets(ns).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			framework.Logf("Error getting daemonsets in namespace: '%s': %v", ns, err)
-			if testutils.IsRetryableAPIError(err) {
-				return false, nil
-			}
 			return false, err
 		}
 		var notReadyDaemonSets []string
@@ -111,7 +111,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 			framework.Failf("Error deleting orphaned namespaces: %v", err)
 		}
 		klog.Infof("Waiting for deletion of the following namespaces: %v", deleted)
-		if err := framework.WaitForNamespacesDeleted(c, deleted, framework.NamespaceCleanupTimeout); err != nil {
+		if err := framework.WaitForNamespacesDeleted(c, deleted, namespaceCleanupTimeout); err != nil {
 			framework.Failf("Failed to delete orphaned namespaces %v: %v", deleted, err)
 		}
 	}
@@ -125,7 +125,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	podStartupTimeout := framework.TestContext.SystemPodsStartupTimeout
 	if err := e2epod.WaitForPodsRunningReady(c, metav1.NamespaceSystem, int32(framework.TestContext.MinStartupPods), int32(framework.TestContext.AllowedNotReadyNodes), podStartupTimeout, map[string]string{}); err != nil {
 		framework.DumpAllNamespaceInfo(c, metav1.NamespaceSystem)
-		framework.LogFailedContainers(c, metav1.NamespaceSystem, framework.Logf)
+		e2ekubectl.LogFailedContainers(c, metav1.NamespaceSystem, framework.Logf)
 		framework.Failf("Error waiting for all pods to be running and ready: %v", err)
 	}
 

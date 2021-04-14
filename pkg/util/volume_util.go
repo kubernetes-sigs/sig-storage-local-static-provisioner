@@ -115,7 +115,7 @@ func (u *volumeUtil) DeleteContents(fullPath string) error {
 // fullPath is the pathname of any file within the mounted filesystem. Capacity
 // returned here is total capacity.
 func (u *volumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
-	_, capacity, _, _, _, _, err := fs.FsInfo(fullPath)
+	_, capacity, _, _, _, _, err := fs.Info(fullPath)
 	return capacity, err
 }
 

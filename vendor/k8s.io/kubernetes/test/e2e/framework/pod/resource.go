@@ -30,16 +30,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
-	"k8s.io/kubernetes/pkg/client/conditions"
-	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
+	"k8s.io/klog/v2"
+	"k8s.io/kubectl/pkg/util/podutils"
 	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
 	testutils "k8s.io/kubernetes/test/utils"
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
+
+// errPodCompleted is returned by PodRunning or PodContainerRunning to indicate that
+// the pod has already reached completed state.
+var errPodCompleted = fmt.Errorf("pod ran to completion")
 
 // TODO: Move to its own subpkg.
 // expectNoError checks if "err" is set, and if so, fails assertion while logging the error.
@@ -87,7 +89,7 @@ func NewProxyResponseChecker(c clientset.Interface, ns string, label labels.Sele
 func (r ProxyResponseChecker) CheckAllResponses() (done bool, err error) {
 	successes := 0
 	options := metav1.ListOptions{LabelSelector: r.label.String()}
-	currentPods, err := r.c.CoreV1().Pods(r.ns).List(options)
+	currentPods, err := r.c.CoreV1().Pods(r.ns).List(context.TODO(), options)
 	expectNoError(err, "Failed to get list of currentPods in namespace: %s", r.ns)
 	for i, pod := range r.pods.Items {
 		// Check that the replica list remains unchanged, otherwise we have problems.
@@ -99,12 +101,11 @@ func (r ProxyResponseChecker) CheckAllResponses() (done bool, err error) {
 		defer cancel()
 
 		body, err := r.c.CoreV1().RESTClient().Get().
-			Context(ctx).
 			Namespace(r.ns).
 			Resource("pods").
 			SubResource("proxy").
 			Name(string(pod.Name)).
-			Do().
+			Do(ctx).
 			Raw()
 
 		if err != nil {
@@ -147,36 +148,9 @@ func (r ProxyResponseChecker) CheckAllResponses() (done bool, err error) {
 	return true, nil
 }
 
-// CountRemainingPods queries the server to count number of remaining pods, and number of pods that had a missing deletion timestamp.
-func CountRemainingPods(c clientset.Interface, namespace string) (int, int, error) {
-	// check for remaining pods
-	pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// nothing remains!
-	if len(pods.Items) == 0 {
-		return 0, 0, nil
-	}
-
-	// stuff remains, log about it
-	LogPodStates(pods.Items)
-
-	// check if there were any pods with missing deletion timestamp
-	numPods := len(pods.Items)
-	missingTimestamp := 0
-	for _, pod := range pods.Items {
-		if pod.DeletionTimestamp == nil {
-			missingTimestamp++
-		}
-	}
-	return numPods, missingTimestamp, nil
-}
-
 func podRunning(c clientset.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -184,7 +158,7 @@ func podRunning(c clientset.Interface, podName, namespace string) wait.Condition
 		case v1.PodRunning:
 			return true, nil
 		case v1.PodFailed, v1.PodSucceeded:
-			return false, conditions.ErrPodCompleted
+			return false, errPodCompleted
 		}
 		return false, nil
 	}
@@ -192,7 +166,7 @@ func podRunning(c clientset.Interface, podName, namespace string) wait.Condition
 
 func podCompleted(c clientset.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -206,23 +180,26 @@ func podCompleted(c clientset.Interface, podName, namespace string) wait.Conditi
 
 func podRunningAndReady(c clientset.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
 		switch pod.Status.Phase {
 		case v1.PodFailed, v1.PodSucceeded:
-			return false, conditions.ErrPodCompleted
+			e2elog.Logf("The status of Pod %s is %s which is unexpected", podName, pod.Status.Phase)
+			return false, errPodCompleted
 		case v1.PodRunning:
-			return podutil.IsPodReady(pod), nil
+			e2elog.Logf("The status of Pod %s is %s (Ready = %v)", podName, pod.Status.Phase, podutils.IsPodReady(pod))
+			return podutils.IsPodReady(pod), nil
 		}
+		e2elog.Logf("The status of Pod %s is %s, waiting for it to be Running (with Ready = true)", podName, pod.Status.Phase)
 		return false, nil
 	}
 }
 
 func podNotPending(c clientset.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -248,7 +225,7 @@ func PodsCreatedByLabel(c clientset.Interface, ns, name string, replicas int32, 
 		options := metav1.ListOptions{LabelSelector: label.String()}
 
 		// List the pods, making sure we observe all the replicas.
-		pods, err := c.CoreV1().Pods(ns).List(options)
+		pods, err := c.CoreV1().Pods(ns).List(context.TODO(), options)
 		if err != nil {
 			return nil, err
 		}
@@ -321,13 +298,41 @@ func podsRunning(c clientset.Interface, pods *v1.PodList) []error {
 	return e
 }
 
-// DumpAllPodInfo logs basic info for all pods.
-func DumpAllPodInfo(c clientset.Interface) {
-	pods, err := c.CoreV1().Pods("").List(metav1.ListOptions{})
-	if err != nil {
-		e2elog.Logf("unable to fetch pod debug info: %v", err)
+func podContainerFailed(c clientset.Interface, namespace, podName string, containerIndex int, reason string) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		switch pod.Status.Phase {
+		case v1.PodPending:
+			if len(pod.Status.ContainerStatuses) == 0 {
+				return false, nil
+			}
+			containerStatus := pod.Status.ContainerStatuses[containerIndex]
+			if containerStatus.State.Waiting != nil && containerStatus.State.Waiting.Reason == reason {
+				return true, nil
+			}
+			return false, nil
+		case v1.PodFailed, v1.PodRunning, v1.PodSucceeded:
+			return false, fmt.Errorf("pod was expected to be pending, but it is in the state: %s", pod.Status.Phase)
+		}
+		return false, nil
 	}
-	LogPodStates(pods.Items)
+}
+
+func podContainerStarted(c clientset.Interface, namespace, podName string, containerIndex int) wait.ConditionFunc {
+	return func() (bool, error) {
+		pod, err := c.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if containerIndex > len(pod.Status.ContainerStatuses)-1 {
+			return false, nil
+		}
+		containerStatus := pod.Status.ContainerStatuses[containerIndex]
+		return *containerStatus.Started, nil
+	}
 }
 
 // LogPodStates logs basic info of provided pods for debugging.
@@ -385,7 +390,7 @@ func logPodTerminationMessages(pods []v1.Pod) {
 
 // DumpAllPodInfoForNamespace logs all pod information for a given namespace.
 func DumpAllPodInfoForNamespace(c clientset.Interface, namespace string) {
-	pods, err := c.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	pods, err := c.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		e2elog.Logf("unable to fetch pod debug info: %v", err)
 	}
@@ -411,29 +416,28 @@ func FilterNonRestartablePods(pods []*v1.Pod) []*v1.Pod {
 }
 
 func isNotRestartAlwaysMirrorPod(p *v1.Pod) bool {
-	if !kubetypes.IsMirrorPod(p) {
+	// Check if the pod is a mirror pod
+	if _, ok := p.Annotations[v1.MirrorPodAnnotationKey]; !ok {
 		return false
 	}
 	return p.Spec.RestartPolicy != v1.RestartPolicyAlways
 }
 
-// NewExecPodSpec returns the pod spec of hostexec pod
-func NewExecPodSpec(ns, name string, hostNetwork bool) *v1.Pod {
+// NewAgnhostPod returns a pod that uses the agnhost image. The image's binary supports various subcommands
+// that behave the same, no matter the underlying OS. If no args are given, it defaults to the pause subcommand.
+// For more information about agnhost subcommands, see: https://github.com/kubernetes/kubernetes/tree/master/test/images/agnhost#agnhost
+func NewAgnhostPod(ns, podName string, volumes []v1.Volume, mounts []v1.VolumeMount, ports []v1.ContainerPort, args ...string) *v1.Pod {
 	immediate := int64(0)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      podName,
 			Namespace: ns,
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
-				{
-					Name:            "agnhost",
-					Image:           imageutils.GetE2EImage(imageutils.Agnhost),
-					ImagePullPolicy: v1.PullIfNotPresent,
-				},
+				NewAgnhostContainer("agnhost-container", mounts, ports, args...),
 			},
-			HostNetwork:                   hostNetwork,
+			Volumes:                       volumes,
 			SecurityContext:               &v1.PodSecurityContext{},
 			TerminationGracePeriodSeconds: &immediate,
 		},
@@ -441,25 +445,35 @@ func NewExecPodSpec(ns, name string, hostNetwork bool) *v1.Pod {
 	return pod
 }
 
+// NewAgnhostContainer returns the container Spec of an agnhost container.
+func NewAgnhostContainer(containerName string, mounts []v1.VolumeMount, ports []v1.ContainerPort, args ...string) v1.Container {
+	if len(args) == 0 {
+		args = []string{"pause"}
+	}
+	return v1.Container{
+		Name:            containerName,
+		Image:           imageutils.GetE2EImage(imageutils.Agnhost),
+		Args:            args,
+		VolumeMounts:    mounts,
+		Ports:           ports,
+		SecurityContext: &v1.SecurityContext{},
+		ImagePullPolicy: v1.PullIfNotPresent,
+	}
+}
+
+// NewExecPodSpec returns the pod spec of hostexec pod
+func NewExecPodSpec(ns, name string, hostNetwork bool) *v1.Pod {
+	pod := NewAgnhostPod(ns, name, nil, nil, nil)
+	pod.Spec.HostNetwork = hostNetwork
+	return pod
+}
+
 // newExecPodSpec returns the pod spec of exec pod
 func newExecPodSpec(ns, generateName string) *v1.Pod {
-	immediate := int64(0)
-	pod := &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: generateName,
-			Namespace:    ns,
-		},
-		Spec: v1.PodSpec{
-			TerminationGracePeriodSeconds: &immediate,
-			Containers: []v1.Container{
-				{
-					Name:  "agnhost-pause",
-					Image: imageutils.GetE2EImage(imageutils.Agnhost),
-					Args:  []string{"pause"},
-				},
-			},
-		},
-	}
+	// GenerateName is an optional prefix, used by the server,
+	// to generate a unique name ONLY IF the Name field has not been provided
+	pod := NewAgnhostPod(ns, "", nil, nil, nil)
+	pod.ObjectMeta.GenerateName = generateName
 	return pod
 }
 
@@ -471,19 +485,16 @@ func CreateExecPodOrFail(client clientset.Interface, ns, generateName string, tw
 	if tweak != nil {
 		tweak(pod)
 	}
-	execPod, err := client.CoreV1().Pods(ns).Create(pod)
+	execPod, err := client.CoreV1().Pods(ns).Create(context.TODO(), pod, metav1.CreateOptions{})
 	expectNoError(err, "failed to create new exec pod in namespace: %s", ns)
 	err = wait.PollImmediate(poll, 5*time.Minute, func() (bool, error) {
-		retrievedPod, err := client.CoreV1().Pods(execPod.Namespace).Get(execPod.Name, metav1.GetOptions{})
+		retrievedPod, err := client.CoreV1().Pods(execPod.Namespace).Get(context.TODO(), execPod.Name, metav1.GetOptions{})
 		if err != nil {
-			if testutils.IsRetryableAPIError(err) {
-				return false, nil
-			}
 			return false, err
 		}
 		return retrievedPod.Status.Phase == v1.PodRunning, nil
 	})
-	expectNoError(err)
+	expectNoError(err, "failed to create new exec pod in namespace: %s", ns)
 	return execPod
 }
 
@@ -532,31 +543,38 @@ func checkPodsCondition(c clientset.Interface, ns string, podNames []string, tim
 }
 
 // GetPodLogs returns the logs of the specified container (namespace/pod/container).
-// TODO(random-liu): Change this to be a member function of the framework.
 func GetPodLogs(c clientset.Interface, namespace, podName, containerName string) (string, error) {
-	return getPodLogsInternal(c, namespace, podName, containerName, false)
+	return getPodLogsInternal(c, namespace, podName, containerName, false, nil)
+}
+
+// GetPodLogsSince returns the logs of the specified container (namespace/pod/container) since a timestamp.
+func GetPodLogsSince(c clientset.Interface, namespace, podName, containerName string, since time.Time) (string, error) {
+	sinceTime := metav1.NewTime(since)
+	return getPodLogsInternal(c, namespace, podName, containerName, false, &sinceTime)
 }
 
 // GetPreviousPodLogs returns the logs of the previous instance of the
 // specified container (namespace/pod/container).
 func GetPreviousPodLogs(c clientset.Interface, namespace, podName, containerName string) (string, error) {
-	return getPodLogsInternal(c, namespace, podName, containerName, true)
+	return getPodLogsInternal(c, namespace, podName, containerName, true, nil)
 }
 
 // utility function for gomega Eventually
-func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName string, previous bool) (string, error) {
-	logs, err := c.CoreV1().RESTClient().Get().
+func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName string, previous bool, sinceTime *metav1.Time) (string, error) {
+	request := c.CoreV1().RESTClient().Get().
 		Resource("pods").
 		Namespace(namespace).
 		Name(podName).SubResource("log").
 		Param("container", containerName).
-		Param("previous", strconv.FormatBool(previous)).
-		Do().
-		Raw()
+		Param("previous", strconv.FormatBool(previous))
+	if sinceTime != nil {
+		request.Param("sinceTime", sinceTime.Format(time.RFC3339))
+	}
+	logs, err := request.Do(context.TODO()).Raw()
 	if err != nil {
 		return "", err
 	}
-	if err == nil && strings.Contains(string(logs), "Internal Error") {
+	if strings.Contains(string(logs), "Internal Error") {
 		return "", fmt.Errorf("Fetched log contains \"Internal Error\": %q", string(logs))
 	}
 	return string(logs), err
@@ -564,13 +582,14 @@ func getPodLogsInternal(c clientset.Interface, namespace, podName, containerName
 
 // GetPodsInNamespace returns the pods in the given namespace.
 func GetPodsInNamespace(c clientset.Interface, ns string, ignoreLabels map[string]string) ([]*v1.Pod, error) {
-	pods, err := c.CoreV1().Pods(ns).List(metav1.ListOptions{})
+	pods, err := c.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return []*v1.Pod{}, err
 	}
 	ignoreSelector := labels.SelectorFromSet(ignoreLabels)
-	filtered := []*v1.Pod{}
-	for _, p := range pods.Items {
+	var filtered []*v1.Pod
+	for i := range pods.Items {
+		p := pods.Items[i]
 		if len(ignoreLabels) != 0 && ignoreSelector.Matches(labels.Set(p.Labels)) {
 			continue
 		}
@@ -579,39 +598,71 @@ func GetPodsInNamespace(c clientset.Interface, ns string, ignoreLabels map[strin
 	return filtered, nil
 }
 
-// GetPodsScheduled returns a number of currently scheduled and not scheduled Pods.
-func GetPodsScheduled(masterNodes sets.String, pods *v1.PodList) (scheduledPods, notScheduledPods []v1.Pod) {
-	for _, pod := range pods.Items {
-		if !masterNodes.Has(pod.Spec.NodeName) {
-			if pod.Spec.NodeName != "" {
-				_, scheduledCondition := podutil.GetPodCondition(&pod.Status, v1.PodScheduled)
-				gomega.Expect(scheduledCondition != nil).To(gomega.Equal(true))
-				gomega.Expect(scheduledCondition.Status).To(gomega.Equal(v1.ConditionTrue))
-				scheduledPods = append(scheduledPods, pod)
-			} else {
-				_, scheduledCondition := podutil.GetPodCondition(&pod.Status, v1.PodScheduled)
-				gomega.Expect(scheduledCondition != nil).To(gomega.Equal(true))
-				gomega.Expect(scheduledCondition.Status).To(gomega.Equal(v1.ConditionFalse))
-				if scheduledCondition.Reason == "Unschedulable" {
-
-					notScheduledPods = append(notScheduledPods, pod)
-				}
-			}
-		}
+// GetPods return the label matched pods in the given ns
+func GetPods(c clientset.Interface, ns string, matchLabels map[string]string) ([]v1.Pod, error) {
+	label := labels.SelectorFromSet(matchLabels)
+	listOpts := metav1.ListOptions{LabelSelector: label.String()}
+	pods, err := c.CoreV1().Pods(ns).List(context.TODO(), listOpts)
+	if err != nil {
+		return []v1.Pod{}, err
 	}
-	return
+	return pods.Items, nil
 }
 
-// PatchContainerImages replaces the specified Container Registry with a custom
-// one provided via the KUBE_TEST_REPO_LIST env variable
-func PatchContainerImages(containers []v1.Container) error {
-	var err error
-	for _, c := range containers {
-		c.Image, err = imageutils.ReplaceRegistryInImageURL(c.Image)
-		if err != nil {
-			return err
+// GetPodSecretUpdateTimeout returns the timeout duration for updating pod secret.
+func GetPodSecretUpdateTimeout(c clientset.Interface) time.Duration {
+	// With SecretManager(ConfigMapManager), we may have to wait up to full sync period +
+	// TTL of secret(configmap) to elapse before the Kubelet projects the update into the
+	// volume and the container picks it up.
+	// So this timeout is based on default Kubelet sync period (1 minute) + maximum TTL for
+	// secret(configmap) that's based on cluster size + additional time as a fudge factor.
+	secretTTL, err := getNodeTTLAnnotationValue(c)
+	if err != nil {
+		e2elog.Logf("Couldn't get node TTL annotation (using default value of 0): %v", err)
+	}
+	podLogTimeout := 240*time.Second + secretTTL
+	return podLogTimeout
+}
+
+func getNodeTTLAnnotationValue(c clientset.Interface) (time.Duration, error) {
+	nodes, err := c.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil || len(nodes.Items) == 0 {
+		return time.Duration(0), fmt.Errorf("Couldn't list any nodes to get TTL annotation: %v", err)
+	}
+	// Since TTL the kubelet is using is stored in node object, for the timeout
+	// purpose we take it from the first node (all of them should be the same).
+	node := &nodes.Items[0]
+	if node.Annotations == nil {
+		return time.Duration(0), fmt.Errorf("No annotations found on the node")
+	}
+	value, ok := node.Annotations[v1.ObjectTTLAnnotationKey]
+	if !ok {
+		return time.Duration(0), fmt.Errorf("No TTL annotation found on the node")
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return time.Duration(0), fmt.Errorf("Cannot convert TTL annotation from %#v to int", *node)
+	}
+	return time.Duration(intValue) * time.Second, nil
+}
+
+// FilterActivePods returns pods that have not terminated.
+func FilterActivePods(pods []*v1.Pod) []*v1.Pod {
+	var result []*v1.Pod
+	for _, p := range pods {
+		if IsPodActive(p) {
+			result = append(result, p)
+		} else {
+			klog.V(4).Infof("Ignoring inactive pod %v/%v in state %v, deletion time %v",
+				p.Namespace, p.Name, p.Status.Phase, p.DeletionTimestamp)
 		}
 	}
+	return result
+}
 
-	return nil
+// IsPodActive return true if the pod meets certain conditions.
+func IsPodActive(p *v1.Pod) bool {
+	return v1.PodSucceeded != p.Status.Phase &&
+		v1.PodFailed != p.Status.Phase &&
+		p.DeletionTimestamp == nil
 }

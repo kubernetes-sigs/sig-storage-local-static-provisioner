@@ -18,6 +18,7 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/url"
 	"strings"
@@ -42,14 +43,16 @@ type ExecOptions struct {
 	CaptureStderr bool
 	// If false, whitespace in std{err,out} will be removed.
 	PreserveWhitespace bool
+	Quiet              bool
 }
 
 // ExecWithOptions executes a command in the specified container,
 // returning stdout, stderr and error. `options` allowed for
 // additional parameters to be passed.
 func (f *Framework) ExecWithOptions(options ExecOptions) (string, string, error) {
-	Logf("ExecWithOptions %+v", options)
-
+	if !options.Quiet {
+		Logf("ExecWithOptions %+v", options)
+	}
 	config, err := LoadConfig()
 	ExpectNoError(err, "failed to load restclient config")
 
@@ -110,14 +113,14 @@ func (f *Framework) ExecShellInContainer(podName, containerName string, cmd stri
 }
 
 func (f *Framework) execCommandInPod(podName string, cmd ...string) string {
-	pod, err := f.PodClient().Get(podName, metav1.GetOptions{})
+	pod, err := f.PodClient().Get(context.TODO(), podName, metav1.GetOptions{})
 	ExpectNoError(err, "failed to get pod %v", podName)
 	gomega.Expect(pod.Spec.Containers).NotTo(gomega.BeEmpty())
 	return f.ExecCommandInContainer(podName, pod.Spec.Containers[0].Name, cmd...)
 }
 
 func (f *Framework) execCommandInPodWithFullOutput(podName string, cmd ...string) (string, string, error) {
-	pod, err := f.PodClient().Get(podName, metav1.GetOptions{})
+	pod, err := f.PodClient().Get(context.TODO(), podName, metav1.GetOptions{})
 	ExpectNoError(err, "failed to get pod %v", podName)
 	gomega.Expect(pod.Spec.Containers).NotTo(gomega.BeEmpty())
 	return f.ExecCommandInContainerWithFullOutput(podName, pod.Spec.Containers[0].Name, cmd...)

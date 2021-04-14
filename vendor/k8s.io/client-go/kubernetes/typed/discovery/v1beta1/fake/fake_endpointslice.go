@@ -19,12 +19,17 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+	json "encoding/json"
+	"fmt"
+
 	v1beta1 "k8s.io/api/discovery/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
+	discoveryv1beta1 "k8s.io/client-go/applyconfigurations/discovery/v1beta1"
 	testing "k8s.io/client-go/testing"
 )
 
@@ -39,7 +44,7 @@ var endpointslicesResource = schema.GroupVersionResource{Group: "discovery.k8s.i
 var endpointslicesKind = schema.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1beta1", Kind: "EndpointSlice"}
 
 // Get takes name of the endpointSlice, and returns the corresponding endpointSlice object, and an error if there is any.
-func (c *FakeEndpointSlices) Get(name string, options v1.GetOptions) (result *v1beta1.EndpointSlice, err error) {
+func (c *FakeEndpointSlices) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.EndpointSlice, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(endpointslicesResource, c.ns, name), &v1beta1.EndpointSlice{})
 
@@ -50,7 +55,7 @@ func (c *FakeEndpointSlices) Get(name string, options v1.GetOptions) (result *v1
 }
 
 // List takes label and field selectors, and returns the list of EndpointSlices that match those selectors.
-func (c *FakeEndpointSlices) List(opts v1.ListOptions) (result *v1beta1.EndpointSliceList, err error) {
+func (c *FakeEndpointSlices) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.EndpointSliceList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(endpointslicesResource, endpointslicesKind, c.ns, opts), &v1beta1.EndpointSliceList{})
 
@@ -72,14 +77,14 @@ func (c *FakeEndpointSlices) List(opts v1.ListOptions) (result *v1beta1.Endpoint
 }
 
 // Watch returns a watch.Interface that watches the requested endpointSlices.
-func (c *FakeEndpointSlices) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeEndpointSlices) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(endpointslicesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a endpointSlice and creates it.  Returns the server's representation of the endpointSlice, and an error, if there is any.
-func (c *FakeEndpointSlices) Create(endpointSlice *v1beta1.EndpointSlice) (result *v1beta1.EndpointSlice, err error) {
+func (c *FakeEndpointSlices) Create(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.CreateOptions) (result *v1beta1.EndpointSlice, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(endpointslicesResource, c.ns, endpointSlice), &v1beta1.EndpointSlice{})
 
@@ -90,7 +95,7 @@ func (c *FakeEndpointSlices) Create(endpointSlice *v1beta1.EndpointSlice) (resul
 }
 
 // Update takes the representation of a endpointSlice and updates it. Returns the server's representation of the endpointSlice, and an error, if there is any.
-func (c *FakeEndpointSlices) Update(endpointSlice *v1beta1.EndpointSlice) (result *v1beta1.EndpointSlice, err error) {
+func (c *FakeEndpointSlices) Update(ctx context.Context, endpointSlice *v1beta1.EndpointSlice, opts v1.UpdateOptions) (result *v1beta1.EndpointSlice, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(endpointslicesResource, c.ns, endpointSlice), &v1beta1.EndpointSlice{})
 
@@ -101,7 +106,7 @@ func (c *FakeEndpointSlices) Update(endpointSlice *v1beta1.EndpointSlice) (resul
 }
 
 // Delete takes name of the endpointSlice and deletes it. Returns an error if one occurs.
-func (c *FakeEndpointSlices) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeEndpointSlices) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(endpointslicesResource, c.ns, name), &v1beta1.EndpointSlice{})
 
@@ -109,17 +114,39 @@ func (c *FakeEndpointSlices) Delete(name string, options *v1.DeleteOptions) erro
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeEndpointSlices) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(endpointslicesResource, c.ns, listOptions)
+func (c *FakeEndpointSlices) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(endpointslicesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.EndpointSliceList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched endpointSlice.
-func (c *FakeEndpointSlices) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.EndpointSlice, err error) {
+func (c *FakeEndpointSlices) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.EndpointSlice, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(endpointslicesResource, c.ns, name, pt, data, subresources...), &v1beta1.EndpointSlice{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.EndpointSlice), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied endpointSlice.
+func (c *FakeEndpointSlices) Apply(ctx context.Context, endpointSlice *discoveryv1beta1.EndpointSliceApplyConfiguration, opts v1.ApplyOptions) (result *v1beta1.EndpointSlice, err error) {
+	if endpointSlice == nil {
+		return nil, fmt.Errorf("endpointSlice provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(endpointSlice)
+	if err != nil {
+		return nil, err
+	}
+	name := endpointSlice.Name
+	if name == nil {
+		return nil, fmt.Errorf("endpointSlice.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(endpointslicesResource, c.ns, *name, types.ApplyPatchType, data), &v1beta1.EndpointSlice{})
 
 	if obj == nil {
 		return nil, err
