@@ -44,6 +44,10 @@ spec:
       affinity:
         {{ toYaml .Values.daemonset.affinity | nindent 8 }}
 {{- end }}
+{{- with .Values.daemonset.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
       containers:
         - name: provisioner
           image: {{ .Values.daemonset.image }}
