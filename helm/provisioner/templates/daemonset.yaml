@@ -105,3 +105,8 @@ spec:
           hostPath:
             path: {{ $classConfig.hostDir }}
         {{- end }}
+        {{- range $name, $path := .Values.daemonset.additionalHostPathVolumes }}
+        - name: {{ quote $name }}
+          hostPath:
+            path: {{ quote $path }}
+        {{- end }}

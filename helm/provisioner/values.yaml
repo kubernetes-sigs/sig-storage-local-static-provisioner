@@ -48,6 +48,13 @@ common:
   #
   mountDevVolume: true
   #
+  # A mapping of additional HostPath volume names to host paths to create, for
+  # your init container to consume
+  #
+  additionalHostPathVolumes: {}
+  #  provisioner-proc: /proc
+  #  provisioner-mnt: /mnt
+  #
   # Map of label key-value pairs to apply to the PVs created by the
   # provisioner. Uncomment to add labels to the list.
   #
