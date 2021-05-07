@@ -48,6 +48,13 @@ common:
   #
   mountDevVolume: true
   #
+  # A mapping of additional HostPath volume names to host paths to create, for
+  # your init container to consume
+  #
+  additionalHostPathVolumes: {}
+  #  provisioner-proc: /proc
+  #  provisioner-mnt: /mnt
+  #
   # Map of label key-value pairs to apply to the PVs created by the
   # provisioner. Uncomment to add labels to the list.
   #
@@ -156,6 +163,9 @@ daemonset:
   #
   # If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
   privileged: true
+  # Any init containers can be configured here.
+  # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  initContainers: []
 #
 # Configure Prometheus monitoring
 #
