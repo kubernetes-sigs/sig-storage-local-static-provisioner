@@ -34,7 +34,7 @@ $ export KUBE_FEATURE_GATES="BlockVolume=true"
 ```
 
 Note: Kubernetes versions prior to 1.10 require [several additional
-feature-gates](https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.0.0/local-volume#enabling-the-alpha-feature-gates) 
+feature-gates](https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.0.0/local-volume#enabling-the-alpha-feature-gates)
 be enabled on all Kubernetes components, because the persistent local volumes and other features were in alpha.
 
 #### Option 1: GCE
@@ -110,6 +110,7 @@ for more information.
 
 #### Option 5: EKS (experimental)
 
+##### eks-nvme-ssd-provisioner
 [eks-nvme-ssd-provisioner](https://github.com/brunsgaard/eks-nvme-ssd-provisioner)
 runs as a DaemonSet and will automatically format and mount the requested local
 NVMe SSDs.
@@ -117,6 +118,54 @@ NVMe SSDs.
 **Note:** This project mounts disks in `/pv-disks/$uuid`. There is a
 working example of storage local static provisioner resources in the
 eks-nvme-ssd-provisioner repo.
+
+##### Using raw block devices directly
+
+You can  also mount the nvme instance storage disks directly.  You can do this
+by mounting the Instance Storage disks for discovery using udev automatically.
+This has the benefit of not needing an additional component like
+`eks-nvme-ssd-provisioner` to be deployed.
+
+The following udev rule will symlink all Instance Storage disks under `/dev/disk/kubernetes/<uniqe id>`:
+```
+# /etc/udev/rules.d/90-kubernetes-discovery.rules
+
+# Discover Instance Storage disks so kubernetes local provisioner can pick them up from /dev/disk/kubernetes
+KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", SYMLINK+="disk/kubernetes/nvme-$attr{model}_$attr{serial}", OPTIONS="string_escape=replace"
+
+```
+
+e.g. you could bring up an eks cluster using [eksctl](https://eksctl.io) that sets up these udev rules on startup as follows:
+
+```yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: cluster-with-storage
+  region: eu-central-1
+managedNodeGroups:
+  - name: storage-nvme
+    desiredCapacity: 4
+    instanceType: i3.large
+    preBootstrapCommands:
+      - |
+          cat <<EOF > /etc/udev/rules.d/90-kubernetes-discovery.rules
+          # Discover Instance Storage disks so kubernetes local provisioner can pick them up from /dev/disk/kubernetes
+          KERNEL=="nvme[0-9]*n[0-9]*", ENV{DEVTYPE}=="disk", ATTRS{model}=="Amazon EC2 NVMe Instance Storage", ATTRS{serial}=="?*", SYMLINK+="disk/kubernetes/nvme-\\\$attr{model}_\\\$attr{serial}", OPTIONS="string_escape=replace"
+          EOF
+      - udevadm control --reload && udevadm trigger
+```
+
+
+You can then use
+
+```
+$ kubectl create -f helm/generated_examples/eks-nvme-ssd.yaml
+```
+
+or use helm with `helm/examples/eks-nvme-ssd.yaml`
+
+to setup provisioning.
 
 #### Option 6: AKS
 See [Local Persistent Volume support on Azure](https://github.com/Azure/kubernetes-volume-drivers/tree/master/local) for more information.
@@ -175,20 +224,20 @@ $ kubectl create -f deployment/kubernetes/example/default_example_storageclass.y
     NAME                CAPACITY    ACCESSMODES   RECLAIMPOLICY   STATUS      CLAIM     STORAGECLASS    REASON    AGE
     local-pv-ce05be60   1024220Ki   RWO           Delete          Available             local-storage             26s
 
-    $ kubectl describe pv local-pv-ce05be60 
+    $ kubectl describe pv local-pv-ce05be60
     Name:		local-pv-ce05be60
     Labels:		<none>
     Annotations:	pv.kubernetes.io/provisioned-by=local-volume-provisioner-minikube-18f57fb2-a186-11e7-b543-080027d51893
     StorageClass:	local-storage
     Status:		Available
-    Claim:		
+    Claim:
     Reclaim Policy:	Delete
     Access Modes:	RWO
     Capacity:	1024220Ki
     NodeAffinity:
       Required Terms:
           Term 0:  kubernetes.io/hostname in [my-node]
-    Message:	
+    Message:
     Source:
         Type:	LocalVolume (a persistent volume backed by local storage on a node)
         Path:	/mnt/disks/vol1
