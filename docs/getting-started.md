@@ -122,7 +122,7 @@ eks-nvme-ssd-provisioner repo.
 ##### Using raw block devices directly
 
 You can  also mount the nvme instance storage disks directly.  You can do this
-by mounting the Instance Storage disks for discovery using udev automatically.
+by symlinking the Instance Storage disks for discovery using udev automatically.
 This has the benefit of not needing an additional component like
 `eks-nvme-ssd-provisioner` to be deployed.
 
