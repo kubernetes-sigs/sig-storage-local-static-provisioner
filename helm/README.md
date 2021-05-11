@@ -236,4 +236,5 @@ Here are a list of examples for various environments:
 * [examples/gce-retain.yaml](examples/gce-retain.yaml)
 * [examples/gce.yaml](examples/gce.yaml)
 * [examples/gke.yaml](examples/gke.yaml)
+* [examples/eks-nvme-ssd.yaml](example/eks-nvme-ssd.yaml)
 * [more...](examples/)

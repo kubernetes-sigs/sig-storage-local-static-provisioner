@@ -1,0 +1,4 @@
+classes:
+  - name: nvme-ssd
+    hostDir: /dev/disk/kubernetes
+    storageClass: true
