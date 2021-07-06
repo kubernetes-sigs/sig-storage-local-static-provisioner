@@ -104,7 +104,7 @@ func TestDeleteVolumes_Basic(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d, "pv4")
 	verifyDeletedPVs(t, test)
 }
@@ -122,11 +122,11 @@ func TestDeleteVolumes_Twice(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	test.expectedDeletedPVs = map[string]string{}
 	verifyDeletedPVs(t, test)
@@ -141,7 +141,7 @@ func TestDeleteVolumes_Empty(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 }
@@ -159,7 +159,7 @@ func TestDeleteVolumes_DeletePVFails(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 	verifyPVExists(t, test)
@@ -178,12 +178,12 @@ func TestDeleteVolumes_DeletePVNotFound(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 
 	// delete not found pv
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -211,11 +211,11 @@ func TestDeleteVolumes_UnsupportedReclaimPolicy(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -246,11 +246,11 @@ func TestDeleteVolumes_UnknownReclaimPolicy(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	verifyDeletedPVs(t, test)
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -280,7 +280,7 @@ func TestDeleteVolumes_CleanupFails(t *testing.T) {
 	}
 	d := testSetupForProcCleaning(t, test, nil)
 
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	waitForAsyncToComplete(t, d)
 	// A few checks to see if its still running.
 	if test.procTable.IsRunningCount == 0 {
@@ -310,7 +310,7 @@ func TestDeleteBlock_BasicProcessExec(t *testing.T) {
 	test := &testConfig{vols: vols, expectedDeletedPVs: expectedDeletedPVs}
 	d := testSetupForProcCleaning(t, test, []string{"sh", "-c", "echo \"hello\""})
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -345,7 +345,7 @@ func TestDeleteBlock_FailedProcess(t *testing.T) {
 
 	test := &testConfig{vols: vols, expectedDeletedPVs: expectedDeletedPVs}
 	d := testSetupForProcCleaning(t, test, []string{"sh", "-c", "exit 10"})
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -384,7 +384,7 @@ func TestDeleteBlock_DuplicateAttempts(t *testing.T) {
 	// Simulate a currently running process by marking it as running in process table
 	test.procTable.MarkRunning("pv4")
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -418,7 +418,7 @@ func TestDeleteBlock_Jobs(t *testing.T) {
 	cmd := []string{"sh", "-c", "echo \"hello\""}
 	d := testSetupForJobCleaning(t, test, cmd)
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -489,7 +489,7 @@ func TestDeleteBlock_DuplicateAttempts_Jobs(t *testing.T) {
 	// Simulate a currently running process by marking it as running in process table
 	test.jobControl.MarkRunning("pv4")
 
-	err := d.deletePV(test.generatedPVs["pv4"])
+	err := d.deletePV(test.generatedPVs["pv4"], GetDefaultDeleteFn())
 	if err != nil {
 		t.Error(err)
 	}
@@ -504,6 +504,29 @@ func TestDeleteBlock_DuplicateAttempts_Jobs(t *testing.T) {
 		t.Errorf("Unexpected job was created. %+v", jobs)
 		t.Fatalf("No job should have been created when one is already simulated as running.")
 	}
+}
+
+func TestDeleteFn(t *testing.T) {
+	vols := map[string]*testVol{
+		"pv4": {
+			pvPhase: v1.VolumeReleased,
+		},
+	}
+	expectedDeletedPVs := map[string]string{"pv4": ""}
+	test := &testConfig{
+		vols:               vols,
+		expectedDeletedPVs: expectedDeletedPVs,
+	}
+	d := testSetupForProcCleaning(t, test, nil)
+
+	called := false
+	deleteFn := func(*v1.PersistentVolume) error { called = true; return nil }
+	d.DeletePVs(deleteFn)
+	if !called {
+		t.Errorf("deleteFn not called")
+	}
+	waitForAsyncToComplete(t, d, "pv4")
+	verifyDeletedPVs(t, test)
 }
 
 func testSetupForProcCleaning(t *testing.T, config *testConfig, cleanupCmd []string) *Deleter {
@@ -666,7 +689,7 @@ func waitForAsyncToComplete(t *testing.T, d *Deleter, pvNames ...string) {
 	}
 
 	// Run again to delete PVs that have been cleaned up.
-	d.DeletePVs()
+	d.DeletePVs(GetDefaultDeleteFn())
 	for _, pvName := range pvNames {
 		if d.CleanupStatus.ProcTable.IsRunning(pvName) {
 			t.Errorf("Command failed to complete for pv %s", pvName)

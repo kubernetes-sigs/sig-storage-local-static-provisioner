@@ -110,7 +110,7 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	}
 	klog.Info("Controller started\n")
 	for {
-		deleter.DeletePVs()
+		deleter.DeletePVs(func(pv *v1.PersistentVolume) error { return nil })
 		discoverer.DiscoverLocalVolumes()
 		time.Sleep(10 * time.Second)
 	}
