@@ -67,7 +67,7 @@ func NewDeleter(config *common.RuntimeConfig, cleanupTracker *CleanupStatusTrack
 
 // DeletePVs will scan through all the existing PVs that are released, and cleanup and
 // delete them
-func (d *Deleter) DeletePVs() {
+func (d *Deleter) DeletePVs(deleteFn ...func(pv *v1.PersistentVolume) error) {
 	for _, pv := range d.Cache.ListPVs() {
 		if pv.Status.Phase != v1.VolumeReleased {
 			continue
@@ -82,7 +82,7 @@ func (d *Deleter) DeletePVs() {
 		case v1.PersistentVolumeReclaimDelete:
 			klog.V(4).Infof("reclaimVolume[%s]: policy is Delete", name)
 			// Cleanup volume
-			err := d.deletePV(pv)
+			err := d.deletePV(pv, deleteFn...)
 			if err != nil {
 				mode, modeErr := d.getVolMode(pv)
 				if modeErr != nil {
@@ -128,7 +128,7 @@ func (d *Deleter) shouldRunJob(mode v1.PersistentVolumeMode) bool {
 	return mode == v1.PersistentVolumeBlock && d.RuntimeConfig.UseJobForCleaning
 }
 
-func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
+func (d *Deleter) deletePV(pv *v1.PersistentVolume, deleteFn ...func(pv *v1.PersistentVolume) error) error {
 	if pv.Spec.Local == nil {
 		return fmt.Errorf("Unsupported volume type")
 	}
@@ -142,6 +142,7 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	if err != nil {
 		return err
 	}
+
 	volMode, err := d.getVolMode(pv)
 	if err != nil {
 		return fmt.Errorf("failed to get volume mode of path %q: %v", mountPath, err)
@@ -161,6 +162,9 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 
 	switch state {
 	case CSSucceeded:
+		for _, function := range deleteFn {
+			function(pv)
+		}
 		// Found a completed cleaning entry
 		klog.Infof("Deleting pv %s after successful cleanup", pv.Name)
 		if err = d.APIUtil.DeletePV(pv.Name); err != nil {
