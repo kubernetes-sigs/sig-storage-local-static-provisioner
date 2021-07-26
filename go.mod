@@ -1,6 +1,6 @@
 module sigs.k8s.io/sig-storage-local-static-provisioner
 
-go 1.13
+go 1.16
 
 require (
 	github.com/ghodss/yaml v1.0.0
