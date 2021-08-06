@@ -44,6 +44,7 @@ const maxGetNodesRetries = 3
 var (
 	optListenAddress string
 	optMetricsPath   string
+	discoveryPeriod  time.Duration
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 	klog.InitFlags(nil)
 	flag.StringVar(&optListenAddress, "listen-address", ":8080", "address on which to expose metrics and readiness status")
 	flag.StringVar(&optMetricsPath, "metrics-path", "/metrics", "path under which to expose metrics")
+	flag.DurationVar(&discoveryPeriod, "discovery-period", 10*time.Second, "the period for local volume discovery")
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
@@ -85,7 +87,7 @@ func main() {
 
 	klog.Info("Starting controller\n")
 	procTable := deleter.NewProcTable()
-	go controller.StartLocalController(client, procTable, &common.UserConfig{
+	go controller.StartLocalController(client, procTable, discoveryPeriod, &common.UserConfig{
 		Node:              node,
 		DiscoveryMap:      provisionerConfig.StorageClassConfig,
 		NodeLabelsForPV:   provisionerConfig.NodeLabelsForPV,

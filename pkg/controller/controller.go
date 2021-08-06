@@ -43,7 +43,7 @@ import (
 )
 
 // StartLocalController starts the sync loop for the local PV discovery and deleter
-func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, config *common.UserConfig) {
+func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, config *common.UserConfig) {
 	klog.Info("Initializing volume cache\n")
 
 	var provisionerName string
@@ -112,6 +112,6 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	for {
 		deleter.DeletePVs()
 		discoverer.DiscoverLocalVolumes()
-		time.Sleep(10 * time.Second)
+		time.Sleep(discoveryPeriod)
 	}
 }
