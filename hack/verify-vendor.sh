@@ -26,7 +26,7 @@ source "${ROOT}/hack/lib.sh"
 tmpdir=$(mktemp -d -t vendor.XXXXXX)
 trap "test -d $tmpdir && rm -rf $tmpdir" EXIT
 
-echo "Backup vendor direcgtory to $tmpdir first"
+echo "Backup vendor directory to $tmpdir first"
 mv vendor $tmpdir/vendor
 
 hack/update-vendor.sh
