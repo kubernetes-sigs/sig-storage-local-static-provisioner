@@ -14,7 +14,7 @@
 
 REGISTRY ?= k8s.gcr.io/sig-storage
 VERSION ?= latest
-GOVERSION ?= 1.16.1
+GOVERSION ?= 1.17
 ARCH ?= amd64
 
 ALL_ARCH = amd64 arm arm64 ppc64le s390x
