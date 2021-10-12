@@ -8,6 +8,7 @@ require (
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/prometheus/client_golang v1.0.0
+	github.com/kubernetes-csi/csi-proxy/client v0.2.2
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5

@@ -22,14 +22,18 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
+	utilpath "k8s.io/utils/path"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 
+	volumeclient "github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	storagev1listers "k8s.io/client-go/listers/storage/v1"
@@ -51,7 +55,8 @@ type Discoverer struct {
 	classLister     storagev1listers.StorageClassLister
 	ownerReference  *metav1.OwnerReference
 
-	Readyz *readyzCheck
+	Readyz       *readyzCheck
+	VolumeClient *volumeclient.Client
 }
 
 type readyzCheck struct {
@@ -99,6 +104,12 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		labelMap[labelName] = labelValue
 	}
 
+	klog.Infof("NEW: volume client")
+	volumeClient, err := volumeclient.NewClient()
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate owner reference
 	ownerRef, err := generateOwnerReference(config.Node)
 	if err != nil {
@@ -122,7 +133,7 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 			classLister:     sharedInformer.Lister(),
 			nodeAffinityAnn: tmpAnnotations[common.AlphaStorageNodeAffinityAnnotation],
 			ownerReference:  ownerRef,
-			Readyz:          &readyzCheck{},
+			VolumeClient:    volumeClient,
 		}, nil
 	}
 
@@ -139,6 +150,7 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		nodeAffinity:   volumeNodeAffinity,
 		ownerReference: ownerRef,
 		Readyz:         &readyzCheck{},
+		VolumeClient:   volumeClient,
 	}, nil
 }
 
@@ -247,7 +259,7 @@ func (d *Discoverer) getMountOptionsFromStorageClass(name string) ([]string, err
 }
 
 func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConfig) error {
-	klog.V(7).Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
+	klog.V(0).Infof("Discovering volumes at hostpath %q, mount path %q for storage class %q", config.HostDir, config.MountDir, class)
 
 	reclaimPolicy, err := d.getReclaimPolicyFromStorageClass(class)
 	if err != nil {
@@ -263,17 +275,64 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		return fmt.Errorf("error reading directory: %v", err)
 	}
 
+	type empty struct{}
+	mountPointMap := make(map[string]empty)
+
 	// Retrieve list of mount points to iterate through discovered paths (aka files) below
-	mountPoints, err := d.RuntimeConfig.Mounter.List()
+	mountPoints, err := d.VolUtil.ListVolumeMounts(config.MountDir, d.Mounter)
 	if err != nil {
 		return fmt.Errorf("error retrieving mountpoints: %v", err)
 	}
-	// Put mount points into set for faster checks below
-	type empty struct{}
-	mountPointMap := make(map[string]empty)
 	for _, mp := range mountPoints {
 		mountPointMap[mp.Path] = empty{}
 	}
+	/*if runtime.GOOS != "windows" {
+		mountPoints, err := d.RuntimeConfig.Mounter.List()
+		if err != nil {
+			return fmt.Errorf("error retrieving mountpoints: %v", err)
+		}
+		// Put mount points into set for faster checks below
+		for _, mp := range mountPoints {
+			mountPointMap[mp.Path] = empty{}
+		}
+	} else {
+		// cmd := fmt.Sprintf("Get-ChildItem %s | Where-Object {$_.LinkType -eq 'SymbolicLink'} | select name | ConvertTo-Json",
+		klog.Infof("search mount dir is %s", config.MountDir)
+		cmd := fmt.Sprintf("Get-ChildItem %s | Where-Object {$_.LinkType -eq 'SymbolicLink'} | select Name | ConvertTo-Json", config.MountDir)
+		out, err := exec.Command("powershell", "/c", cmd).CombinedOutput()
+
+		if err != nil || len(out) == 0 {
+			return fmt.Errorf("error getting sizemin,sizemax from mount. cmd: %s, output: %s, error: %v", cmd, string(out), err)
+		}
+
+		var dirs map[string]string
+		outString := string(out)
+		err = json.Unmarshal([]byte(outString), &dirs)
+		if err != nil {
+			return fmt.Errorf("out %v outstring %v err %v", out, outString, err)
+		}
+
+		dirs, err := utilpath.ReadDirNoStat(config.MountDir)
+		if err != nil {
+			return fmt.Errorf("error ReadDirNoStat. %v", err)
+		}
+		for _, dir := range dirs {
+			path := filepath.Join(config.MountDir, dir)
+			klog.Infof("check mount dir is %s", path)
+			cmd := fmt.Sprintf("Test-Path -Path %s -PathType leaf-Path", path)
+			out, err := exec.Command("powershell", "/c", cmd).CombinedOutput()
+			klog.Errorf("check leaf path %s, %s, %v", path, string(out), err)
+			if err != nil || len(out) == 0 {
+
+				//return fmt.Errorf("error getting sizemin,sizemax from mount. cmd: %s, output: %s, error: %v", cmd, string(out), err)
+			}
+			if strings.TrimSpace(string(out)) == "True" {
+				//continue
+			}
+			mountPointMap[path] = empty{}
+		}
+
+	}*/
 
 	var discoErrors []error
 	var totalCapacityBlockBytes, totalCapacityFSBytes int64
@@ -290,13 +349,16 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		}
 		startTime := time.Now()
 		filePath := filepath.Join(config.MountDir, file)
+
 		volMode, err := common.GetVolumeMode(d.VolUtil, filePath)
 		if err != nil {
 			discoErrors = append(discoErrors, err)
 			continue
 		}
+
 		// Check if PV already exists for it
 		pvName := generatePVName(file, d.Node.Name, class)
+		klog.Infof("pv %s", pvName)
 		pv, exists := d.Cache.GetPV(pvName)
 		if exists {
 			if pv.Spec.VolumeMode != nil && *pv.Spec.VolumeMode == v1.PersistentVolumeBlock &&
@@ -349,17 +411,57 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, fmt.Errorf("path %q of filesystem mode cannot be used to create block volume", filePath))
 				continue
 			}
-			// Validate that this path is an actual mountpoint
-			if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
-				discoErrors = append(discoErrors, fmt.Errorf("path %q is not an actual mountpoint", filePath))
-				continue
-			}
-			capacityByte, err = d.VolUtil.GetFsCapacityByte(filePath)
+
+			capacityByte, err = d.VolUtil.GetFsCapacityByte(filePath, d.RuntimeConfig.Mounter)
 			if err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
 				continue
 			}
 			totalCapacityFSBytes += capacityByte
+
+			// For linux
+			// Validate that this path is an actual mountpoint
+			/*if runtime.GOOS != "windows" {
+				if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
+					discoErrors = append(discoErrors, fmt.Errorf("JING path %q is not an actual mountpoint", filePath))
+					continue
+				}
+			} else {
+				isNotMount, err := isLikelyNotMountPoint(filePath)
+				if err != nil || isNotMount {
+					discoErrors = append(discoErrors, fmt.Errorf("jing really path %q is not an actual mountpoint err %v", filePath, err))
+					continue
+				}
+
+				klog.Infof("notmount %t %v", isNotMount, err)
+				idRequest := &volumeapi.VolumeIDFromMountRequest{
+					Mount: filePath,
+				}
+				idResponse, err := d.RuntimeConfig.Mounter.GetVolumeIDFromMount(context.Background(), idRequest)
+				klog.Infof("Get volume id error %v", err)
+				if err != nil {
+					discoErrors = append(discoErrors, fmt.Errorf("GetVolumeIDFromMount really path %q is not an actual mountpoint err %v", filePath, err))
+					continue
+				}
+				volumeId := idResponse.GetVolumeId()
+				klog.Infof("Get volume id is %s", volumeId)
+
+				statRequest := &volumeapi.VolumeStatsRequest{
+					VolumeId: volumeId,
+				}
+
+				statResponse, err := d.RuntimeConfig.Mounter.VolumeStats(context.Background(), statRequest)
+				if err != nil {
+					klog.Infof("Get volume stat error %v", err)
+					discoErrors = append(discoErrors, fmt.Errorf("GetVolumeIDFromMount really path %q is not an actual mountpoint err %v", filePath, err))
+					continue
+				}
+				capacityByte = statResponse.GetVolumeSize()
+
+			}
+
+			totalCapacityFSBytes += capacityByte*/
+
 		default:
 			discoErrors = append(discoErrors, fmt.Errorf("path %q has unexpected volume type %q", filePath, volMode))
 			continue
@@ -376,6 +478,59 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		return nil
 	}
 	return fmt.Errorf("%d error(s) while discovering volumes: %v", len(discoErrors), discoErrors)
+}
+
+// GetWindowsPath get a windows path
+func GetWindowsPath(path string) string {
+	windowsPath := strings.Replace(path, "/", "\\", -1)
+	if strings.HasPrefix(windowsPath, "\\") {
+		windowsPath = "c:" + windowsPath
+	}
+	return windowsPath
+}
+
+// IsLikelyNotMountPoint determines if a directory is not a mountpoint.
+func isLikelyNotMountPoint(file string) (bool, error) {
+	stat, err := os.Lstat(file)
+	if err != nil {
+		return true, err
+	}
+	// If current file is a symlink, then it is a mountpoint.
+	if stat.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(file)
+		klog.Infof("target is %s", target)
+		if err != nil {
+			klog.Infof("readlink error %s %v", file, err)
+			return false, nil
+			//	return true, fmt.Errorf("readlink error: %v", err)
+		}
+		exists, err := utilpath.Exists(utilpath.CheckFollowSymlink, target)
+		if err != nil {
+			klog.Infof("utilpath.CheckFollowSymlink error %s %v", file, err)
+			return true, err
+		}
+		klog.Infof("check %s exist %t, err %v", file, exists, err)
+		exists, err = utilpath.Exists(utilpath.CheckSymlinkOnly, target)
+		if err != nil {
+			return true, err
+		}
+		klog.Infof("2 check exist %t, err %v", exists, err)
+		_, err = os.Lstat(target)
+		if err != nil {
+			klog.Info("3 check exist %v", err)
+			//return true, err
+		}
+		_, err = os.Lstat("C:\\mnt")
+		if err != nil {
+			klog.Info("4 check exist %v", err)
+			//return true, err
+		}
+		klog.Infof("5 check exist %t, err %v", exists, err)
+		//return !exists, nil
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func generatePVName(file, node, class string) string {

@@ -22,9 +22,7 @@ import (
 	"path/filepath"
 
 	"k8s.io/klog/v2"
-
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/kubernetes/pkg/volume/util/fs"
+	"k8s.io/utils/mount"
 )
 
 // VolumeUtil is an interface for local filesystem operations
@@ -39,13 +37,15 @@ type VolumeUtil interface {
 	ReadDir(fullPath string) ([]string, error)
 
 	// Delete all the contents under the given path, but not the path itself
-	DeleteContents(fullPath string) error
+	DeleteContents(fullPath string, mount *mount.SafeFormatAndMount) error
 
 	// Get capacity for fs on full path
-	GetFsCapacityByte(fullPath string) (int64, error)
+	GetFsCapacityByte(fullPath string, mount *mount.SafeFormatAndMount) (int64, error)
 
 	// Get capacity of the block device
 	GetBlockCapacityByte(fullPath string) (int64, error)
+
+	ListVolumeMounts(fullPath string, m *mount.SafeFormatAndMount) ([]mount.MountPoint, error)
 }
 
 var _ VolumeUtil = &volumeUtil{}
@@ -86,37 +86,6 @@ func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
 		return nil, err
 	}
 	return files, nil
-}
-
-// DeleteContents deletes all the contents under the given directory
-func (u *volumeUtil) DeleteContents(fullPath string) error {
-	dir, err := os.Open(fullPath)
-	if err != nil {
-		return err
-	}
-	defer dir.Close()
-
-	files, err := dir.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	errList := []error{}
-	for _, file := range files {
-		err = os.RemoveAll(filepath.Join(fullPath, file))
-		if err != nil {
-			errList = append(errList, err)
-		}
-	}
-
-	return utilerrors.NewAggregate(errList)
-}
-
-// GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
-// fullPath is the pathname of any file within the mounted filesystem. Capacity
-// returned here is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
-	_, capacity, _, _, _, _, err := fs.FsInfo(fullPath)
-	return capacity, err
 }
 
 var _ VolumeUtil = &FakeVolumeUtil{}
@@ -207,7 +176,7 @@ func (u *FakeVolumeUtil) ReadDir(fullPath string) ([]string, error) {
 }
 
 // DeleteContents removes all the contents under the given directory
-func (u *FakeVolumeUtil) DeleteContents(fullPath string) error {
+func (u *FakeVolumeUtil) DeleteContents(fullPath string, mount *mount.SafeFormatAndMount) error {
 	if u.deleteShouldFail {
 		return fmt.Errorf("Fake delete contents failed")
 	}
@@ -215,7 +184,7 @@ func (u *FakeVolumeUtil) DeleteContents(fullPath string) error {
 }
 
 // GetFsCapacityByte returns capacity in byte about a mounted filesystem.
-func (u *FakeVolumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
+func (u *FakeVolumeUtil) GetFsCapacityByte(fullPath string, mount *mount.SafeFormatAndMount) (int64, error) {
 	return u.getDirEntryCapacity(fullPath, FakeEntryFile)
 }
 
@@ -255,4 +224,12 @@ func (u *FakeVolumeUtil) AddNewDirEntries(mountDir string, dirFiles map[string][
 		klog.Infof("Adding to directory %q: files %v\n", dir, files)
 		u.directoryFiles[mountedPath] = append(curFiles, files...)
 	}
+}
+
+func (u *FakeVolumeUtil) ListVolumeMounts(fullPath string, m *mount.SafeFormatAndMount) ([]mount.MountPoint, error) {
+	return nil, fmt.Errorf("GetBlockCapacityByte is unsupported in this build")
+}
+
+func (u *FakeVolumeUtil) RemoveDir(fullPath string, m *mount.SafeFormatAndMount) error {
+	return nil
 }

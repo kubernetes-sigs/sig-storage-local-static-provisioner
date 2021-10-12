@@ -22,6 +22,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -153,7 +154,7 @@ type RuntimeConfig struct {
 	// Disable block device discovery and management if true
 	BlockDisabled bool
 	// Mounter used to verify mountpoints
-	Mounter mount.Interface
+	Mounter *mount.SafeFormatAndMount
 	// InformerFactory gives access to informers for the controller.
 	InformerFactory informers.SharedInformerFactory
 }
@@ -424,6 +425,12 @@ func GenerateMountName(mount *MountConfig) string {
 
 // GetVolumeMode check volume mode of given path.
 func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolumeMode, error) {
+	klog.Infof("GetVolumeMode")
+	if runtime.GOOS == "windows" {
+		klog.Infof("PersistentVolumeFilesystem")
+		return v1.PersistentVolumeFilesystem, nil
+	}
+	klog.Infof("GetVolumeMode chek block mode")
 	isdir, errdir := volUtil.IsDir(fullPath)
 	if isdir {
 		return v1.PersistentVolumeFilesystem, nil
@@ -440,7 +447,7 @@ func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolum
 
 	// report the first error found
 	if errdir != nil {
-		return "", fmt.Errorf("Directory check for %q failed: %s", fullPath, errdir)
+		return "", fmt.Errorf("Jing Directory check for %q failed: %s", fullPath, errdir)
 	}
 	return "", fmt.Errorf("Block device check for %q failed: %s", fullPath, errblk)
 }

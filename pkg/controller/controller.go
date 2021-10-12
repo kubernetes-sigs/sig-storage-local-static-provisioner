@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/discovery"
+	mountmanager "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/mount-manager"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/populator"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
@@ -39,7 +40,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/mount"
 )
 
 // StartLocalController starts the sync loop for the local PV discovery and deleter
@@ -62,22 +62,28 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	// at same time don't list the apiserver simultaneously.
 	resyncPeriod := time.Duration(config.MinResyncPeriod.Seconds()*(1+rand.Float64())) * time.Second
 
+	mounter, err := mountmanager.NewSafeMounter()
+	if err != nil {
+		klog.Fatalf("Error initializing mounter: %v", err)
+	}
+
 	runtimeConfig := &common.RuntimeConfig{
-		UserConfig:      config,
-		Cache:           cache.NewVolumeCache(),
-		VolUtil:         util.NewVolumeUtil(),
-		APIUtil:         util.NewAPIUtil(client),
-		Client:          client,
-		Name:            provisionerName,
-		Recorder:        recorder,
-		Mounter:         mount.New("" /* default mount path */),
+		UserConfig: config,
+		Cache:      cache.NewVolumeCache(),
+		VolUtil:    util.NewVolumeUtil(),
+		APIUtil:    util.NewAPIUtil(client),
+		Client:     client,
+		Name:       provisionerName,
+		Recorder:   recorder,
+		Mounter:    mounter,
+		//Mounter:         mount.New("" /* default mount path */),
 		InformerFactory: informers.NewSharedInformerFactory(client, resyncPeriod),
 	}
 
 	populator.NewPopulator(runtimeConfig)
 
 	var jobController deleter.JobController
-	var err error
+	//var err error
 	if runtimeConfig.UseJobForCleaning {
 		labels := map[string]string{common.NodeNameLabel: config.Node.Name}
 		jobController, err = deleter.NewJobController(labels, runtimeConfig)

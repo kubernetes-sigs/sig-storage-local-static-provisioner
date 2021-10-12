@@ -31,11 +31,13 @@ type Populator struct {
 
 // NewPopulator returns a Populator object to update the PV cache
 func NewPopulator(config *common.RuntimeConfig) *Populator {
+	klog.Infof("Populator")
 	p := &Populator{RuntimeConfig: config}
 	sharedInformer := config.InformerFactory.Core().V1().PersistentVolumes()
 	sharedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pv, ok := obj.(*v1.PersistentVolume)
+			klog.Infof("Add func")
 			if !ok {
 				klog.Errorf("Added object is not a v1.PersistentVolume type")
 				return
@@ -43,6 +45,7 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 			p.handlePVUpdate(pv)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			klog.Infof("Update func")
 			newPV, ok := newObj.(*v1.PersistentVolume)
 			if !ok {
 				klog.Errorf("Updated object is not a v1.PersistentVolume type")
@@ -85,6 +88,8 @@ func (p *Populator) handlePVUpdate(pv *v1.PersistentVolume) {
 			if !found {
 				return
 			}
+			klog.Infof("provioner %s", provisioner)
+			klog.Info("p name %s", p.Name)
 			if provisioner == p.Name {
 				// This PV was created by this provisioner
 				p.Cache.AddPV(pv)

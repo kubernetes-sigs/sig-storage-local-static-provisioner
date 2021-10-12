@@ -68,19 +68,21 @@ func NewDeleter(config *common.RuntimeConfig, cleanupTracker *CleanupStatusTrack
 // DeletePVs will scan through all the existing PVs that are released, and cleanup and
 // delete them
 func (d *Deleter) DeletePVs() {
+	klog.Infof("WHY!")
 	for _, pv := range d.Cache.ListPVs() {
+		klog.Infof("PV name %s", pv.Name)
 		if pv.Status.Phase != v1.VolumeReleased {
 			continue
 		}
 		name := pv.Name
 		switch pv.Spec.PersistentVolumeReclaimPolicy {
 		case v1.PersistentVolumeReclaimRetain:
-			klog.V(4).Infof("reclaimVolume[%s]: policy is Retain, nothing to do", name)
+			klog.V(0).Infof("reclaimVolume[%s]: policy is Retain, nothing to do", name)
 		case v1.PersistentVolumeReclaimRecycle:
 			klog.V(4).Infof("reclaimVolume[%s]: policy is Recycle which is not supported", name)
 			d.RuntimeConfig.Recorder.Eventf(pv, v1.EventTypeWarning, "VolumeUnsupportedReclaimPolicy", "Volume has unsupported PersistentVolumeReclaimPolicy: Recycle")
 		case v1.PersistentVolumeReclaimDelete:
-			klog.V(4).Infof("reclaimVolume[%s]: policy is Delete", name)
+			klog.V(0).Infof("reclaimVolume[%s]: policy is Delete", name)
 			// Cleanup volume
 			err := d.deletePV(pv)
 			if err != nil {
@@ -112,6 +114,7 @@ func (d *Deleter) getVolMode(pv *v1.PersistentVolume) (v1.PersistentVolumeMode, 
 	}
 
 	mountPath, err := common.GetContainerPath(pv, config)
+	klog.Infof("mountPath %s", mountPath)
 	if err != nil {
 		return "", err
 	}
@@ -242,10 +245,18 @@ func (d *Deleter) asyncCleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVol
 	}
 }
 
+// ConvertPath get a windows path
+func ConvertPath(path string) string {
+	windowsPath := strings.Replace(path, "\\", "/", -1)
+	return windowsPath
+}
+
 func (d *Deleter) cleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVolumeMode, mountPath string,
 	config common.MountConfig) error {
 	// Make absolutely sure here that we are not deleting anything outside of mounted dir
-	if !strings.HasPrefix(mountPath, config.MountDir) {
+	klog.Infof("mountPath %s", ConvertPath(mountPath))
+	klog.Infof("config %s", ConvertPath(config.MountDir))
+	if !strings.HasPrefix(ConvertPath(mountPath), ConvertPath(config.MountDir)) {
 		return fmt.Errorf("Unexpected error pv %q mountPath %s but mount dir is %s", pv.Name, mountPath,
 			config.MountDir)
 	}
@@ -266,7 +277,7 @@ func (d *Deleter) cleanFilePV(pv *v1.PersistentVolume, mountPath string, config 
 	klog.Infof("Deleting PV file volume %q contents at hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
 		mountPath)
 
-	return d.VolUtil.DeleteContents(mountPath)
+	return d.VolUtil.DeleteContents(mountPath, d.RuntimeConfig.Mounter)
 }
 
 func (d *Deleter) cleanBlockPV(pv *v1.PersistentVolume, blkdevPath string, config common.MountConfig) error {

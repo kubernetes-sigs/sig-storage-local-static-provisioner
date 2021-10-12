@@ -1,4 +1,4 @@
-// +build !linux
+// +build !windows
 
 /*
 Copyright 2017 The Kubernetes Authors.
@@ -20,6 +20,8 @@ package util
 
 import (
 	"fmt"
+
+	"k8s.io/utils/mount"
 )
 
 // GetBlockCapacityByte is defined here for darwin and other platforms
@@ -31,4 +33,15 @@ func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
 // IsBlock for unsupported platform returns error.
 func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
+}
+
+// GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
+// fullPath is the pathname of any file within the mounted filesystem. Capacity
+// returned here is total capacity.
+func (u *volumeUtil) GetFsCapacityByte(fullPath string, m *mount.SafeFormatAndMount) (int64, error) {
+	return 0, fmt.Errorf("GetBlockCapacityByte is unsupported in this build")
+}
+
+func (u *volumeUtil) ListVolumeMounts(fullPath string, m *mount.SafeFormatAndMount) ([]mount.MountPoint, error) {
+	return nil, fmt.Errorf("GetBlockCapacityByte is unsupported in this build")
 }
