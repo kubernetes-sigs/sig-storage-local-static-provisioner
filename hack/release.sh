@@ -21,6 +21,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
@@ -63,7 +64,7 @@ Examples:
 
 3) Release multi-arch image to your own registry
 
-    REGISTRY=quay.io/<yourname> ALL_ARCH="amd64 arm64" ./hack/release.sh
+    REGISTRY=quay.io/<yourname> LINUX_ARCH="amd64 arm64" ./hack/release.sh
 
 EOF
 }
@@ -87,12 +88,8 @@ ALLOW_DIRTY=${ALLOW_DIRTY:-}
 ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
 SKIP_PUSH_LATEST=${SKIP_PUSH_LATEST:-}
-# There is a problem in building multi-arch images in prow environment. Enable non-amd64
-# arches when we have a reliable way, see https://github.com/kubernetes/test-infra/issues/13937.
-# In the meantime, you may set the ALL_ARCH environment variable to name the architectures you'd
-# like to target.
-#ALL_ARCH="amd64 arm arm64 ppc64le s390x"
-ALL_ARCH=${ALL_ARCH:-amd64}
+LINUX_ARCH=${LINUX_ARCH:-amd64 arm arm64 ppc64le s390x}
+WINDOWS_DISTROS=${WINDOWS_DISTROS:-ltsc2019 1909 2004 20H2}
 
 echo "REGISTRY: $REGISTRY"
 echo "VERSION: $VERSION"
@@ -104,6 +101,8 @@ echo "ALLOW_DIRTY: $ALLOW_DIRTY"
 echo "ALLOW_OVERRIDE: $ALLOW_OVERRIDE"
 echo "SKIP_BUILD: $SKIP_BUILD"
 echo "SKIP_PUSH_LATEST: $SKIP_PUSH_LATEST"
+echo "LINUX_ARCH: $LINUX_ARCH"
+echo "WINDOWS_DISTROS: $WINDOWS_DISTROS"
 
 IMAGE="$REGISTRY/local-volume-provisioner"
 
@@ -197,51 +196,58 @@ if [ -z "$ALLOW_OVERRIDE" ] && is_stable_version "$VERSION"; then
 fi
 
 # build & push multi-arch images
-
 if [ -z "$SKIP_BUILD" ]; then
-    echo "info: building $image"
-    for arch in $ALL_ARCH; do
-        make provisioner REGISTRY=$REGISTRY VERSION=$VERSION ARCH=$arch
-    done
+    echo "info: build and push $image"
+    make cross \
+        REGISTRY=$REGISTRY \
+        VERSION=$VERSION \
+        LINUX_ARCH="$LINUX_ARCH" \
+        WINDOWS_DISTROS="$WINDOWS_DISTROS"
 else
-    echo "info: building is skipped"
+    echo "info: build and push is skipped"
 fi
-
-function docker_push() {
-    local image="$1"
-    echo "info: pushing $image"
-    docker_args=()
-    if [ -n "$DOCKER_CONFIG" ]; then
-        if [ ! -d "$DOCKER_CONFIG" ]; then
-            echo "error: DOCKER_CONFIG '$DOCKER_CONFIG' does not exist or not a directory"
-            exit 1
-        fi
-        if [ ! -f "$DOCKER_CONFIG/config.json" ]; then
-            echo "error: docker config json '$DOCKER_CONFIG/config.json' does not exist"
-            exit 1
-        fi
-        docker_args+=(--config "$DOCKER_CONFIG")
-    fi
-    docker_args+=(push "$image")
-    docker "${docker_args[@]}"
-}
-
-for arch in $ALL_ARCH; do
-    docker_push "$REGISTRY/local-volume-provisioner-$arch:$VERSION"
-done
 
 echo "info: create multi-arch manifest for $IMAGE:$VERSION"
 function docker_create_multi_arch() {
     export DOCKER_CLI_EXPERIMENTAL=enabled
-    local tag="$1"
-    docker manifest create --amend $IMAGE:$tag $(echo ${ALL_ARCH} | sed -e "s~[^ ]*~${IMAGE}\-&:${tag}~g")
-    for arch in $ALL_ARCH; do
-        docker manifest annotate --arch ${arch} ${IMAGE}:${tag} ${IMAGE}-${arch}:${tag}
+
+    # tag_version is the version used in the docker manifest that ties
+    # all of the images that were tagged with $VERSION
+    local tag_version=${1}
+    local manifest_image=$IMAGE:$tag_version
+
+    # get the list of all the images created
+    local linux_images=$(echo "${LINUX_ARCH}" | tr ' ' '\n' | while read -r arch; do \
+        echo $IMAGE:${VERSION}_linux_${arch}; \
+    done);
+    local windows_images=$(echo "${WINDOWS_DISTROS}" | tr ' ' '\n' | while read -r distro; do \
+        echo $IMAGE:${VERSION}_windows_${distro}; \
+    done);
+    local all_images="${linux_images} ${windows_images}"
+
+    # create a manifest with all the images created
+    docker manifest create --amend $manifest_image $all_images
+
+    # annotate the linux images with the right arch
+    # from https://github.com/kubernetes/release/blob/8dbca63a6875e59e2234954ad3876d9490bbeede/images/build/debian-base/Makefile#L67-L70
+    echo "${LINUX_ARCH}" | tr ' ' '\n' | while read -r arch; do
+        local linux_image=$IMAGE:${VERSION}_linux_${arch}
+        docker manifest annotate --arch $arch $manifest_image $linux_image
     done
-    docker manifest push --purge $IMAGE:$tag
+
+    # annotate the windows images with the base image os-version
+    # from https://github.com/kubernetes-csi/csi-release-tools/blob/5b9a1e06794ddb137ff7e2d565416cc6934ec380/build.make#L181-L189
+    echo "${WINDOWS_DISTROS}" | tr ' ' '\n' | while read -r distro; do
+        local windows_image=$IMAGE:${VERSION}_windows_${distro}
+        # the image matches the value in the Makefile
+        local os_version=$(docker manifest inspect mcr.microsoft.com/windows/servercore:${distro} | grep "os.version" | head -n 1 | awk '{print $2}' | sed -e 's/"//g')
+        docker manifest annotate --os-version ${os_version} $manifest_image $windows_image
+    done
+
+    docker manifest push --purge $manifest_image
 }
 
-docker_create_multi_arch "$VERSION"
+docker_create_multi_arch $VERSION
 
 if ! is_stable_version "$VERSION" || [ -n "$SKIP_PUSH_LATEST" ]; then
     echo "info: VERSION '$VERSION' is not stable version or SKIP_PUSH_LATEST is set, skip pushing $VERSION as the latest image"
@@ -262,11 +268,5 @@ if [ "$VERSION" != "$latest_stable_version" ]; then
     exit 0
 fi
 
-echo "info: VERSION '$VERSION' is latest stable version, push multi-arch images for latest tag"
-for arch in $ALL_ARCH; do
-    docker tag "$REGISTRY/local-volume-provisioner-$arch:$VERSION" "$REGISTRY/local-volume-provisioner-$arch:latest"
-    docker_push "$REGISTRY/local-volume-provisioner-$arch:latest"
-done
-
-echo "info: VERSION '$VERSION' is latest stable version, create multi-arch manifest for latest tag"
-docker_create_multi_arch "latest"
+echo "info: VERSION '$VERSION' is latest stable version, tagging $IMAGE as latest"
+docker_create_multi_arch latest
