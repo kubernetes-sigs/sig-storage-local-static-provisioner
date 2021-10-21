@@ -200,7 +200,7 @@ fi
 # build & push multi-arch images
 if [ -z "$SKIP_BUILD" ]; then
     echo "info: build and push $image"
-    make cross \
+    make cross -j2 \
         REGISTRY=$REGISTRY \
         VERSION=$VERSION \
         LINUX_ARCH="$LINUX_ARCH" \
