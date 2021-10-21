@@ -50,6 +50,8 @@ Environments:
     ALLOW_OVERRIDE              by default, stable image is not allowed to override, set this to skip (debug only)
     SKIP_BUILD                  set this to skip build phase (debug only)
     SKIP_PUSH_LATEST            set this to skip pushing the latest stable image as the latest image
+    LINUX_ARCH                  Linux architectures to build
+    WINDOWS_DISTROS             Windows distros to build
 
 Examples:
 
@@ -64,7 +66,7 @@ Examples:
 
 3) Release multi-arch image to your own registry
 
-    REGISTRY=quay.io/<yourname> LINUX_ARCH="amd64 arm64" ./hack/release.sh
+    REGISTRY=quay.io/<yourname> LINUX_ARCH="amd64 arm64" WINDOWS_DISTROS="ltsc2019 1909" ./hack/release.sh
 
 EOF
 }

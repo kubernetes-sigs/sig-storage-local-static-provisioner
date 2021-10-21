@@ -1,4 +1,4 @@
-# Copyright 2016 The Kubernetes Authors.
+# Copyright 2021 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@ ARG GOVERSION=1.17
 ARG STAGINGVERSION
 
 FROM --platform=$BUILDPLATFORM golang:${GOVERSION}-alpine AS builder
-ARG OS=windows
-ARG ARCH=amd64
 ARG STAGINGVERSION
 WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
 ADD . .
-RUN echo "OS: $OS ARCH: $ARCH"
-RUN GO111MODULE=off CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -o _output/${OS}/${ARCH}/local-volume-provisioner.exe ./cmd/local-volume-provisioner
+RUN echo "OS: windows ARCH: amd64"
+RUN GO111MODULE=off CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
 
 FROM ${BASE_IMAGE}
-ARG OS=windows
-ARG ARCH=amd64
 LABEL description="Local Volume Provisioner"
-COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/${OS}/${ARCH}/local-volume-provisioner.exe /local-provisioner.exe
+COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/windows/amd64/local-volume-provisioner.exe /local-provisioner.exe
 
 # this image can't run in privileged mode so even porting these scripts to
 # powershell might not help, CSI Proxy can help with some privileged

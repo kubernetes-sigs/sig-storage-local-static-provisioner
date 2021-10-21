@@ -43,7 +43,7 @@ lookup = $(word $(call pos,$1,$2),$3)
 all: build-container-linux-amd64
 .PHONY: all
 
-cross: check-env init-buildx \
+cross: init-buildx \
 	$(addprefix build-and-push-container-linux-,$(LINUX_ARCH)) \
 	$(addprefix build-and-push-container-windows-,$(WINDOWS_DISTROS))
 .PHONY: cross
@@ -103,14 +103,3 @@ init-buildx:
 	gcloud auth configure-docker --quiet
 .PHONY: init-buildx
 
-check-env-os:
-ifndef OS
-	$(error OS is not set)
-endif
-.PHONY: check-env-os
-
-check-env-arch:
-ifndef ARCH
-	$(error ARCH is not set)
-endif
-.PHONY: check-env-arch
