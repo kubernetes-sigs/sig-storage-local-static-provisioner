@@ -32,8 +32,9 @@ spec:
 {{- if .Values.daemonset.priorityClassName }}
       priorityClassName: {{.Values.daemonset.priorityClassName}}
 {{- end }}
-{{- if .Values.daemonset.nodeSelector }}
       nodeSelector:
+        kubernetes.io/os: linux
+{{- if .Values.daemonset.nodeSelector }}
         {{ toYaml .Values.daemonset.nodeSelector | nindent 8 }}
 {{- end }}
 {{- if .Values.daemonset.tolerations }}

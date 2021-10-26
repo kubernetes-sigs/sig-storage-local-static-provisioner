@@ -99,7 +99,7 @@ roleRef:
   name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: provisioner/templates/daemonset.yaml
+# Source: provisioner/templates/daemonset_linux.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -125,6 +125,8 @@ spec:
     spec:
       serviceAccountName: local-static-provisioner
       priorityClassName: system-node-critical
+      nodeSelector:
+        kubernetes.io/os: linux
       containers:
         - name: provisioner
           image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
@@ -160,6 +162,119 @@ spec:
         - name: provisioner-dev
           hostPath:
             path: /dev
+        - name: local-storage
+          hostPath:
+            path: /mnt/disks
+---
+# Source: provisioner/templates/daemonset_windows.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-static-provisioner-win
+  namespace: default
+  labels:
+    helm.sh/chart: provisioner-2.5.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: provisioner
+      app.kubernetes.io/instance: local-static-provisioner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: provisioner
+        app.kubernetes.io/instance: local-static-provisioner
+      annotations:
+        checksum/config: 5a2fc47afffa2a982cff53af8b99da3694484be2a032fa8f6c723580d2d7fe19
+    spec:
+      serviceAccountName: local-static-provisioner
+      priorityClassName: system-node-critical
+      nodeSelector:
+        kubernetes.io/os: windows
+      tolerations:
+        # an empty key operator Exists matches all keys, values and effects
+        # which meants that this will tolerate everything
+        - operator: "Exists"
+      containers:
+        - name: provisioner
+          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: JOB_CONTAINER_IMAGE
+            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          ports:
+          - name: metrics
+            containerPort: 8080
+          volumeMounts:
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
+              readOnly: true
+            - name: provisioner-dev
+              mountPath: /dev
+            - name: local-storage
+              mountPath: /mnt/disks
+              mountPropagation: HostToContainer
+            - name: csi-proxy-volume-v1
+              mountPath: \\.\pipe\csi-proxy-volume-v1
+            - name: csi-proxy-filesystem-v1
+              mountPath: \\.\pipe\csi-proxy-filesystem-v1
+            - name: csi-proxy-disk-v1
+              mountPath: \\.\pipe\csi-proxy-disk-v1
+            # these paths are still included for compatibility, they're used
+            # only if the node has still the beta version of the CSI proxy
+            - name: csi-proxy-volume-v1beta2
+              mountPath: \\.\pipe\csi-proxy-volume-v1beta2
+            - name: csi-proxy-filesystem-v1beta1
+              mountPath: \\.\pipe\csi-proxy-filesystem-v1beta1
+            - name: csi-proxy-disk-v1beta2
+              mountPath: \\.\pipe\csi-proxy-disk-v1beta2
+      volumes:
+        - name: csi-proxy-disk-v1
+          hostPath:
+            path: \\.\pipe\csi-proxy-disk-v1
+            type: ""
+        - name: csi-proxy-volume-v1
+          hostPath:
+            path: \\.\pipe\csi-proxy-volume-v1
+            type: ""
+        - name: csi-proxy-filesystem-v1
+          hostPath:
+            path: \\.\pipe\csi-proxy-filesystem-v1
+            type: ""
+        # these paths are still included for compatibility, they're used
+        # only if the node has still the beta version of the CSI proxy
+        - name: csi-proxy-disk-v1beta2
+          hostPath:
+            path: \\.\pipe\csi-proxy-disk-v1beta2
+            type: ""
+        - name: csi-proxy-volume-v1beta2
+          hostPath:
+            path: \\.\pipe\csi-proxy-volume-v1beta2
+            type: ""
+        - name: csi-proxy-filesystem-v1beta1
+          hostPath:
+            path: \\.\pipe\csi-proxy-filesystem-v1beta1
+            type: ""
+        - name: provisioner-config
+          configMap:
+            name: local-static-provisioner-config
+        - name: provisioner-dev
+          hostPath:
+            path: "C:\\dev"
+            # If nothing exists at the given path, an empty directory will be
+            # created there as needed with permission set to 0755,
+            # having the same group and ownership with Kubelet.
+            type: DirectoryOrCreate
         - name: local-storage
           hostPath:
             path: /mnt/disks

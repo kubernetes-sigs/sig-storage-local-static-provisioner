@@ -1,0 +1,10 @@
+daemonset:
+  image: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
+  imagePullPolicy: Always
+common:
+  useNodeNameOnly: true
+classes:
+- name: local-scsi
+  hostDir: "/mnt/disks"
+  fsType: ""
+  storageClass: true
