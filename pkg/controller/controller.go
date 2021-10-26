@@ -43,7 +43,7 @@ import (
 )
 
 // StartLocalController starts the sync loop for the local PV discovery and deleter
-func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, config *common.UserConfig) {
+func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, config *common.UserConfig) error {
 	klog.Info("Initializing volume cache\n")
 
 	var provisionerName string
@@ -62,10 +62,16 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	// at same time don't list the apiserver simultaneously.
 	resyncPeriod := time.Duration(config.MinResyncPeriod.Seconds()*(1+rand.Float64())) * time.Second
 
+	var err error
+	volumeUtil, err := util.NewVolumeUtil()
+	if err != nil {
+		klog.Fatalf("Error initializing VolumeUtil: %v", err)
+	}
+
 	runtimeConfig := &common.RuntimeConfig{
 		UserConfig:      config,
 		Cache:           cache.NewVolumeCache(),
-		VolUtil:         util.NewVolumeUtil(),
+		VolUtil:         volumeUtil,
 		APIUtil:         util.NewAPIUtil(client),
 		Client:          client,
 		Name:            provisionerName,
@@ -77,7 +83,6 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	populator.NewPopulator(runtimeConfig)
 
 	var jobController deleter.JobController
-	var err error
 	if runtimeConfig.UseJobForCleaning {
 		labels := map[string]string{common.NodeNameLabel: config.Node.Name}
 		jobController, err = deleter.NewJobController(labels, runtimeConfig)

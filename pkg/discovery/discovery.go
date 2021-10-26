@@ -23,6 +23,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -360,12 +361,20 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, fmt.Errorf("path %q of filesystem mode cannot be used to create block volume", filePath))
 				continue
 			}
-			// Validate that this path is an actual mountpoint
-			if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
-				discoErrors = append(discoErrors, fmt.Errorf("path %q is not an actual mountpoint", filePath))
-				continue
+			// TODO(mauriciopoppe): skipping the mountpoint verification in Windows, unlike Linux there's no /proc/mounts file to check
+			if runtime.GOOS == "windows" {
+				// the path to use is the one sent to CSI Proxy and must be in the context of the host
+				// not the container, filePath is in the context of the container
+				volumePathInHost := filepath.Join(config.HostDir, file)
+				capacityByte, err = d.VolUtil.GetFsCapacityByte(volumePathInHost)
+			} else {
+				// Validate that this path is an actual mountpoint
+				if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
+					discoErrors = append(discoErrors, fmt.Errorf("path %q is not an actual mountpoint", filePath))
+					continue
+				}
+				capacityByte, err = d.VolUtil.GetFsCapacityByte(filePath)
 			}
-			capacityByte, err = d.VolUtil.GetFsCapacityByte(filePath)
 			if err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
 				continue

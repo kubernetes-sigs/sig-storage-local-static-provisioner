@@ -1,8 +1,8 @@
-//go:build !linux && !windows
-// +build !linux,!windows
+//go:build windows
+// +build windows
 
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,18 +25,48 @@ import (
 
 var _ VolumeUtil = &volumeUtil{}
 
-type volumeUtil struct{}
+type volumeUtil struct {
+	// csiProxy is the CSIProxy implementation (either v1 or v1beta)
+	csiProxy CSIProxy
+}
 
 // NewVolumeUtil returns a VolumeUtil object for performing local filesystem operations
 func NewVolumeUtil() (VolumeUtil, error) {
-	return &volumeUtil{}, nil
+	csiProxy, err := NewCSIProxy()
+	if err != nil {
+		return nil, err
+	}
+	return &volumeUtil{
+		csiProxy,
+	}, nil
 }
 
 // GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
-// fullPath is the pathname of any file within the mounted filesystem. Capacity
+// mountPath is the pathname of any file within the mounted filesystem. Capacity
 // returned here is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
-	return 0, fmt.Errorf("GetFsCapacityByte is unsupported in this build")
+func (u *volumeUtil) GetFsCapacityByte(mountPath string) (int64, error) {
+	volumeID, err := u.csiProxy.GetVolumeId(mountPath)
+	if err != nil {
+		return 0, err
+	}
+	totalBytes, _, err := u.csiProxy.GetVolumeStats(volumeID)
+	if err != nil {
+		return 0, err
+	}
+	return totalBytes, nil
+}
+
+// DeleteContents deletes all the contents under the given directory
+func (u *volumeUtil) DeleteContents(mountPath string) error {
+	volumeID, err := u.csiProxy.GetVolumeId(mountPath)
+	if err != nil {
+		return err
+	}
+	err = u.csiProxy.FormatVolume(volumeID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetBlockCapacityByte is defined here for darwin and other platforms
@@ -51,14 +81,9 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 }
 
 func (u *volumeUtil) IsSymLink(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
+	return false, fmt.Errorf("IsSymlink is unsupported in this build")
 }
 
 func (u *volumeUtil) IsMount(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
-}
-
-// DeleteContents deletes all the contents under the given directory
-func (u *volumeUtil) DeleteContents(mountPath string) error {
-	return fmt.Errorf("DeleteContents is unsupported in this build")
+	return false, fmt.Errorf("IsMount is unsupported in this build")
 }

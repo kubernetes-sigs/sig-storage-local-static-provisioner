@@ -21,10 +21,30 @@ package util
 
 import (
 	"os"
+	"path/filepath"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/kubernetes/pkg/volume/util/fs"
 )
+
+var _ VolumeUtil = &volumeUtil{}
+
+type volumeUtil struct{}
+
+// NewVolumeUtil returns a VolumeUtil object for performing local filesystem operations
+func NewVolumeUtil() (VolumeUtil, error) {
+	return &volumeUtil{}, nil
+}
+
+// GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
+// fullPath is the pathname of any file within the mounted filesystem. Capacity
+// returned here is total capacity.
+func (u *volumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
+	_, capacity, _, _, _, _, err := fs.Info(fullPath)
+	return capacity, err
+}
 
 // GetBlockCapacityByte returns  capacity in bytes of a block device.
 // fullPath is the pathname of block device.
@@ -54,4 +74,27 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	}
 
 	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
+}
+
+// DeleteContents deletes all the contents under the given directory
+func (u *volumeUtil) DeleteContents(fullPath string) error {
+	dir, err := os.Open(fullPath)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	errList := []error{}
+	for _, file := range files {
+		err = os.RemoveAll(filepath.Join(fullPath, file))
+		if err != nil {
+			errList = append(errList, err)
+		}
+	}
+
+	return utilerrors.NewAggregate(errList)
 }
