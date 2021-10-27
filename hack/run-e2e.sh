@@ -19,6 +19,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 # Note that kubetest run this script under kubernetes root directory.
 KUBE_ROOT=$(pwd)
@@ -80,10 +81,21 @@ fi
 
 # build image if not specified
 if [ -z "$PROVISIONER_E2E_IMAGE" ]; then
-    make
-    PROVISIONER_E2E_IMAGE=" k8s.gcr.io/sig-storage/local-volume-provisioner:latest_linux_amd64"
-else
-    docker pull $PROVISIONER_E2E_IMAGE
+    # build and push ${version}_linux_amd64 and ${version}_windows_ltsc2019
+    VERSION=${VERSION:-$(git describe --tags --abbrev=8 --always)}
+    REGISTRY=${REGISTRY:-k8s.gcr.io/sig-storage}
+    IMAGE=local-volume-provisioner
+
+    REGISTRY=${REGISTRY} \
+        VERSION=$VERSION \
+        CONFIRM=false \
+        ALLOW_UNSTABLE=true \
+        ALLOW_DIRTY=true \
+        LINUX_ARCH="amd64" \
+        WINDOWS_DISTROS="ltsc2019" \
+        ./hack/release.sh
+
+    PROVISIONER_E2E_IMAGE="$REGISTRY/${IMAGE}:${VERSION}"
 fi
 
 # Why we use KUBERNETES_CONFORMANCE_PROVIDER here, see
@@ -97,13 +109,7 @@ if [ "$KUBERNETES_PROVIDER" == "gce" -o "$KUBERNETES_CONFORMANCE_PROVIDER" == "g
             exit 1
         fi
     fi
-    VERSION=$(git describe --tags --abbrev=8 --always)
-    PROVISIONER_IMAGE_NAME=gcr.io/$PROJECT/local-volume-provisioner:$VERSION
-    echo "Tag and push image $PROVISIONER_IMAGE_NAME"
-    docker tag $PROVISIONER_E2E_IMAGE $PROVISIONER_IMAGE_NAME
-    unset DOCKER_CONFIG # We don't need this and it may be read-only and fail the command to fail
-    gcloud auth configure-docker
-    docker push $PROVISIONER_IMAGE_NAME
+    PROVISIONER_IMAGE_NAME=$PROVISIONER_E2E_IMAGE
     PROVISIONER_IMAGE_PULL_POLICY=Always
 elif [ "$KUBERNETES_PROVIDER" == "local" ]; then
     KUBECONFIG=/var/run/kubernetes/admin.kubeconfig

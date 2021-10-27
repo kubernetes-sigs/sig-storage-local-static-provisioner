@@ -141,6 +141,10 @@ CLUSTER=${CLUSTER:-e2e}
 GKE_ENVIRONMENT=${GKE_ENVIRONMENT:-prod}
 KUBERNETES_SRC=${KUBERNETES_SRC:-} # If set, skip extracting kubernetes, use it as kubernetes src.
 KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-} # Prebuilt kind node image to use, e.g. kindest/node:v1.15.0.
+# set from kubernetes/test-infra
+GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+JENKINS_GCE_SSH_PRIVATE_KEY_FILE=${JENKINS_GCE_SSH_PRIVATE_KEY_FILE:-}
+JENKINS_GCE_SSH_PUBLIC_KEY_FILE=${JENKINS_GCE_SSH_PUBLIC_KEY_FILE:-}
 
 if [ -z "$PROVIDER" ]; then
     echo "PROVIDER not specified, detecting provider automatically" >&2
@@ -161,6 +165,9 @@ echo "DEPLOYMENT: $DEPLOYMENT" >&2
 echo "CLUSTER: $CLUSTER" >&2
 echo "GKE_ENVIRONMENT: $GKE_ENVIRONMENT" >&2
 echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
+echo "GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS" >&2
+echo "JENKINS_GCE_SSH_PRIVATE_KEY_FILE: $JENKINS_GCE_SSH_PRIVATE_KEY_FILE" >&2
+echo "JENKINS_GCE_SSH_PUBLIC_KEY_FILE: $JENKINS_GCE_SSH_PUBLIC_KEY_FILE" >&2
 
 kubetest_args=(
     --provider "$PROVIDER"
@@ -213,12 +220,12 @@ if [ "$PROVIDER" == "gce" -o "$PROVIDER" == "gke" ]; then
     if [ ! -d ~/.ssh ]; then
         mkdir ~/.ssh
     fi
-    if [ -e ~/.ssh/google_compute_engine -o -n "$JENKINS_GCE_SSH_PRIVATE_KEY_FILE" ]; then
+    if [ -n "$JENKINS_GCE_SSH_PRIVATE_KEY_FILE" ]; then
         echo "Copying $JENKINS_GCE_SSH_PRIVATE_KEY_FILE to ~/.ssh/google_compute_engine" >&2
         cp $JENKINS_GCE_SSH_PRIVATE_KEY_FILE ~/.ssh/google_compute_engine
         chmod 0600 ~/.ssh/google_compute_engine
     fi
-    if [ -e ~/.ssh/google_compute_engine.pub -o -n "$JENKINS_GCE_SSH_PUBLIC_KEY_FILE" ]; then
+    if [ -n "$JENKINS_GCE_SSH_PUBLIC_KEY_FILE" ]; then
         echo "Copying $JENKINS_GCE_SSH_PUBLIC_KEY_FILE to ~/.ssh/google_compute_engine.pub" >&2
         cp $JENKINS_GCE_SSH_PUBLIC_KEY_FILE ~/.ssh/google_compute_engine.pub
         chmod 0600 ~/.ssh/google_compute_engine.pub
@@ -286,9 +293,9 @@ if [ "${1:-}" == "--" ]; then
 fi
 
 if [ "$PROVIDER" == "gke" ]; then
+        # --up
+        # --down
     kubetest2_args+=(
-        --up
-        --down
         --test exec
         -v 1
         --cluster-name "$CLUSTER"
@@ -317,8 +324,6 @@ fi
 # legacy path
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
     --deployment "$DEPLOYMENT" \
-    --up \
-    --down \
     --test-cmd bash \
     --test-cmd-args="$ROOT/hack/run-e2e.sh" \
     "$@"
