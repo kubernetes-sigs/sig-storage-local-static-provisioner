@@ -80,7 +80,7 @@ const (
 )
 
 var (
-	// provisioner image used for e2e tests
+	// default provisioner image used for e2e tests
 	provisionerImageName                     = "quay.io/external_storage/local-volume-provisioner:latest"
 	provisionerImagePullPolicy v1.PullPolicy = "Never"
 	// storage class volume binding modes
@@ -161,6 +161,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	BeforeEach(func() {
 		// Get all the schedulable nodes
+		// NOTE: After the creation of the e2e cluster there's a script
+		// that taints the nodes that don't belong to the current platform
+		// being tested e.g. taint the Linux nodes if the tests are for Windows
 		nodes, err := e2enode.GetReadySchedulableNodes(f.ClientSet)
 		framework.ExpectNoError(err)
 		Expect(len(nodes.Items)).NotTo(BeZero(), "No available nodes for scheduling")

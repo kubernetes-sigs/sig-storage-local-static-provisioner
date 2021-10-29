@@ -293,13 +293,13 @@ if [ "${1:-}" == "--" ]; then
 fi
 
 if [ "$PROVIDER" == "gke" ]; then
-        # --up
-        # --down
     kubetest2_args+=(
         --test exec
         -v 1
         --cluster-name "$CLUSTER"
         --network "$CLUSTER"
+        --up
+        --down
         --gcp-service-account "$GOOGLE_APPLICATION_CREDENTIALS"
         --environment "$GKE_ENVIRONMENT"
     )
@@ -324,6 +324,5 @@ fi
 # legacy path
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
     --deployment "$DEPLOYMENT" \
-    --test-cmd bash \
-    --test-cmd-args="$ROOT/hack/run-e2e.sh" \
-    "$@"
+    --test-cmd "$ROOT/hack/run-e2e.sh" \
+    --test-cmd-args="$@"

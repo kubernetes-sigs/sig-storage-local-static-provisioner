@@ -77,7 +77,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
-	log.Printf("Calling kubetest %v...", strings.Join(f.args, " "))
+	log.Printf("Calling [kubetest %v]", strings.Join(f.args, " "))
 	if err = t.wait(k, f.args...); err != nil {
 		log.Fatalf("err: %v", err)
 	}

@@ -45,6 +45,7 @@ fi
 KUBERNETES_PROVIDER=${KUBERNETES_PROVIDER:-} # e.g. local, gce
 KUBERNETES_CONFORMANCE_TEST=${KUBERNETES_CONFORMANCE_TEST:-}
 KUBERNETES_CONFORMANCE_PROVIDER=${KUBERNETES_CONFORMANCE_PROVIDER:-}
+KUBERNETES_NODE_PLATFORM=${KUBERNETES_NODE_PLATFORM:-} # e.g. windows
 KUBE_GCE_ZONE=${KUBE_GCE_ZONE:-} # Available when provider is gce/gke
 PROJECT=${PROJECT:-} # Available when provider is gce/gke
 KUBECONFIG=${KUBECONFIG:-$DEFAULT_KUBECONFIG}
@@ -131,6 +132,22 @@ fi
 
 export PROVISIONER_IMAGE_NAME
 export PROVISIONER_IMAGE_PULL_POLICY
+
+current_platform=linux
+taint_platform=windows
+if [ "${KUBERNETES_NODE_PLATFORM}" == "windows" ]; then
+    current_platform=windows
+    taint_platform=linux
+fi
+echo "Running tests for platform=${current_platform}, removing taints from all nodes and tainting platform=${taint_platform} nodes"
+kubectl get nodes -o name | \
+while IFS= read -r node; do
+  kubectl taint node $node node.kubernetes.io/os:NoSchedule- || true
+done
+kubectl get nodes -l kubernetes.io/os=${taint_platform} -o name | \
+while IFS= read -r node; do
+  kubectl taint node $node node.kubernetes.io/os:NoSchedule || true
+done
 
 TEST_ARGS=(
     test
