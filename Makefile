@@ -15,35 +15,37 @@
 REGISTRY ?= k8s.gcr.io/sig-storage
 VERSION ?= latest
 GOVERSION ?= 1.17
-ARCH ?= amd64
 
-ALL_ARCH = amd64 arm arm64 ppc64le s390x
+# These env vars have default values set from hack/release.sh, the values
+# shown here are for `make` and `make verify` only
+LINUX_ARCH ?= amd64
+WINDOWS_DISTROS ?=
 
-IMAGE = $(REGISTRY)/local-volume-provisioner-$(ARCH):$(VERSION)
-MUTABLE_IMAGE = $(REGISTRY)/local-volume-provisioner-$(ARCH):latest
+WINDOWS_BASE_IMAGES=$(addprefix mcr.microsoft.com/windows/servercore:,$(WINDOWS_DISTROS))
 
-TEMP_DIR := $(shell mktemp -d)
-QEMUVERSION = v2.9.1
+DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
+STAGINGVERSION=${VERSION}
+STAGINGIMAGE=${REGISTRY}/local-volume-provisioner
 
-ifeq ($(ARCH),arm)
-	QEMUARCH = arm
-endif
-ifeq ($(ARCH),arm64)
-	QEMUARCH = aarch64
-endif
-ifeq ($(ARCH),ppc64le)
-	QEMUARCH = ppc64le
-endif
-ifeq ($(ARCH),s390x)
-	QEMUARCH = s390x
-endif
-   
 SUDO = $(if $(filter 0,$(shell id -u)),,sudo)
 
-all: provisioner
+# $(call pos,slice,wanted)
+# finds the index of `wanted` in `slice`
+_pos = $(if $(findstring $1,$2),$(call _pos,$1,\
+       $(wordlist 2,$(words $2),$2),x $3),$3)
+pos = $(words $(call _pos,$1,$2))
+
+# $(call lookup,wanted,list1,list2)
+# finds the index of `wanted` in list1, then, it returns the element of `list2`
+# at that index
+lookup = $(word $(call pos,$1,$2),$3)
+
+all: build-container-linux-amd64
 .PHONY: all
 
-cross: $(addprefix provisioner-,$(ALL_ARCH))
+cross: init-buildx \
+	$(addprefix build-and-push-container-linux-,$(LINUX_ARCH)) \
+	$(addprefix build-and-push-container-windows-,$(WINDOWS_DISTROS))
 .PHONY: cross
 
 verify:
@@ -58,29 +60,46 @@ release:
 	./hack/release.sh
 .PHONY: release
 
-provisioner-%: 
-	$(MAKE) ARCH=$* provisioner
+# used in `make test` and `make e2e`
+# builds without pushing to the registry
+build-container-linux-%:
+	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
+		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
+		--build-arg OS=linux \
+		--build-arg ARCH=$* \
+		--build-arg BUILDPLATFORM=linux \
+		--build-arg STAGINGVERSION=$(STAGINGVERSION) .
 
-provisioner:
-	mkdir -p _output
-	# because COPY does not expand build arguments, we need substitute it
-	cat ./deployment/docker/Dockerfile \
-		| sed "s|QEMUARCH|$(QEMUARCH)|g" \
-		> $(TEMP_DIR)/Dockerfile
-ifneq ($(ARCH),amd64)
-	# Register /usr/bin/qemu-ARCH-static as the handler for non-x86 binaries in the kernel
-	$(SUDO) ./third_party/multiarch/qemu-user-static/register/register.sh --reset
-endif
-	docker build -t $(MUTABLE_IMAGE) --build-arg GOVERSION=$(GOVERSION) --build-arg ARCH=$(ARCH) -f $(TEMP_DIR)/Dockerfile .
-	docker tag $(MUTABLE_IMAGE) $(IMAGE)
-	rm -rf $(TEMP_DIR)
-.PHONY: provisioner
+build-and-push-container-linux-%: init-buildx
+	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
+		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
+		--build-arg OS=linux \
+		--build-arg ARCH=$* \
+		--build-arg BUILDPLATFORM=linux \
+		--build-arg STAGINGVERSION=$(STAGINGVERSION) --push .
 
-test: provisioner
+build-and-push-container-windows-%: init-buildx
+	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
+		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* \
+		--build-arg BASE_IMAGE=$(call lookup,$*,$(WINDOWS_DISTROS),$(WINDOWS_BASE_IMAGES)) \
+		--build-arg STAGINGVERSION=$(STAGINGVERSION) --push .
+
+test: build-container-linux-amd64
 	go test ./cmd/... ./pkg/...
-	docker run --privileged -v $(PWD)/deployment/docker/test.sh:/test.sh --entrypoint bash $(IMAGE) /test.sh
+	docker run --privileged -v $(PWD)/deployment/docker/test.sh:/test.sh --entrypoint bash $(STAGINGIMAGE):$(STAGINGVERSION)_linux_amd64 /test.sh
 .PHONY: test
 
 clean:
 	rm -rf _output
 .PHONY: clean
+
+init-buildx:
+	# Ensure we use a builder that can leverage it (the default on linux will not)
+	-$(DOCKER) buildx rm multiarch-multiplatform-builder
+	$(DOCKER) buildx create --use --name=multiarch-multiplatform-builder
+	$(DOCKER) run --rm --privileged multiarch/qemu-user-static --reset --credential yes --persistent yes
+	# Register gcloud as a Docker credential helper.
+	# Required for "docker buildx build --push".
+	gcloud auth configure-docker --quiet
+.PHONY: init-buildx
+

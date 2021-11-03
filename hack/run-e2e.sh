@@ -80,8 +80,8 @@ fi
 
 # build image if not specified
 if [ -z "$PROVISIONER_E2E_IMAGE" ]; then
-    make provisioner
-    PROVISIONER_E2E_IMAGE=" k8s.gcr.io/sig-storage/local-volume-provisioner-amd64:latest"
+    make
+    PROVISIONER_E2E_IMAGE=" k8s.gcr.io/sig-storage/local-volume-provisioner:latest_linux_amd64"
 else
     docker pull $PROVISIONER_E2E_IMAGE
 fi

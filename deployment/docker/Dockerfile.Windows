@@ -1,0 +1,34 @@
+# Copyright 2021 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+ARG BASE_IMAGE
+ARG GOVERSION=1.17
+ARG STAGINGVERSION
+
+FROM --platform=$BUILDPLATFORM golang:${GOVERSION}-alpine AS builder
+ARG STAGINGVERSION
+WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
+ADD . .
+RUN echo "OS: windows ARCH: amd64"
+RUN GO111MODULE=off CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
+
+FROM ${BASE_IMAGE}
+LABEL description="Local Volume Provisioner"
+COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/windows/amd64/local-volume-provisioner.exe /local-provisioner.exe
+
+# this image can't run in privileged mode so even porting these scripts to
+# powershell might not help, CSI Proxy can help with some privileged
+# storage operations
+# ADD deployment/docker/scripts /scripts
+
+ENTRYPOINT ["/local-provisioner.exe"]
