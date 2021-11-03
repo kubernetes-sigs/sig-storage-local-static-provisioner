@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package windows
 
 import (
 	"bytes"
@@ -26,20 +26,20 @@ import (
 	e2estorageutils "k8s.io/kubernetes/test/e2e/storage/utils"
 )
 
-type HostExecutor struct {
+type hostExecutor struct {
 }
 
-var _ e2estorageutils.HostExec = &HostExecutor{}
+var _ e2estorageutils.HostExec = &hostExecutor{}
 
 // NewHostExec returns a HostExec
-func NewHostExec() *HostExecutor {
-	return &HostExecutor{}
+func NewHostExec() e2estorageutils.HostExec {
+	return &hostExecutor{}
 }
 
 // Execute executes the command on the given node. If there is no error
 // performing the remote command execution, the stdout, stderr and exit code
 // are returned.
-func (h *HostExecutor) Execute(command string, node *v1.Node) (e2estorageutils.Result, error) {
+func (h *hostExecutor) Execute(command string, node *v1.Node) (e2estorageutils.Result, error) {
 	powershellCommand := fmt.Sprintf(`--command=powershell -c %s`, command)
 	args := []string{
 		"compute",
@@ -64,7 +64,6 @@ func (h *HostExecutor) Execute(command string, node *v1.Node) (e2estorageutils.R
 		if exitError, ok := err.(*exec.ExitError); ok {
 			result.Code = exitError.ExitCode()
 		}
-		e2estorageutils.LogResult(result)
 		return result, err
 	}
 
@@ -74,7 +73,7 @@ func (h *HostExecutor) Execute(command string, node *v1.Node) (e2estorageutils.R
 // IssueCommandWithResult issues command on the given node and returns stdout as
 // result. It returns error if there are some issues executing the command or
 // the command exits non-zero.
-func (h *HostExecutor) IssueCommandWithResult(cmd string, node *v1.Node) (string, error) {
+func (h *hostExecutor) IssueCommandWithResult(cmd string, node *v1.Node) (string, error) {
 	result, err := h.Execute(cmd, node)
 	if err != nil {
 		e2estorageutils.LogResult(result)
@@ -83,7 +82,7 @@ func (h *HostExecutor) IssueCommandWithResult(cmd string, node *v1.Node) (string
 }
 
 // IssueCommand works like IssueCommandWithResult, but discards result.
-func (h *HostExecutor) IssueCommand(cmd string, node *v1.Node) error {
+func (h *hostExecutor) IssueCommand(cmd string, node *v1.Node) error {
 	_, err := h.IssueCommandWithResult(cmd, node)
 	return err
 }
@@ -91,5 +90,5 @@ func (h *HostExecutor) IssueCommand(cmd string, node *v1.Node) error {
 // Cleanup cleanup resources it created during test.
 // Note that in most cases it is not necessary to call this because we create
 // pods under test namespace which will be destroyed in teardown phase.
-func (h *HostExecutor) Cleanup() {
+func (h *hostExecutor) Cleanup() {
 }

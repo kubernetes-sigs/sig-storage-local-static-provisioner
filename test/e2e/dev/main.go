@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 
 	"k8s.io/klog/v2"
 	e2estorageutils "k8s.io/kubernetes/test/e2e/storage/utils"
+	windows "sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e/windows"
 )
 
 func main() {
@@ -39,8 +40,36 @@ func main() {
 			Name: "e2e-test-mauriciopoppe-windows-node-group-l64t",
 		},
 	}
-	hostExec := NewHostExec()
+	hostExec := windows.NewHostExec()
 	result, err := hostExec.Execute("echo $env:USERPROFILE", node)
+	if err != nil {
+		panic(err)
+	}
+	e2estorageutils.LogResult(result)
+
+	vhd := windows.NewVHD("C:\\var\\lib\\kubelet\\plugins\\testplugin-0.csi.io\\disk-dev-9.vhdx", 1024*1024*1024)
+
+	vhdStage, err := vhd.StageScript()
+	if err != nil {
+		panic(err)
+	}
+	result, err = hostExec.Execute(vhdStage, node)
+	if err != nil {
+		panic(err)
+	}
+	e2estorageutils.LogResult(result)
+
+	vhdPublish, err := vhd.PublishScript("C:\\var\\lib\\kubelet\\plugins\\testplugin-0.csi.io\\mount-9")
+	if err != nil {
+		panic(err)
+	}
+	result, err = hostExec.Execute(vhdPublish, node)
+	if err != nil {
+		panic(err)
+	}
+	e2estorageutils.LogResult(result)
+
+	result, err = hostExec.Execute(`"& { Get-Volume -UniqueId ("\\\\?\\" + (Get-Item -Path C:\\var\\lib\\kubelet\\plugins\\testplugin-0.csi.io\\mount-9).Target) }"`, node)
 	if err != nil {
 		panic(err)
 	}

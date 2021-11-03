@@ -23,6 +23,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
@@ -294,12 +295,12 @@ fi
 
 if [ "$PROVIDER" == "gke" ]; then
     kubetest2_args+=(
+        --up
+        --down
         --test exec
         -v 1
         --cluster-name "$CLUSTER"
         --network "$CLUSTER"
-        --up
-        --down
         --gcp-service-account "$GOOGLE_APPLICATION_CREDENTIALS"
         --environment "$GKE_ENVIRONMENT"
     )
@@ -322,7 +323,9 @@ if [ "$PROVIDER" == "gke" ]; then
 fi
 
 # legacy path
+    # --up
+    # --down
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
-    --deployment "$DEPLOYMENT" \
-    --test-cmd "$ROOT/hack/run-e2e.sh" \
-    --test-cmd-args="$@"
+    --deployment="$DEPLOYMENT" \
+    --test-cmd="$ROOT/hack/run-e2e.sh" \
+    "${@:-}"

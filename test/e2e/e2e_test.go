@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -49,6 +50,7 @@ import (
 	e2eresource "k8s.io/kubernetes/test/e2e/framework/resource"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e/windows"
 )
 
 const (
@@ -102,8 +104,9 @@ const (
 type localVolume struct {
 	volumePath string
 	volumeType localVolumeType
-	loopDev    string // optional, loop device path under /dev
-	loopFile   string // optional, loop device backing file
+	vhd        *windows.VHD // set if the local volume is created in Windows
+	loopDev    string       // optional, loop device path under /dev
+	loopFile   string       // optional, loop device backing file
 }
 
 type testConfig struct {
@@ -153,6 +156,21 @@ func init() {
 	fmt.Printf("PROVISIONER_IMAGE_PULL_POLICY: %s\n", imagePullPolicyFromEnv)
 }
 
+// getNodeOSDistro returns the node OS distro for the test set using `--node-os-distro`
+// defaults to linux if the flag is not set
+func getNodeOSDistro() string {
+	var nodeOSDistroFlag *flag.Flag = flag.Lookup("node-os-distro")
+	if nodeOSDistroFlag != nil {
+		return nodeOSDistroFlag.Value.String()
+	}
+	return "linux"
+}
+
+// nodeOSDistroIs returns true if the distro is the same as `--node-os-distro`
+func nodeOSDistroIs(distro string) bool {
+	return getNodeOSDistro() == distro
+}
+
 var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 	f := framework.NewDefaultFramework("persistent-local-volumes-test")
 	var (
@@ -161,9 +179,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	BeforeEach(func() {
 		// Get all the schedulable nodes
-		// NOTE: After the creation of the e2e cluster there's a script
-		// that taints the nodes that don't belong to the current platform
-		// being tested e.g. taint the Linux nodes if the tests are for Windows
+		// NOTE: After the creation of the e2e cluster the hack/run-e2e.sh script
+		// taints the nodes that don't belong to the current platform
+		// being tested e.g. taint the Linux nodes if the tests should run in Windows nodes
 		nodes, err := e2enode.GetReadySchedulableNodes(f.ClientSet)
 		framework.ExpectNoError(err)
 		Expect(len(nodes.Items)).NotTo(BeZero(), "No available nodes for scheduling")
@@ -176,7 +194,12 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 		// Choose the first node
 		node0 := &nodes.Items[0]
+
+		// hostExec depends on the test platform
 		hostExec := utils.NewHostExec(f)
+		if nodeOSDistroIs("windows") {
+			hostExec = windows.NewHostExec()
+		}
 
 		config = &localTestConfig{
 			ns:           f.Namespace.Name,
@@ -191,7 +214,15 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	// Provisioner positive tests
 	for _, testConfig := range testConfigs {
+		// make sure that the testCase is a local variable (shouldn't carry the loop variable across runs)
+		testConfig := testConfig
 		ctxString := fmt.Sprintf("Local volume provisioner [Serial][UseJobForCleaning: %v][VolumeType: %v]", testConfig.UseJobForCleaning, testConfig.VolumeType)
+
+		// Windows doesn't support block local volumes
+		if nodeOSDistroIs("windows") && testConfig.VolumeType == BlockLocalVolumeType {
+			continue
+		}
+
 		Context(ctxString, func() {
 			BeforeEach(func() {
 				setupStorageClass(config, &immediateMode)
@@ -209,6 +240,8 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				By(fmt.Sprintf("Creating a %s volume in discovery directory", testConfig.VolumeType))
 				testVol := setupLocalVolumeProvisionerMountPoint(config, config.node0, testConfig.VolumeType)
 				volumePath := testVol.volumePath
+
+				defer cleanupLocalVolumeProvisionerMountPoint(config, testVol, config.node0)
 
 				By("Waiting for a PersistentVolume to be created")
 				oldPV, err := waitForLocalPersistentVolume(config.client, volumePath)
@@ -229,7 +262,8 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				// Delete the persistent volume claim: file will be cleaned up and volume be re-created.
 				By("Deleting the persistent volume claim to clean up persistent volume and re-create one")
 				writeCmd := createWriteCmd(volumePath, testFile, testFileContent, testConfig.VolumeType)
-				err = config.hostExec.IssueCommand(writeCmd, config.node0)
+				execResult, err := config.hostExec.Execute(writeCmd, config.node0)
+				utils.LogResult(execResult)
 				Expect(err).NotTo(HaveOccurred())
 				err = config.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Delete(context.TODO(), claim.Name, metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -239,10 +273,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(newPV.UID).NotTo(Equal(oldPV.UID))
 				fileDoesntExistCmd := createFileDoesntExistCmd(volumePath, testFile)
-				err = config.hostExec.IssueCommand(fileDoesntExistCmd, config.node0)
+				execResult, err = config.hostExec.Execute(fileDoesntExistCmd, config.node0)
+				utils.LogResult(execResult)
 				Expect(err).NotTo(HaveOccurred())
-
-				cleanupLocalVolumeProvisionerMountPoint(config, testVol, config.node0)
 			})
 		})
 	}
@@ -265,7 +298,8 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			directoryPath := filepath.Join(config.discoveryDir, "notbindmount")
 			By("Creating a directory, not bind mounted, in discovery directory")
 			mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", directoryPath)
-			err := config.hostExec.IssueCommand(mkdirCmd, config.node0)
+			execResult, err := config.hostExec.Execute(mkdirCmd, config.node0)
+			utils.LogResult(execResult)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Allowing provisioner to run for 30s and discover potential local PVs")
@@ -453,7 +487,11 @@ func setupLocalVolumeProvisioner(config *localTestConfig, testConfig *testConfig
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Initializing local volume discovery base path on node %v", node.Name))
 		mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", config.discoveryDir)
-		err := config.hostExec.IssueCommand(mkdirCmd, &node)
+		if nodeOSDistroIs("windows") {
+			mkdirCmd = fmt.Sprintf("mkdir -Force %v", config.discoveryDir)
+		}
+		execResult, err := config.hostExec.Execute(mkdirCmd, &node)
+		utils.LogResult(execResult)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
@@ -466,7 +504,8 @@ func cleanupLocalVolumeProvisioner(config *localTestConfig) {
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Removing the test discovery directory on node %v", node.Name))
 		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", config.discoveryDir, config.discoveryDir)
-		err := config.hostExec.IssueCommand(removeCmd, &node)
+		execResult, err := config.hostExec.Execute(removeCmd, &node)
+		utils.LogResult(execResult)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
@@ -597,7 +636,8 @@ func createAndSetupLoopDevice(config *localTestConfig, file string, node *v1.Nod
 	}
 	ddCmd := fmt.Sprintf("dd if=/dev/zero of=%s bs=4096 count=%d", file, count)
 	losetupCmd := fmt.Sprintf("sudo losetup -f %s", file)
-	err := config.hostExec.IssueCommand(fmt.Sprintf("%s && %s", ddCmd, losetupCmd), node)
+	execResult, err := config.hostExec.Execute(fmt.Sprintf("%s && %s", ddCmd, losetupCmd), node)
+	utils.LogResult(execResult)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -611,19 +651,31 @@ func findLoopDevice(config *localTestConfig, file string, node *v1.Node) string 
 func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Node, volumeType localVolumeType) *localVolume {
 	volumePath := path.Join(config.discoveryDir, fmt.Sprintf("vol-%v", string(uuid.NewUUID())))
 	if volumeType == DirectoryLocalVolumeType {
-		By(fmt.Sprintf("Creating local directory at path %q", volumePath))
-		mkdirCmd := fmt.Sprintf("mkdir %v -m 777", volumePath)
-		err := config.hostExec.IssueCommand(mkdirCmd, node)
-		Expect(err).NotTo(HaveOccurred())
-
-		By(fmt.Sprintf("Mounting local directory at path %q", volumePath))
-		mntCmd := fmt.Sprintf("sudo mount --bind %v %v", volumePath, volumePath)
-		err = config.hostExec.IssueCommand(mntCmd, node)
-		Expect(err).NotTo(HaveOccurred())
-		return &localVolume{
+		lv := &localVolume{
 			volumePath: volumePath,
 			volumeType: volumeType,
 		}
+
+		By(fmt.Sprintf("Creating local directory at path %q", volumePath))
+		mkdirCmd := fmt.Sprintf("mkdir %v -m 777", volumePath)
+		if nodeOSDistroIs("windows") {
+			mkdirCmd = fmt.Sprintf("mkdir -Force %v", volumePath)
+		}
+		execResult, err := config.hostExec.Execute(mkdirCmd, node)
+		utils.LogResult(execResult)
+		Expect(err).NotTo(HaveOccurred())
+
+		By(fmt.Sprintf("Mounting local directory at path %q", volumePath))
+		if nodeOSDistroIs("windows") {
+			vhd := setupVHD(config, node, volumePath, 1024*1024*1024 /* 1GB */)
+			lv.vhd = vhd
+		} else {
+			mntCmd := fmt.Sprintf("sudo mount --bind %v %v", volumePath, volumePath)
+			execResult, err = config.hostExec.Execute(mntCmd, node)
+			utils.LogResult(execResult)
+			Expect(err).NotTo(HaveOccurred())
+		}
+		return lv
 	} else if volumeType == BlockLocalVolumeType {
 		By("Creating a new loop device")
 		loopFile := fmt.Sprintf("/tmp/loop-%s", string(uuid.NewUUID()))
@@ -632,7 +684,8 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 
 		By(fmt.Sprintf("Linking %s at %s", loopDev, volumePath))
 		cmd := fmt.Sprintf("sudo ln -s %s %s", loopDev, volumePath)
-		err := config.hostExec.IssueCommand(cmd, node)
+		execResult, err := config.hostExec.Execute(cmd, node)
+		utils.LogResult(execResult)
 		Expect(err).NotTo(HaveOccurred())
 		return &localVolume{
 			volumePath: volumePath,
@@ -645,20 +698,37 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 }
 
 func cleanupLocalVolumeProvisionerMountPoint(config *localTestConfig, vol *localVolume, node *v1.Node) {
+	var err error
+	var execResult utils.Result
 	if vol.volumeType == DirectoryLocalVolumeType {
-		By(fmt.Sprintf("Unmounting the test mount point from %q", vol.volumePath))
-		umountCmd := fmt.Sprintf("[ ! -e %v ] || sudo umount %v", vol.volumePath, vol.volumePath)
-		err := config.hostExec.IssueCommand(umountCmd, node)
-		Expect(err).NotTo(HaveOccurred())
+		if nodeOSDistroIs("windows") {
+			By(fmt.Sprintf("Unmounting the test mount point from %q", vol.volumePath))
+			execResult, err = config.hostExec.Execute(vol.vhd.UnpublishScript(vol.volumePath), node)
+			utils.LogResult(execResult)
+			Expect(err).NotTo(HaveOccurred())
 
-		By("Removing the test mount point")
-		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", vol.volumePath, vol.volumePath)
-		err = config.hostExec.IssueCommand(removeCmd, node)
-		Expect(err).NotTo(HaveOccurred())
+			By("Removing the VHDx file")
+			execResult, err = config.hostExec.Execute(vol.vhd.UnstageScript(), node)
+			utils.LogResult(execResult)
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			By(fmt.Sprintf("Unmounting the test mount point from %q", vol.volumePath))
+			umountCmd := fmt.Sprintf("[ ! -e %v ] || sudo umount %v", vol.volumePath, vol.volumePath)
+			execResult, err = config.hostExec.Execute(umountCmd, node)
+			utils.LogResult(execResult)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Removing the test mount point")
+			removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", vol.volumePath, vol.volumePath)
+			execResult, err = config.hostExec.Execute(removeCmd, node)
+			utils.LogResult(execResult)
+			Expect(err).NotTo(HaveOccurred())
+		}
 	} else {
 		By(fmt.Sprintf("Tear down block device %q on node %q at path %s", vol.loopDev, node.Name, vol.loopFile))
 		losetupDeleteCmd := fmt.Sprintf("sudo losetup -d %s && sudo rm %s", vol.loopDev, vol.loopFile)
-		err := config.hostExec.IssueCommand(losetupDeleteCmd, node)
+		execResult, err = config.hostExec.Execute(losetupDeleteCmd, node)
+		utils.LogResult(execResult)
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -669,6 +739,30 @@ func cleanupLocalVolumeProvisionerMountPoint(config *localTestConfig, vol *local
 		err = config.client.CoreV1().PersistentVolumes().Delete(context.TODO(), pv.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+// setupVHD creates a VHD and mounts it at `volumePath`
+// The caller must cleanup the VHD reference
+func setupVHD(config *localTestConfig, node *v1.Node, volumePath string, sizeBytes int) *windows.VHD {
+	var err error
+	// the tmp dir is created during the discovery dir creation
+	vhd := windows.NewVHD(fmt.Sprintf("/tmp/%08x.vhdx", rand.Int31()), sizeBytes)
+
+	// setup the VHD to create and format an NTFS volume
+	vhdStageScript, err := vhd.StageScript()
+	Expect(err).NotTo(HaveOccurred())
+	execResult, err := config.hostExec.Execute(vhdStageScript, node)
+	utils.LogResult(execResult)
+	Expect(err).NotTo(HaveOccurred())
+
+	// publish the Volume to the volumePath
+	vhdPublishScript, err := vhd.PublishScript(volumePath)
+	Expect(err).NotTo(HaveOccurred())
+	execResult, err = config.hostExec.Execute(vhdPublishScript, node)
+	utils.LogResult(execResult)
+	Expect(err).NotTo(HaveOccurred())
+
+	return vhd
 }
 
 func createVolumeConfigMap(config *localTestConfig, testConfig *testConfig) {
@@ -724,7 +818,43 @@ func findLocalPersistentVolume(c clientset.Interface, volumePath string) (*v1.Pe
 }
 
 func createProvisionerDaemonset(config *localTestConfig) {
+	additionalVolumeMounts := []v1.VolumeMount{}
+	additionalVolumes := []v1.Volume{}
 	provisionerPrivileged := true
+
+	// LVP in Windows interacts with CSI Proxy through these named pipes
+	// mounted as volumes in the pod
+	// see helm/provisioner/templates/daemonset_windows.yaml for more details
+	if nodeOSDistroIs("windows") {
+		apiGroups := []string{
+			"disk-v1", "volume-v1", "filesystem-v1",
+			"disk-v1beta2", "volume-v1beta2", "filesystem-v1beta1",
+		}
+
+		for _, apiGroup := range apiGroups {
+			additionalVolumes = append(
+				additionalVolumes,
+				v1.Volume{
+					Name: fmt.Sprintf("csi-proxy-%s", apiGroup),
+					VolumeSource: v1.VolumeSource{
+						HostPath: &v1.HostPathVolumeSource{
+							Path: fmt.Sprintf(`\\.\pipe\csi-proxy-%s`, apiGroup),
+						},
+					},
+				},
+			)
+			additionalVolumeMounts = append(
+				additionalVolumeMounts,
+				v1.VolumeMount{
+					Name:      fmt.Sprintf("csi-proxy-%s", apiGroup),
+					MountPath: fmt.Sprintf(`\\.\pipe\csi-proxy-%s`, apiGroup),
+				},
+			)
+		}
+
+		provisionerPrivileged = false
+	}
+
 	mountProp := v1.MountPropagationHostToContainer
 
 	provisioner := &appsv1.DaemonSet{
@@ -745,6 +875,9 @@ func createProvisionerDaemonset(config *localTestConfig) {
 				},
 				Spec: v1.PodSpec{
 					ServiceAccountName: testServiceAccount,
+					NodeSelector: map[string]string{
+						"kubernetes.io/os": getNodeOSDistro(),
+					},
 					Containers: []v1.Container{
 						{
 							Name:            "provisioner",
@@ -778,20 +911,21 @@ func createProvisionerDaemonset(config *localTestConfig) {
 									Value: provisionerImageName,
 								},
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: append([]v1.VolumeMount{
 								{
 									Name:      volumeConfigName,
 									MountPath: "/etc/provisioner/config/",
+									ReadOnly:  true,
 								},
 								{
 									Name:             "local-disks",
 									MountPath:        provisionerDefaultMountRoot,
 									MountPropagation: &mountProp,
 								},
-							},
+							}, additionalVolumeMounts...),
 						},
 					},
-					Volumes: []v1.Volume{
+					Volumes: append([]v1.Volume{
 						{
 							Name: volumeConfigName,
 							VolumeSource: v1.VolumeSource{
@@ -810,7 +944,7 @@ func createProvisionerDaemonset(config *localTestConfig) {
 								},
 							},
 						},
-					},
+					}, additionalVolumes...),
 				},
 			},
 		},
@@ -891,6 +1025,9 @@ func createWriteCmd(testDir string, testFile string, writeTestFileContent string
 		return fmt.Sprintf("%s && %s && %s && %s", writeTestFileCmd, sudoCmd, writeBlockCmd, deleteTestFileCmd)
 	}
 	testFilePath := filepath.Join(testDir, testFile)
+	if nodeOSDistroIs("windows") {
+		return fmt.Sprintf("mkdir -Force %s; echo %s > %s", testDir, writeTestFileContent, testFilePath)
+	}
 	return fmt.Sprintf("mkdir -p %s; echo %s > %s", testDir, writeTestFileContent, testFilePath)
 }
 
@@ -898,6 +1035,9 @@ func createWriteCmd(testDir string, testFile string, writeTestFileContent string
 // to be executed via hostexec Pod on the node with the local PV
 func createFileDoesntExistCmd(testFileDir string, testFile string) string {
 	testFilePath := filepath.Join(testFileDir, testFile)
+	if nodeOSDistroIs("windows") {
+		return fmt.Sprintf("if(-not(Test-Path -Path %s)) { throw 'File exists' }", testFilePath)
+	}
 	return fmt.Sprintf("[ ! -e %s ]", testFilePath)
 }
 

@@ -182,4 +182,4 @@ echo "Running e2e tests:" >&2
 echo "PROVISIONER_IMAGE_NAME: $PROVISIONER_IMAGE_NAME"
 echo "PROVISIONER_IMAGE_PULL_POLICY: $PROVISIONER_IMAGE_PULL_POLICY"
 echo "go ${TEST_ARGS[@]}" >&2
-exec "go" "${TEST_ARGS[@]}"
+eval "go ${TEST_ARGS[@]}"
