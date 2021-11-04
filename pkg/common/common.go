@@ -329,8 +329,8 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		if config.MountDir == "" || config.HostDir == "" {
 			return fmt.Errorf("Storage Class %v is misconfigured, missing HostDir or MountDir parameter", class)
 		}
-		config.MountDir = normalizePath(config.MountDir)
-		config.HostDir = normalizePath(config.HostDir)
+		config.MountDir = NormalizePath(config.MountDir)
+		config.HostDir = NormalizePath(config.HostDir)
 
 		if config.VolumeMode == "" {
 			config.VolumeMode = DefaultVolumeMode
@@ -357,10 +357,10 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 	return nil
 }
 
-// normalizePath makes sure the given path is a valid path on Windows too
+// NormalizePath makes sure the given path is a valid path on Windows too
 // by making sure all instances of `/` are replaced with `\\`, and the
 // path beings with `c:`
-func normalizePath(path string) string {
+func NormalizePath(path string) string {
 	if runtime.GOOS != "windows" {
 		return path
 	}

@@ -58,8 +58,3 @@ func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath, file string) (bool,
 func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
 	return fmt.Errorf("DeleteContents is unsupported in this build")
 }
-
-// DeleteContents deletes all the contents under the given directory
-func (u *volumeUtil) DeleteContents(mountPath string) error {
-	return fmt.Errorf("DeleteContents is unsupported in this build")
-}

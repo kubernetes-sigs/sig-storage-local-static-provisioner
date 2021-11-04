@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package windows
 
 import (
@@ -41,7 +42,7 @@ func NewVHD(path string, sizeBytes int) *VHD {
 func (vhd *VHD) StageScript() (string, error) {
 	script := strings.Replace(`"& {
 $global:progressPreference = 'SilentlyContinue'
-$vhdPath = {{.Path}}
+$vhdPath = '{{.Path}}'
 New-VHD -Path $vhdPath -SizeBytes {{.SizeBytes}}
 Mount-VHD -Path $vhdPath -PassThru | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -UseMaximumSize
 Get-VHD -Path $vhdPath | Get-Partition | Get-Volume | Format-Volume -Filesystem ntfs -Confirm:$false

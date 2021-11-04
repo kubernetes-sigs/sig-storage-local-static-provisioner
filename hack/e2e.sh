@@ -142,7 +142,7 @@ CLUSTER=${CLUSTER:-e2e}
 GKE_ENVIRONMENT=${GKE_ENVIRONMENT:-prod}
 KUBERNETES_SRC=${KUBERNETES_SRC:-} # If set, skip extracting kubernetes, use it as kubernetes src.
 KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-} # Prebuilt kind node image to use, e.g. kindest/node:v1.15.0.
-# set from kubernetes/test-infra
+# set in the prow job through the common config in kubernetes/test-infra
 GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
 JENKINS_GCE_SSH_PRIVATE_KEY_FILE=${JENKINS_GCE_SSH_PRIVATE_KEY_FILE:-}
 JENKINS_GCE_SSH_PUBLIC_KEY_FILE=${JENKINS_GCE_SSH_PUBLIC_KEY_FILE:-}
@@ -166,9 +166,6 @@ echo "DEPLOYMENT: $DEPLOYMENT" >&2
 echo "CLUSTER: $CLUSTER" >&2
 echo "GKE_ENVIRONMENT: $GKE_ENVIRONMENT" >&2
 echo "KUBERNETES_SRC: $KUBERNETES_SRC" >&2
-echo "GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS" >&2
-echo "JENKINS_GCE_SSH_PRIVATE_KEY_FILE: $JENKINS_GCE_SSH_PRIVATE_KEY_FILE" >&2
-echo "JENKINS_GCE_SSH_PUBLIC_KEY_FILE: $JENKINS_GCE_SSH_PUBLIC_KEY_FILE" >&2
 
 kubetest_args=(
     --provider "$PROVIDER"
@@ -209,6 +206,8 @@ if [ "$PROVIDER" == "gce" -o "$PROVIDER" == "gke" ]; then
         kubetest_args+=(
             --gcp-zone "$GCP_ZONE"
         )
+        # also set the default zone for the gcloud sdk
+        export CLOUDSDK_COMPUTE_ZONE="$GCP_ZONE"
     fi
 
     if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
@@ -323,9 +322,9 @@ if [ "$PROVIDER" == "gke" ]; then
 fi
 
 # legacy path
-    # --up
-    # --down
 go run $ROOT/hack/e2e.go -- "${kubetest_args[@]}" \
     --deployment="$DEPLOYMENT" \
+    --up \
+    --down \
     --test-cmd="$ROOT/hack/run-e2e.sh" \
     "${@:-}"

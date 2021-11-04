@@ -34,10 +34,11 @@ func main() {
 	flag.Parse()
 
 	klog.Infof("Remotely executing a program!")
+	klog.Infof(`This script tests that the windows hostExec implementation can execute commands through SSH`)
 
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "e2e-test-mauriciopoppe-windows-node-group-l64t",
+			Name: "<gce instance name>",
 		},
 	}
 	hostExec := windows.NewHostExec()

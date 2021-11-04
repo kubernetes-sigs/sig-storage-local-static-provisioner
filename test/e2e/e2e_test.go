@@ -38,6 +38,8 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -49,6 +51,7 @@ import (
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	e2eresource "k8s.io/kubernetes/test/e2e/framework/resource"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
+	testutils "k8s.io/kubernetes/test/utils"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/test/e2e/windows"
 )
@@ -156,19 +159,13 @@ func init() {
 	fmt.Printf("PROVISIONER_IMAGE_PULL_POLICY: %s\n", imagePullPolicyFromEnv)
 }
 
-// getNodeOSDistro returns the node OS distro for the test set using `--node-os-distro`
-// defaults to linux if the flag is not set
-func getNodeOSDistro() string {
-	var nodeOSDistroFlag *flag.Flag = flag.Lookup("node-os-distro")
-	if nodeOSDistroFlag != nil {
-		return nodeOSDistroFlag.Value.String()
-	}
-	return "linux"
-}
-
 // nodeOSDistroIs returns true if the distro is the same as `--node-os-distro`
 func nodeOSDistroIs(distro string) bool {
-	return getNodeOSDistro() == distro
+	var nodeOSDistroFlag *flag.Flag = flag.Lookup("node-os-distro")
+	if nodeOSDistroFlag != nil {
+		return nodeOSDistroFlag.Value.String() == distro
+	}
+	return false
 }
 
 var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
@@ -179,9 +176,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	BeforeEach(func() {
 		// Get all the schedulable nodes
-		// NOTE: After the creation of the e2e cluster the hack/run-e2e.sh script
-		// taints the nodes that don't belong to the current platform
-		// being tested e.g. taint the Linux nodes if the tests should run in Windows nodes
+		// NOTE: After the creation of the e2e cluster the hack/run-e2e.sh script taints
+		// the nodes that don't belong to the current platform being tested
+		// e.g. taint the Linux nodes if the tests should run in Windows nodes
 		nodes, err := e2enode.GetReadySchedulableNodes(f.ClientSet)
 		framework.ExpectNoError(err)
 		Expect(len(nodes.Items)).NotTo(BeZero(), "No available nodes for scheduling")
@@ -193,7 +190,8 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 		}
 
 		// Choose the first node
-		node0 := &nodes.Items[0]
+		testNodes := nodes.Items[:maxLen]
+		testNode0 := &testNodes[0]
 
 		// hostExec depends on the test platform
 		hostExec := utils.NewHostExec(f)
@@ -204,9 +202,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 		config = &localTestConfig{
 			ns:           f.Namespace.Name,
 			client:       f.ClientSet,
-			nodes:        nodes.Items[:maxLen],
 			hostExec:     hostExec,
-			node0:        node0,
+			nodes:        testNodes,
+			node0:        testNode0,
 			scName:       fmt.Sprintf("%v-%v", testSCPrefix, f.Namespace.Name),
 			discoveryDir: filepath.Join(hostBase, f.Namespace.Name),
 		}
@@ -231,9 +229,9 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			})
 
 			AfterEach(func() {
+				deleteProvisionerDaemonset(config)
 				cleanupLocalVolumeProvisioner(config)
 				cleanupStorageClass(config)
-				deleteProvisionerDaemonset(config)
 			})
 
 			It("should create and recreate local persistent volume", func() {
@@ -289,15 +287,18 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 		})
 
 		AfterEach(func() {
+			deleteProvisionerDaemonset(config)
 			cleanupLocalVolumeProvisioner(config)
 			cleanupStorageClass(config)
-			deleteProvisionerDaemonset(config)
 		})
 
 		It("should not create local persistent volume for filesystem volume that was not bind mounted", func() {
 			directoryPath := filepath.Join(config.discoveryDir, "notbindmount")
 			By("Creating a directory, not bind mounted, in discovery directory")
 			mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", directoryPath)
+			if nodeOSDistroIs("windows") {
+				mkdirCmd = fmt.Sprintf("mkdir -Force %v", directoryPath)
+			}
 			execResult, err := config.hostExec.Execute(mkdirCmd, config.node0)
 			utils.LogResult(execResult)
 			Expect(err).NotTo(HaveOccurred())
@@ -320,11 +321,19 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 	Context("Stress with local volume provisioner [Serial]", func() {
 		var testVols [][]*localVolume
 
-		const (
+		var (
 			volsPerNode = 10 // Make this non-divisable by volsPerPod to increase changes of partial binding failure
 			volsPerPod  = 3
 			podsFactor  = 4
 		)
+		if nodeOSDistroIs("windows") {
+			// the Windows image is big and having `volsPerNode/volsPerPod + 1` pods pulling it
+			// at the same time consumes all the bandwidth, in Windows these parameters are
+			// changed so that the stress test is with fewer parallel pods
+			volsPerNode = 7
+			volsPerPod = 3
+			podsFactor = 3
+		}
 
 		BeforeEach(func() {
 			setupStorageClass(config, &waitMode)
@@ -342,14 +351,11 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 				testVols = append(testVols, vols)
 			}
 
-			By("Starting the local volume provisioner")
 			createProvisionerDaemonset(config)
 		})
 
 		AfterEach(func() {
-			By("Deleting provisioner daemonset")
 			deleteProvisionerDaemonset(config)
-
 			for i, vols := range testVols {
 				for _, vol := range vols {
 					cleanupLocalVolumeProvisionerMountPoint(config, vol, &config.nodes[i])
@@ -428,7 +434,11 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			}()
 
 			By("Waiting for all pods to complete successfully")
-			err := wait.PollImmediate(time.Second, 5*time.Minute, func() (done bool, err error) {
+			timeout := 5 * time.Minute
+			if nodeOSDistroIs("windows") {
+				timeout = 10 * time.Minute
+			}
+			err := wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
 				podsList, err := config.client.CoreV1().Pods(config.ns).List(context.TODO(), metav1.ListOptions{})
 				if err != nil {
 					return false, err
@@ -474,11 +484,12 @@ func setupStorageClass(config *localTestConfig, mode *storagev1.VolumeBindingMod
 }
 
 func cleanupStorageClass(config *localTestConfig) {
+	By("Cleanup StorageClass")
 	framework.ExpectNoError(config.client.StorageV1().StorageClasses().Delete(context.TODO(), config.scName, metav1.DeleteOptions{}))
 }
 
 func setupLocalVolumeProvisioner(config *localTestConfig, testConfig *testConfig) {
-	By("Bootstrapping local volume provisioner")
+	By("Setup local volume provisioner dependencies")
 	createServiceAccount(config)
 	createProvisionerClusterRoleBinding(config)
 	utils.PrivilegedTestPSPClusterRoleBinding(config.client, config.ns, false /* teardown */, []string{testServiceAccount})
@@ -504,6 +515,9 @@ func cleanupLocalVolumeProvisioner(config *localTestConfig) {
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Removing the test discovery directory on node %v", node.Name))
 		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", config.discoveryDir, config.discoveryDir)
+		if nodeOSDistroIs("windows") {
+			removeCmd = fmt.Sprintf("rmdir -Recurse -Force %v", config.discoveryDir)
+		}
 		execResult, err := config.hostExec.Execute(removeCmd, &node)
 		utils.LogResult(execResult)
 		Expect(err).NotTo(HaveOccurred())
@@ -648,8 +662,22 @@ func findLoopDevice(config *localTestConfig, file string, node *v1.Node) string 
 	return strings.TrimSpace(loopDevResult)
 }
 
+// normalizePath makes sure the given path is a valid path on Windows too
+// by making sure all instances of `/` are replaced with `\\`, and the
+// path beings with `c:`
+func normalizePath(path string) string {
+	if !nodeOSDistroIs("windows") {
+		return path
+	}
+	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	if strings.HasPrefix(normalizedPath, "\\") {
+		normalizedPath = "c:" + normalizedPath
+	}
+	return normalizedPath
+}
+
 func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Node, volumeType localVolumeType) *localVolume {
-	volumePath := path.Join(config.discoveryDir, fmt.Sprintf("vol-%v", string(uuid.NewUUID())))
+	volumePath := normalizePath(path.Join(config.discoveryDir, fmt.Sprintf("vol-%v", string(uuid.NewUUID()))))
 	if volumeType == DirectoryLocalVolumeType {
 		lv := &localVolume{
 			volumePath: volumePath,
@@ -667,6 +695,7 @@ func setupLocalVolumeProvisionerMountPoint(config *localTestConfig, node *v1.Nod
 
 		By(fmt.Sprintf("Mounting local directory at path %q", volumePath))
 		if nodeOSDistroIs("windows") {
+			// NOTE: the value must be greater than the PVC config ClaimSize
 			vhd := setupVHD(config, node, volumePath, 1024*1024*1024 /* 1GB */)
 			lv.vhd = vhd
 		} else {
@@ -818,19 +847,20 @@ func findLocalPersistentVolume(c clientset.Interface, volumePath string) (*v1.Pe
 }
 
 func createProvisionerDaemonset(config *localTestConfig) {
+	By("Setup local volume provisioner daemonset")
 	additionalVolumeMounts := []v1.VolumeMount{}
 	additionalVolumes := []v1.Volume{}
+	nodeSelector := map[string]string{}
 	provisionerPrivileged := true
 
 	// LVP in Windows interacts with CSI Proxy through these named pipes
 	// mounted as volumes in the pod
 	// see helm/provisioner/templates/daemonset_windows.yaml for more details
 	if nodeOSDistroIs("windows") {
-		apiGroups := []string{
-			"disk-v1", "volume-v1", "filesystem-v1",
-			"disk-v1beta2", "volume-v1beta2", "filesystem-v1beta1",
+		apiGroups := []string{"volume-v1", "volume-v1beta2", "filesystem-v1", "filesytem-v1beta2"}
+		nodeSelector = map[string]string{
+			"kubernetes.io/os": "windows",
 		}
-
 		for _, apiGroup := range apiGroups {
 			additionalVolumes = append(
 				additionalVolumes,
@@ -875,9 +905,7 @@ func createProvisionerDaemonset(config *localTestConfig) {
 				},
 				Spec: v1.PodSpec{
 					ServiceAccountName: testServiceAccount,
-					NodeSelector: map[string]string{
-						"kubernetes.io/os": getNodeOSDistro(),
-					},
+					NodeSelector:       nodeSelector,
 					Containers: []v1.Container{
 						{
 							Name:            "provisioner",
@@ -952,8 +980,66 @@ func createProvisionerDaemonset(config *localTestConfig) {
 	_, err := config.client.AppsV1().DaemonSets(config.ns).Create(context.TODO(), provisioner, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	kind := schema.GroupKind{Group: appsv1.GroupName, Kind: "DaemonSet"}
-	e2eresource.WaitForControlledPodsRunning(config.client, config.ns, daemonSetName, kind)
+	By("Waiting for local volume provisioner deamonset to be ready")
+	kind := schema.GroupKind{Group: "extensions", Kind: "DaemonSet"}
+	err = waitForDeamonSetPodsRunning(config.client, config.ns, daemonSetName, kind)
+	Expect(err).NotTo(HaveOccurred())
+}
+
+// waitForDeamonSetPodsRunning waits up to 10 minutes for pods to become Running.
+// The implementation is similar to kubernetes/test/e2e/framework/resource/WaitForControlledPodsRunning
+// with the difference that it's going to wait for all the replicas to be ready
+func waitForDeamonSetPodsRunning(c clientset.Interface, ns, name string, kind schema.GroupKind) error {
+	rtObject, err := e2eresource.GetRuntimeObjectForKind(c, kind, ns, name)
+	if err != nil {
+		return err
+	}
+	selector, err := e2eresource.GetSelectorFromRuntimeObject(rtObject)
+	if err != nil {
+		return err
+	}
+	err = waitForPodsWithLabelRunning(c, ns, selector)
+	if err != nil {
+		return fmt.Errorf("Error while waiting for deamonset %s pods to be running: %v", name, err)
+	}
+	pods, err := e2epod.WaitForPodsWithLabel(c, ns, selector)
+	if err != nil {
+		return err
+	}
+	e2epod.LogPodStates(pods.Items)
+	return nil
+}
+
+func waitForPodsWithLabelRunning(c clientset.Interface, ns string, label labels.Selector) error {
+	running := false
+	ps, err := testutils.NewPodStore(c, ns, label, fields.Everything())
+	if err != nil {
+		return err
+	}
+	defer ps.Stop()
+
+	for start := time.Now(); time.Since(start) < 20*time.Minute; time.Sleep(20 * time.Second) {
+		pods := ps.List()
+		if len(pods) == 0 {
+			continue
+		}
+		runningPodsCount := 0
+		for _, p := range pods {
+			if p.Status.Phase == v1.PodRunning {
+				runningPodsCount++
+			}
+		}
+		klog.Infof("Checking running replicas with label=%q, want=%d, got=%d", label.String(), len(pods), runningPodsCount)
+		if runningPodsCount < len(pods) {
+			continue
+		}
+		running = true
+		break
+	}
+	if !running {
+		return fmt.Errorf("timeout while waiting for pods with labels %q to be running", label.String())
+	}
+	return nil
 }
 
 // waitForLocalPersistentVolume waits a local persistent volume with 'volumePath' to be available.
@@ -1036,7 +1122,7 @@ func createWriteCmd(testDir string, testFile string, writeTestFileContent string
 func createFileDoesntExistCmd(testFileDir string, testFile string) string {
 	testFilePath := filepath.Join(testFileDir, testFile)
 	if nodeOSDistroIs("windows") {
-		return fmt.Sprintf("if(-not(Test-Path -Path %s)) { throw 'File exists' }", testFilePath)
+		return fmt.Sprintf("if (Test-Path -Path %s) { throw 'File exists' }", testFilePath)
 	}
 	return fmt.Sprintf("[ ! -e %s ]", testFilePath)
 }
@@ -1073,6 +1159,7 @@ func (c *localTestConfig) isNodeInList(name string) bool {
 }
 
 func deleteProvisionerDaemonset(config *localTestConfig) {
+	By("Cleanup Provisioner daemonset")
 	ds, err := config.client.AppsV1().DaemonSets(config.ns).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
 	if ds == nil {
 		return
@@ -1144,6 +1231,7 @@ func makeLocalPVCConfig(config *localTestConfig, volumeType localVolumeType) e2e
 	pvcConfig := e2epv.PersistentVolumeClaimConfig{
 		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: &config.scName,
+		ClaimSize:        "100M",
 	}
 	if volumeType == BlockLocalVolumeType {
 		pvcVolumeMode := v1.PersistentVolumeBlock

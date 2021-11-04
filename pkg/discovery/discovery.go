@@ -23,7 +23,6 @@ import (
 	"hash/fnv"
 	"net/http"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -267,7 +266,6 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 
 	// Retrieve list of mount points to iterate through discovered paths (aka files) below
 	mountPoints, err := d.RuntimeConfig.Mounter.List()
-	klog.V(4).Infof("[DEBUG] the mount points are %v", mountPoints)
 	if err != nil {
 		return fmt.Errorf("error retrieving mountpoints: %v", err)
 	}

@@ -119,7 +119,4 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 		discoverer.DiscoverLocalVolumes()
 		time.Sleep(discoveryPeriod)
 	}
-
-	// unreachable
-	return nil
 }

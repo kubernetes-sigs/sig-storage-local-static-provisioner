@@ -21,8 +21,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	e2estorageutils "k8s.io/kubernetes/test/e2e/storage/utils"
 )
 
@@ -53,21 +57,40 @@ func (h *hostExecutor) Execute(command string, node *v1.Node) (e2estorageutils.R
 	cmd.Stdout = &outBuffer
 	cmd.Stderr = &errBuffer
 
-	err := cmd.Run()
-	result := e2estorageutils.Result{
-		Host:   node.Name,
-		Cmd:    cmd.String(),
-		Stdout: outBuffer.String(),
-		Stderr: errBuffer.String(),
-	}
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			result.Code = exitError.ExitCode()
-		}
-		return result, err
-	}
+	var result e2estorageutils.Result
 
-	return result, nil
+	// sometimes `gcloud compute ssh` fails with
+	//
+	//   Permission denied (publickey,keyboard-interactive).
+	//   ERROR: (gcloud.compute.ssh) [/usr/bin/ssh] exited with return code [255]
+	//
+	// in that case let's retry with backoff
+	backoff := wait.Backoff{Duration: 1 * time.Second, Factor: 3, Steps: 4}
+	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		err := cmd.Run()
+		result = e2estorageutils.Result{
+			Host:   node.Name,
+			Cmd:    cmd.String(),
+			Stdout: outBuffer.String(),
+			Stderr: errBuffer.String(),
+		}
+		if err != nil {
+			if strings.Contains(result.Stderr, "exited with return code [255]") {
+				// the command failed with an error that might be transient
+				klog.Errorf("Request command=[%s] failed with a possibly transient error", result.Cmd)
+				return false, nil
+			}
+			if exitError, ok := err.(*exec.ExitError); ok {
+				result.Code = exitError.ExitCode()
+			}
+			return true, err
+		}
+
+		// request succeeded!
+		return true, nil
+	})
+
+	return result, err
 }
 
 // IssueCommandWithResult issues command on the given node and returns stdout as

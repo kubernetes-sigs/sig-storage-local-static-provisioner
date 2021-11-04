@@ -84,7 +84,7 @@ fi
 if [ -z "$PROVISIONER_E2E_IMAGE" ]; then
     # build and push ${version}_linux_amd64 and ${version}_windows_ltsc2019
     VERSION=${VERSION:-$(git describe --tags --abbrev=8 --always)}
-    REGISTRY=${REGISTRY:-k8s.gcr.io/sig-storage}
+    REGISTRY=${REGISTRY:-gcr.io/${PROJECT}}
     IMAGE=local-volume-provisioner
 
     REGISTRY=${REGISTRY} \
@@ -133,13 +133,14 @@ fi
 export PROVISIONER_IMAGE_NAME
 export PROVISIONER_IMAGE_PULL_POLICY
 
+# Taint nodes of the platform where the test shouldn't run
 current_platform=linux
 taint_platform=windows
 if [ "${KUBERNETES_NODE_PLATFORM}" == "windows" ]; then
     current_platform=windows
     taint_platform=linux
 fi
-echo "Running tests for platform=${current_platform}, removing taints from all nodes and tainting platform=${taint_platform} nodes"
+echo "Running tests for platform=${current_platform}, tainting platform=${taint_platform} nodes"
 kubectl get nodes -o name | \
 while IFS= read -r node; do
   kubectl taint node $node node.kubernetes.io/os:NoSchedule- || true
