@@ -1,16 +1,4 @@
 ---
-# Source: provisioner/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: local-static-provisioner
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-2.5.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
----
 # Source: provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -20,48 +8,49 @@ metadata:
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 data:
-  useJobForCleaning: "yes"
+  useNodeNameOnly: "true"
   storageClassMap: |
-    local-storage:
+    local-scsi:
       hostDir: /mnt/disks
       mountDir: /mnt/disks
-      blockCleanerCommand:
-        - "/scripts/quick_reset.sh"
-      volumeMode: Block
+
 ---
 # Source: provisioner/templates/storageclass.yaml
+
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: local-storage
+  name: local-scsi
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
+
 ---
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+# Source: provisioner/templates/serviceaccount.yaml
+
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: local-static-provisioner-node-clusterrole
+  name: local-static-provisioner
+  namespace: default
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
-rules:
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get"]
+
 ---
 # Source: provisioner/templates/rbac.yaml
+
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -69,7 +58,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -80,7 +69,20 @@ roleRef:
   name: system:persistent-volume-provisioner
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: provisioner/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-static-provisioner-node-clusterrole
+  labels:
+    helm.sh/chart: provisioner-2.5.0
+    app.kubernetes.io/name: provisioner
+    app.kubernetes.io/managed-by: Tiller
+    app.kubernetes.io/instance: local-static-provisioner
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -88,7 +90,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
 - kind: ServiceAccount
@@ -98,47 +100,10 @@ roleRef:
   kind: ClusterRole
   name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
----
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: local-static-provisioner-jobs-role
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-2.5.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-rules:
-- apiGroups:
-    - 'batch'
-  resources:
-    - jobs
-  verbs:
-    - '*'
----
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: local-static-provisioner-jobs-rolebinding
-  namespace: default
-  labels:
-    helm.sh/chart: provisioner-2.5.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-subjects:
-- kind: ServiceAccount
-  name: local-static-provisioner
-  namespace: default
-roleRef:
-  kind: Role
-  name: local-static-provisioner-jobs-role
-  apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: provisioner/templates/daemonset_linux.yaml
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -147,7 +112,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
@@ -160,14 +125,15 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: cdda409e0f72e7bb38ed20c4e3811585416ed2480ce62ab5d276c4b37db566c9
+        checksum/config: 4eb9c319293e455d791095bf423e610062444b6bed3a2b383326ff43f7806fa3
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
         kubernetes.io/os: linux
       containers:
         - name: provisioner
-          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          image: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
+          imagePullPolicy: Always
           securityContext:
             privileged: true
           env:
@@ -180,7 +146,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+            value: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
           ports:
           - name: metrics
             containerPort: 8080
@@ -190,7 +156,7 @@ spec:
               readOnly: true
             - name: provisioner-dev
               mountPath: /dev
-            - name: local-storage
+            - name: local-scsi
               mountPath: /mnt/disks
               mountPropagation: HostToContainer
       volumes:
@@ -200,11 +166,13 @@ spec:
         - name: provisioner-dev
           hostPath:
             path: /dev
-        - name: local-storage
+        - name: local-scsi
           hostPath:
             path: /mnt/disks
+
 ---
 # Source: provisioner/templates/daemonset_windows.yaml
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -213,7 +181,7 @@ metadata:
   labels:
     helm.sh/chart: provisioner-2.5.0
     app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
@@ -226,7 +194,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: cdda409e0f72e7bb38ed20c4e3811585416ed2480ce62ab5d276c4b37db566c9
+        checksum/config: 4eb9c319293e455d791095bf423e610062444b6bed3a2b383326ff43f7806fa3
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -237,7 +205,8 @@ spec:
         - operator: "Exists"
       containers:
         - name: provisioner
-          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          image: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
+          imagePullPolicy: Always
           env:
           - name: MY_NODE_NAME
             valueFrom:
@@ -248,7 +217,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+            value: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
           ports:
           - name: metrics
             containerPort: 8080
@@ -258,7 +227,7 @@ spec:
               readOnly: true
             - name: provisioner-dev
               mountPath: /dev
-            - name: local-storage
+            - name: local-scsi
               mountPath: /mnt/disks
               mountPropagation: HostToContainer
             - name: csi-proxy-volume-v1
@@ -312,6 +281,15 @@ spec:
             # created there as needed with permission set to 0755,
             # having the same group and ownership with Kubelet.
             type: DirectoryOrCreate
-        - name: local-storage
+        - name: local-scsi
           hostPath:
             path: /mnt/disks
+
+---
+# Source: provisioner/templates/psp.yaml
+
+
+---
+# Source: provisioner/templates/servicemonitor.yaml
+
+
