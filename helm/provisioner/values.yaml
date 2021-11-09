@@ -88,8 +88,8 @@ classes:
   #  - "/scripts/dd_zero.sh"
   #  - "2"
   # or run shred utility for 2 iteration.s
-     - "/scripts/shred.sh"
-     - "2"
+    - "/scripts/shred.sh"
+    - "2"
   # or blkdiscard utility by uncommenting the line below.
   #  - "/scripts/blkdiscard.sh"
   # Uncomment to create storage class object with default configuration.
