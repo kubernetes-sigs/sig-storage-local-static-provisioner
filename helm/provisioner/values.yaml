@@ -1,6 +1,7 @@
 #
 # Common options.
 #
+#
 common:
   #
   # Defines whether to generate rbac roles
