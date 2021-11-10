@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.0
+    helm.sh/chart: provisioner-2.5.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -28,7 +28,7 @@ kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    helm.sh/chart: provisioner-2.5.0
+    helm.sh/chart: provisioner-2.5.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -45,7 +45,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.0
+    helm.sh/chart: provisioner-2.5.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -59,7 +59,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.0
+    helm.sh/chart: provisioner-2.5.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -74,7 +74,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 851383efdbc5f5ae3ffc68718da77a6dbe6de8500ce0a5f87027d513dd80d868
+        checksum/config: 1c07be5338a0fe9a6e2ada01aa1a8f0804f2f01fbec3b68abd5d781a0b561c22
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -127,7 +127,7 @@ metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.0
+    helm.sh/chart: provisioner-2.5.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -142,7 +142,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 851383efdbc5f5ae3ffc68718da77a6dbe6de8500ce0a5f87027d513dd80d868
+        checksum/config: 1c07be5338a0fe9a6e2ada01aa1a8f0804f2f01fbec3b68abd5d781a0b561c22
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
