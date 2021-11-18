@@ -89,7 +89,7 @@ func (d *Deleter) DeletePVs() {
 					mode = "unknown"
 				}
 				deleteType := metrics.DeleteTypeProcess
-				if d.shouldRunJob(mode) {
+				if d.RuntimeConfig.UseJobForCleaning {
 					deleteType = metrics.DeleteTypeJob
 				}
 				metrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(mode), deleteType).Inc()
@@ -124,10 +124,6 @@ func (d *Deleter) getVolMode(pv *v1.PersistentVolume) (v1.PersistentVolumeMode, 
 	return volMode, nil
 }
 
-func (d *Deleter) shouldRunJob(mode v1.PersistentVolumeMode) bool {
-	return mode == v1.PersistentVolumeBlock && d.RuntimeConfig.UseJobForCleaning
-}
-
 func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	if pv.Spec.Local == nil {
 		return fmt.Errorf("Unsupported volume type")
@@ -146,7 +142,7 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	if err != nil {
 		return fmt.Errorf("failed to get volume mode of path %q: %v", mountPath, err)
 	}
-	runjob := d.shouldRunJob(volMode)
+	runjob := d.RuntimeConfig.UseJobForCleaning
 
 	// Exit if cleaning is still in progress.
 	if d.CleanupStatus.InProgress(pv.Name, runjob) {
@@ -186,6 +182,9 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 			if len(config.BlockCleanerCommand) > 0 {
 				cleanupCommand = config.BlockCleanerCommand[0]
 			}
+			if len(config.FsCleanerCommand) > 0 {
+				cleanupCommand = config.FsCleanerCommand[0]
+			}
 			metrics.PersistentVolumeDeleteDurationSeconds.WithLabelValues(mode, deleteType, capacityBreakDown, cleanupCommand).Observe(time.Since(*startTime).Seconds())
 		}
 		return nil
@@ -200,6 +199,11 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	if volMode == v1.PersistentVolumeBlock {
 		if len(config.BlockCleanerCommand) < 1 {
 			return fmt.Errorf("Blockcleaner command was empty for pv %q mountPath %s but mount dir is %s", pv.Name,
+				mountPath, config.MountDir)
+		}
+	} else if volMode == v1.PersistentVolumeFilesystem {
+		if len(config.FsCleanerCommand) < 1 {
+			return fmt.Errorf("FsCleaner command was empty for pv %q mountPath %s but mount dir is %s", pv.Name,
 				mountPath, config.MountDir)
 		}
 	}

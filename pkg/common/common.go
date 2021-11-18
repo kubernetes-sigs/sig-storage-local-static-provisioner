@@ -52,6 +52,8 @@ const (
 
 	// DefaultBlockCleanerCommand is the default block device cleaning command
 	DefaultBlockCleanerCommand = "/scripts/quick_reset.sh"
+	// DefaultFsCleanerCommand is the default filesystem device cleaning command
+	DefaultFsCleanerCommand = "/scripts/fsclean.sh"
 
 	// EventVolumeFailedDelete copied from k8s.io/kubernetes/pkg/controller/volume/events
 	EventVolumeFailedDelete = "VolumeFailedDelete"
@@ -123,6 +125,8 @@ type MountConfig struct {
 	MountDir string `json:"mountDir" yaml:"mountDir"`
 	// The type of block cleaner to use
 	BlockCleanerCommand []string `json:"blockCleanerCommand" yaml:"blockCleanerCommand"`
+	// The type of fs cleaner to use
+	FsCleanerCommand []string `json:"fsCleanerCommand" yaml:"fsCleanerCommand"`
 	// The volume mode of created PersistentVolume object,
 	// default to Filesystem if not specified.
 	VolumeMode string `json:"volumeMode" yaml:"volumeMode"`
@@ -329,6 +333,16 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 			return fmt.Errorf("Storage Class %v is misconfigured, missing HostDir or MountDir parameter", class)
 		}
 
+		if config.FsCleanerCommand == nil {
+			// Supply a default fs cleaner command.
+			config.FsCleanerCommand = []string{DefaultFsCleanerCommand}
+		} else {
+			// Validate that array is non empty.
+			if len(config.FsCleanerCommand) < 1 {
+				return fmt.Errorf("Invalid empty fs cleaner command for class %v", class)
+			}
+		}
+
 		if config.VolumeMode == "" {
 			config.VolumeMode = DefaultVolumeMode
 		}
@@ -342,13 +356,14 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		}
 
 		provisionerConfig.StorageClassConfig[class] = config
-		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q, NamePattern %q",
+		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q, FsCleanerCommand %q, NamePattern %q",
 			class,
 			config.MountDir,
 			config.HostDir,
 			config.VolumeMode,
 			config.FsType,
 			config.BlockCleanerCommand,
+			config.FsCleanerCommand,
 			config.NamePattern)
 	}
 	return nil

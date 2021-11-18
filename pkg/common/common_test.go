@@ -120,6 +120,7 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 						HostDir:             "/mnt/disks",
 						MountDir:            "/mnt/disks",
 						BlockCleanerCommand: []string{"/scripts/shred.sh", "2"},
+						FsCleanerCommand:    []string{"/scripts/fsclean.sh"},
 						VolumeMode:          "Filesystem",
 						FsType:              "ext4",
 						NamePattern:         "nvm*",

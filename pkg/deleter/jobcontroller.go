@@ -267,9 +267,7 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 		jobContainer.Command = config.BlockCleanerCommand
 		jobContainer.Env = []apiv1.EnvVar{{Name: common.LocalPVEnv, Value: mountPath}}
 	} else if volMode == apiv1.PersistentVolumeFilesystem {
-		// We only have one way to clean filesystem, so no need to customize
-		// filesystem cleaner command.
-		jobContainer.Command = []string{"/scripts/fsclean.sh"}
+		jobContainer.Command = config.FsCleanerCommand
 		jobContainer.Env = []apiv1.EnvVar{{Name: common.LocalFilesystemEnv, Value: mountPath}}
 	} else {
 		return nil, fmt.Errorf("unknown PersistentVolume mode: %v", volMode)

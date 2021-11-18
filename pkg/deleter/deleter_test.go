@@ -102,7 +102,7 @@ func TestDeleteVolumes_Basic(t *testing.T) {
 		vols:               vols,
 		expectedDeletedPVs: expectedDeletedPVs,
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d, "pv4")
@@ -120,7 +120,7 @@ func TestDeleteVolumes_Twice(t *testing.T) {
 		vols:               vols,
 		expectedDeletedPVs: expectedDeletedPVs,
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d)
@@ -176,7 +176,7 @@ func TestDeleteVolumes_DeletePVNotFound(t *testing.T) {
 		vols:               vols,
 		expectedDeletedPVs: map[string]string{"pv4": ""},
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d)
@@ -209,7 +209,7 @@ func TestDeleteVolumes_UnsupportedReclaimPolicy(t *testing.T) {
 		vols:               vols,
 		expectedDeletedPVs: map[string]string{},
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d)
@@ -244,7 +244,7 @@ func TestDeleteVolumes_UnknownReclaimPolicy(t *testing.T) {
 		vols:               vols,
 		expectedDeletedPVs: map[string]string{},
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d)
@@ -278,7 +278,7 @@ func TestDeleteVolumes_CleanupFails(t *testing.T) {
 		vols:                vols,
 		expectedDeletedPVs:  map[string]string{},
 	}
-	d := testSetupForProcCleaning(t, test, nil)
+	d := testSetupForProcCleaning(t, test, []string{common.DefaultFsCleanerCommand})
 
 	d.DeletePVs()
 	waitForAsyncToComplete(t, d)
@@ -603,6 +603,7 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 				HostDir:             testHostDir,
 				MountDir:            testMountDir,
 				BlockCleanerCommand: cleanupCmd,
+				FsCleanerCommand:    cleanupCmd,
 			},
 		},
 		Node: &v1.Node{ObjectMeta: meta_v1.ObjectMeta{
