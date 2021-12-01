@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -27,7 +27,7 @@ kind: StorageClass
 metadata:
   name: local-scsi
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -44,7 +44,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -57,7 +57,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-pv-binding
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -75,7 +75,7 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -89,7 +89,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -111,7 +111,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -126,7 +126,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 82dde0ee006ba73e01c4b739bdcf9fb521a9e08020346f411c3ed30ab0bc2704
+        checksum/config: d2564e3bcba3eb8833c1c9dc00e4c856ac6d87b1cd83b1d42172ccb14e85c5b5
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -179,7 +179,7 @@ metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -194,7 +194,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 82dde0ee006ba73e01c4b739bdcf9fb521a9e08020346f411c3ed30ab0bc2704
+        checksum/config: d2564e3bcba3eb8833c1c9dc00e4c856ac6d87b1cd83b1d42172ccb14e85c5b5
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
