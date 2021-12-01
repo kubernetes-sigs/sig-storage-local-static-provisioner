@@ -106,7 +106,7 @@ github.com/inconshreveable/mousetrap
 github.com/jmespath/go-jmespath
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
-# github.com/kubernetes-csi/csi-proxy/client v1.0.1
+# github.com/kubernetes-csi/csi-proxy/client v1.0.2
 ## explicit
 github.com/kubernetes-csi/csi-proxy/client
 github.com/kubernetes-csi/csi-proxy/client/api/volume/v1
