@@ -8,7 +8,7 @@ timeout: 1800s
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-- name: gcr.io/k8s-testimages/gcb-docker-gcloud:v20200421-a2bf5f8
+- name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20211118-2f2d816b90
   entrypoint: hack/release.sh
   env:
   - REGISTRY=gcr.io/${_STAGING_PROJECT}
