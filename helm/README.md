@@ -14,7 +14,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
     * [Install with `helm install` directly](#install-with-helm-install-directly)
 - [helm version >= v3.0.0](#helm-version-gt-v3.0.0)
     * [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl1)
-    * [Install with `helm install` directly](#install-with-helm-install-directly1)
+    * [Install with `helm install` directly](#install-with-helm-install-directly-1)
 - [Configurations](#configurations)
 - [Examples](#examples)
 
