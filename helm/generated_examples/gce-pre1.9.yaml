@@ -222,20 +222,32 @@ spec:
               mountPropagation: HostToContainer
             - name: csi-proxy-volume-v1
               mountPath: \\.\pipe\csi-proxy-volume-v1
-            # these paths are still included for compatibility, they're used
+            - name: csi-proxy-filesystem-v1
+              mountPath: \\.\pipe\csi-proxy-filesystem-v1
+            # these csi-proxy paths are still included for compatibility, they're used
             # only if the node has still the beta version of the CSI proxy
             - name: csi-proxy-volume-v1beta2
               mountPath: \\.\pipe\csi-proxy-volume-v1beta2
+            - name: csi-proxy-filesystem-v1beta2
+              mountPath: \\.\pipe\csi-proxy-filesystem-v1beta2
       volumes:
         - name: csi-proxy-volume-v1
           hostPath:
             path: \\.\pipe\csi-proxy-volume-v1
             type: ""
-        # these paths are still included for compatibility, they're used
+        - name: csi-proxy-filesystem-v1
+          hostPath:
+            path: \\.\pipe\csi-proxy-filesystem-v1
+            type: ""
+        # these csi-proxy paths are still included for compatibility, they're used
         # only if the node has still the beta version of the CSI proxy
         - name: csi-proxy-volume-v1beta2
           hostPath:
             path: \\.\pipe\csi-proxy-volume-v1beta2
+            type: ""
+        - name: csi-proxy-filesystem-v1beta2
+          hostPath:
+            path: \\.\pipe\csi-proxy-filesystem-v1beta2
             type: ""
         - name: provisioner-config
           configMap:
