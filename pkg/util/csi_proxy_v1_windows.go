@@ -23,13 +23,16 @@ import (
 	"context"
 	"fmt"
 
+	filesystemapi "github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v1"
 	volumeapi "github.com/kubernetes-csi/csi-proxy/client/api/volume/v1"
+	filesystemclient "github.com/kubernetes-csi/csi-proxy/client/groups/filesystem/v1"
 	volumeclient "github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1"
 )
 
 // CSIProxyV1 is the CSI Proxy implementation that uses the v1 API
 type CSIProxyV1 struct {
-	VolumeClient *volumeclient.Client
+	VolumeClient     *volumeclient.Client
+	FilesystemClient *filesystemclient.Client
 }
 
 // check that CSIProxyV1 implements CSIProxy
@@ -40,8 +43,13 @@ func NewCSIProxyV1() (*CSIProxyV1, error) {
 	if err != nil {
 		return nil, err
 	}
+	filesystemClient, err := filesystemclient.NewClient()
+	if err != nil {
+		return nil, err
+	}
 	return &CSIProxyV1{
-		VolumeClient: volumeClient,
+		VolumeClient:     volumeClient,
+		FilesystemClient: filesystemClient,
 	}, nil
 }
 
@@ -93,4 +101,18 @@ func (proxy *CSIProxyV1) FormatVolume(volumeId string) (err error) {
 		return err
 	}
 	return nil
+}
+
+// IsSymlink checks if the given path is a symlink
+func (proxy *CSIProxyV1) IsSymlink(mountPath string) (isSymlink bool, err error) {
+	isSymlinkResponse, err := proxy.FilesystemClient.IsSymlink(
+		context.Background(),
+		&filesystemapi.IsSymlinkRequest{
+			Path: mountPath,
+		},
+	)
+	if err != nil {
+		return false, err
+	}
+	return isSymlinkResponse.IsSymlink, nil
 }

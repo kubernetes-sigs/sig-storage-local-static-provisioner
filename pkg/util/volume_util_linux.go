@@ -20,6 +20,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"unsafe"
@@ -63,6 +64,12 @@ func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
 	}
 
 	return size, err
+}
+
+// IsLikelyMountPoint is not implemented in linux because the discovery implementation
+// already checks if a path is a mount point by analyzing the /proc/mounts file
+func (u *volumeUtil) IsLikelyMountPoint(fullPath string) (bool, error) {
+	return false, fmt.Errorf("IsLikelyMountPoint is not implemented in Linux")
 }
 
 // IsBlock checks if the given path is a block device

@@ -50,12 +50,8 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsSymLink(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
-}
-
-func (u *volumeUtil) IsMount(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
+func (u *volumeUtil) IsLikelyMountPoint(fullPath string) (bool, error) {
+	return false, fmt.Errorf("IsLikelyMountPoint is unsupported in this build")
 }
 
 // DeleteContents deletes all the contents under the given directory

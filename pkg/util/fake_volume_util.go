@@ -160,3 +160,8 @@ func (u *FakeVolumeUtil) AddNewDirEntries(mountDir string, dirFiles map[string][
 		u.directoryFiles[mountedPath] = append(curFiles, files...)
 	}
 }
+
+// IsLikelyMountPoint checks if the given path is likely a mountpoint
+func (u *FakeVolumeUtil) IsLikelyMountPoint(fullPath string) (bool, error) {
+	return false, fmt.Errorf("IsLikelyMountPoint is unsupported in this build")
+}

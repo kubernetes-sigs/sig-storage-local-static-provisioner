@@ -28,6 +28,9 @@ type VolumeUtil interface {
 	// IsBlock checks if the given path is a directory
 	IsBlock(fullPath string) (bool, error)
 
+	// IsLikelyMountPoint checks if the given path is likely a mountpoint
+	IsLikelyMountPoint(fullPath string) (bool, error)
+
 	// ReadDir returns a list of files under the specified directory
 	ReadDir(fullPath string) ([]string, error)
 

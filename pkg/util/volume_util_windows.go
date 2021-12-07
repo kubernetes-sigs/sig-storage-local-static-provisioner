@@ -80,10 +80,10 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsSymLink(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsSymlink is unsupported in this build")
-}
-
-func (u *volumeUtil) IsMount(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsMount is unsupported in this build")
+func (u *volumeUtil) IsLikelyMountPoint(mountPath string) (bool, error) {
+	isLikelyMountPoint, err := u.csiProxy.IsSymlink(mountPath)
+	if err != nil {
+		return false, err
+	}
+	return isLikelyMountPoint, nil
 }

@@ -37,6 +37,9 @@ type CSIProxy interface {
 
 	// FormatVolume formats a volume identified by `volumeId`
 	FormatVolume(volumeId string) (err error)
+
+	// IsSymlink checks if the given path is a symlink
+	IsSymlink(mountPath string) (isSymlink bool, err error)
 }
 
 // NewCSIProxy returns an instance of the CSIProxy client compatible with either v1 or v1beta
