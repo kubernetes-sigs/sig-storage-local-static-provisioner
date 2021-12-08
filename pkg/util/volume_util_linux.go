@@ -42,7 +42,8 @@ func NewVolumeUtil() (VolumeUtil, error) {
 // GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
 // fullPath is the pathname of any file within the mounted filesystem. Capacity
 // returned here is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
+func (u *volumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, error) {
+	fullPath := filepath.Join(mountDir, file)
 	_, capacity, _, _, _, _, err := fs.Info(fullPath)
 	return capacity, err
 }
@@ -68,8 +69,13 @@ func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
 
 // IsLikelyMountPoint is not implemented in linux because the discovery implementation
 // already checks if a path is a mount point by analyzing the /proc/mounts file
-func (u *volumeUtil) IsLikelyMountPoint(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsLikelyMountPoint is not implemented in Linux")
+func (u *volumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error) {
+	filePath := filepath.Join(mountDir, file)
+	if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
+		// mountPointMap is built in discovery.go by using k8s.io/utils/mount
+		return false, fmt.Errorf("filepath %q wasn't found in the /proc/mounts file", filePath)
+	}
+	return true, nil
 }
 
 // IsBlock checks if the given path is a block device

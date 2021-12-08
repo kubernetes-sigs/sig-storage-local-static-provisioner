@@ -21,6 +21,7 @@ package util
 
 import (
 	"fmt"
+	"path/filepath"
 )
 
 var _ VolumeUtil = &volumeUtil{}
@@ -42,10 +43,11 @@ func NewVolumeUtil() (VolumeUtil, error) {
 }
 
 // GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
-// mountPath is the pathname of any file within the mounted filesystem. Capacity
-// returned here is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(mountPath string) (int64, error) {
-	volumeID, err := u.csiProxy.GetVolumeId(mountPath)
+// In Windows the path is in the context of the host, not in the context of the container
+// Capacity returned is total capacity.
+func (u *volumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, error) {
+	hostPath := filepath.Join(hostDir, file)
+	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
 	if err != nil {
 		return 0, err
 	}
@@ -80,10 +82,14 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsLikelyMountPoint(mountPath string) (bool, error) {
-	isLikelyMountPoint, err := u.csiProxy.IsSymlink(mountPath)
+func (u *volumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error) {
+	hostPath := filepath.Join(hostDir, file)
+	isLikelyMountPoint, err := u.csiProxy.IsSymlink(hostPath)
 	if err != nil {
 		return false, err
+	}
+	if !isLikelyMountPoint {
+		return false, fmt.Errorf("hostPath %q is not a symlink", hostPath)
 	}
 	return isLikelyMountPoint, nil
 }

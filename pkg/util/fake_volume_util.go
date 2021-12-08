@@ -119,7 +119,8 @@ func (u *FakeVolumeUtil) DeleteContents(fullPath string) error {
 }
 
 // GetFsCapacityByte returns capacity in byte about a mounted filesystem.
-func (u *FakeVolumeUtil) GetFsCapacityByte(fullPath string) (int64, error) {
+func (u *FakeVolumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, error) {
+	fullPath := filepath.Join(mountDir, file)
 	return u.getDirEntryCapacity(fullPath, FakeEntryFile)
 }
 
@@ -162,6 +163,11 @@ func (u *FakeVolumeUtil) AddNewDirEntries(mountDir string, dirFiles map[string][
 }
 
 // IsLikelyMountPoint checks if the given path is likely a mountpoint
-func (u *FakeVolumeUtil) IsLikelyMountPoint(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsLikelyMountPoint is unsupported in this build")
+func (u *FakeVolumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error) {
+	filePath := filepath.Join(mountDir, file)
+	if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
+		// mountPointMap is built in discovery.go by using k8s.io/utils/mount
+		return false, fmt.Errorf("filepath %q wasn't found in the /proc/mounts file", filePath)
+	}
+	return true, nil
 }
