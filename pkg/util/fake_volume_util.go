@@ -111,7 +111,7 @@ func (u *FakeVolumeUtil) ReadDir(fullPath string) ([]string, error) {
 }
 
 // DeleteContents removes all the contents under the given directory
-func (u *FakeVolumeUtil) DeleteContents(fullPath string) error {
+func (u *FakeVolumeUtil) DeleteContents(hostPath, mountPath string) error {
 	if u.deleteShouldFail {
 		return fmt.Errorf("Fake delete contents failed")
 	}
@@ -119,9 +119,8 @@ func (u *FakeVolumeUtil) DeleteContents(fullPath string) error {
 }
 
 // GetFsCapacityByte returns capacity in byte about a mounted filesystem.
-func (u *FakeVolumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, error) {
-	fullPath := filepath.Join(mountDir, file)
-	return u.getDirEntryCapacity(fullPath, FakeEntryFile)
+func (u *FakeVolumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error) {
+	return u.getDirEntryCapacity(mountPath, FakeEntryFile)
 }
 
 // GetBlockCapacityByte returns the space in the specified block device.
@@ -163,11 +162,10 @@ func (u *FakeVolumeUtil) AddNewDirEntries(mountDir string, dirFiles map[string][
 }
 
 // IsLikelyMountPoint checks if the given path is likely a mountpoint
-func (u *FakeVolumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error) {
-	filePath := filepath.Join(mountDir, file)
-	if _, isMntPnt := mountPointMap[filePath]; isMntPnt == false {
+func (u *FakeVolumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error) {
+	if _, isMntPnt := mountPointMap[mountPath]; isMntPnt == false {
 		// mountPointMap is built in discovery.go by using k8s.io/utils/mount
-		return false, fmt.Errorf("filepath %q wasn't found in the /proc/mounts file", filePath)
+		return false, fmt.Errorf("hostPath=%q wasn't found in the /proc/mounts file", hostPath)
 	}
 	return true, nil
 }

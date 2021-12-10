@@ -29,16 +29,16 @@ type VolumeUtil interface {
 	IsBlock(fullPath string) (bool, error)
 
 	// IsLikelyMountPoint checks if the given path is likely a mountpoint
-	IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error)
+	IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error)
 
 	// ReadDir returns a list of files under the specified directory
 	ReadDir(fullPath string) ([]string, error)
 
 	// Delete all the contents under the given path, but not the path itself
-	DeleteContents(fullPath string) error
+	DeleteContents(hostPath, mountPath string) error
 
 	// Get capacity for fs on full path
-	GetFsCapacityByte(hostDir, mountDir, file string) (int64, error)
+	GetFsCapacityByte(hostPath, mountPath string) (int64, error)
 
 	// Get capacity of the block device
 	GetBlockCapacityByte(fullPath string) (int64, error)

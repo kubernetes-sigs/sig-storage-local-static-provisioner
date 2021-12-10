@@ -35,7 +35,7 @@ func NewVolumeUtil() (VolumeUtil, error) {
 // GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
 // fullPath is the pathname of any file within the mounted filesystem. Capacity
 // returned here is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (int64, error) {
+func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string, mountPointMap map[string]interface{}) (int64, error) {
 	return 0, fmt.Errorf("GetFsCapacityByte is unsupported in this build")
 }
 
@@ -50,11 +50,11 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string) (bool, error) {
+func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath, file string) (bool, error) {
 	return false, fmt.Errorf("IsLikelyMountPoint is unsupported in this build")
 }
 
 // DeleteContents deletes all the contents under the given directory
-func (u *volumeUtil) DeleteContents(mountPath string) error {
+func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
 	return fmt.Errorf("DeleteContents is unsupported in this build")
 }

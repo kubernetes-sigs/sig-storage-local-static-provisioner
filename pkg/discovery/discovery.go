@@ -364,13 +364,13 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			// check if the file in the discovery directory is a mount point:
 			// - Windows: it should be a symlink pointing to a path that exists
 			// - Linux: it should exist in the /proc/mounts file
-			isLikelyMountPoint, err := d.VolUtil.IsLikelyMountPoint(config.HostDir, config.MountDir, file, mountPointMap)
+			isLikelyMountPoint, err := d.VolUtil.IsLikelyMountPoint(outsidePath, filePath, mountPointMap)
 			if !isLikelyMountPoint || err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q is not a valid mount point: %v", filePath, err))
 				continue
 			}
 
-			capacityByte, err = d.VolUtil.GetFsCapacityByte(config.HostDir, config.MountDir, file)
+			capacityByte, err = d.VolUtil.GetFsCapacityByte(outsidePath, filePath)
 			if err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
 				continue

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -266,16 +265,8 @@ func (d *Deleter) cleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVolumeMo
 func (d *Deleter) cleanFilePV(pv *v1.PersistentVolume, mountPath string, config common.MountConfig) error {
 	klog.Infof("Deleting PV file volume %q contents at hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
 		mountPath)
-
-	if runtime.GOOS == "windows" {
-		// mountPath is in the context of the volume inside local volume provisioner
-		// the path to use in Windows is the one that CSI Proxy will use and it should
-		// be in the context of the host (because CSI Proxy doesn't know about the context
-		// of the local volume provisioner volumes)
-		return d.VolUtil.DeleteContents(pv.Spec.Local.Path)
-	}
-
-	return d.VolUtil.DeleteContents(mountPath)
+	hostPath := pv.Spec.Local.Path
+	return d.VolUtil.DeleteContents(hostPath, mountPath)
 }
 
 func (d *Deleter) cleanBlockPV(pv *v1.PersistentVolume, blkdevPath string, config common.MountConfig) error {

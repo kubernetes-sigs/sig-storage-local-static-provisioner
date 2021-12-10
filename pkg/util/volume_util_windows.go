@@ -21,7 +21,6 @@ package util
 
 import (
 	"fmt"
-	"path/filepath"
 )
 
 var _ VolumeUtil = &volumeUtil{}
@@ -45,8 +44,7 @@ func NewVolumeUtil() (VolumeUtil, error) {
 // GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
 // In Windows the path is in the context of the host, not in the context of the container
 // Capacity returned is total capacity.
-func (u *volumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, error) {
-	hostPath := filepath.Join(hostDir, file)
+func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error) {
 	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
 	if err != nil {
 		return 0, err
@@ -59,8 +57,12 @@ func (u *volumeUtil) GetFsCapacityByte(hostDir, mountDir, file string) (int64, e
 }
 
 // DeleteContents deletes all the contents under the given directory
-func (u *volumeUtil) DeleteContents(mountPath string) error {
-	volumeID, err := u.csiProxy.GetVolumeId(mountPath)
+func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
+	// mountPath is in the context of the volume inside local volume provisioner
+	// the path to use in Windows is the one that CSI Proxy will use and it should
+	// be in the context of the host (because CSI Proxy doesn't know about the context
+	// of the local volume provisioner volumes)
+	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
 	if err != nil {
 		return err
 	}
@@ -82,8 +84,7 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsLikelyMountPoint(hostDir, mountDir, file string, mountPointMap map[string]interface{}) (bool, error) {
-	hostPath := filepath.Join(hostDir, file)
+func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error) {
 	isLikelyMountPoint, err := u.csiProxy.IsSymlink(hostPath)
 	if err != nil {
 		return false, err
