@@ -5,6 +5,9 @@ github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud
 github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/filter
 github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/meta
 github.com/GoogleCloudPlatform/k8s-cloud-provider/pkg/cloud/mock
+# github.com/Microsoft/go-winio v0.4.16
+github.com/Microsoft/go-winio
+github.com/Microsoft/go-winio/pkg/guid
 # github.com/aws/aws-sdk-go v1.38.49
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
@@ -103,6 +106,18 @@ github.com/inconshreveable/mousetrap
 github.com/jmespath/go-jmespath
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
+# github.com/kubernetes-csi/csi-proxy/client v1.0.2
+## explicit
+github.com/kubernetes-csi/csi-proxy/client
+github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v1
+github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v1beta2
+github.com/kubernetes-csi/csi-proxy/client/api/volume/v1
+github.com/kubernetes-csi/csi-proxy/client/api/volume/v1beta2
+github.com/kubernetes-csi/csi-proxy/client/apiversion
+github.com/kubernetes-csi/csi-proxy/client/groups/filesystem/v1
+github.com/kubernetes-csi/csi-proxy/client/groups/filesystem/v1beta2
+github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1
+github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1beta2
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/miekg/dns v1.1.29

@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -328,6 +329,8 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		if config.MountDir == "" || config.HostDir == "" {
 			return fmt.Errorf("Storage Class %v is misconfigured, missing HostDir or MountDir parameter", class)
 		}
+		config.MountDir = normalizePath(config.MountDir)
+		config.HostDir = normalizePath(config.HostDir)
 
 		if config.VolumeMode == "" {
 			config.VolumeMode = DefaultVolumeMode
@@ -352,6 +355,20 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 			config.NamePattern)
 	}
 	return nil
+}
+
+// normalizePath makes sure the given path is a valid path on Windows too
+// by making sure all instances of `/` are replaced with `\\`, and the
+// path beings with `c:`
+func normalizePath(path string) string {
+	if runtime.GOOS != "windows" {
+		return path
+	}
+	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	if strings.HasPrefix(normalizedPath, "\\") {
+		normalizedPath = "c:" + normalizedPath
+	}
+	return normalizedPath
 }
 
 func insertSpaces(original string) string {
@@ -425,6 +442,11 @@ func GenerateMountName(mount *MountConfig) string {
 
 // GetVolumeMode check volume mode of given path.
 func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolumeMode, error) {
+	if runtime.GOOS == "windows" {
+		// only filesystem is supported in Windows
+		return v1.PersistentVolumeFilesystem, nil
+	}
+
 	isdir, errdir := volUtil.IsDir(fullPath)
 	if isdir {
 		return v1.PersistentVolumeFilesystem, nil

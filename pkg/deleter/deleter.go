@@ -265,8 +265,8 @@ func (d *Deleter) cleanPV(pv *v1.PersistentVolume, volMode v1.PersistentVolumeMo
 func (d *Deleter) cleanFilePV(pv *v1.PersistentVolume, mountPath string, config common.MountConfig) error {
 	klog.Infof("Deleting PV file volume %q contents at hostpath %q, mountpath %q", pv.Name, pv.Spec.Local.Path,
 		mountPath)
-
-	return d.VolUtil.DeleteContents(mountPath)
+	hostPath := pv.Spec.Local.Path
+	return d.VolUtil.DeleteContents(hostPath, mountPath)
 }
 
 func (d *Deleter) cleanBlockPV(pv *v1.PersistentVolume, blkdevPath string, config common.MountConfig) error {

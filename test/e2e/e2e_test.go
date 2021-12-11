@@ -275,7 +275,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			Expect(err).NotTo(HaveOccurred(),
 				"Error getting logs from pod %s in namespace %s", provisionerPodName, config.ns)
 
-			expectedLogMessage := "path \"/mnt/local-storage/notbindmount\" is not an actual mountpoint"
+			expectedLogMessage := "path \"/mnt/local-storage/notbindmount\" is not a valid mount point"
 			Expect(strings.Contains(logs, expectedLogMessage)).To(BeTrue())
 		})
 	})

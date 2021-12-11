@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -26,7 +26,7 @@ kind: StorageClass
 metadata:
   name: local-scsi
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -43,7 +43,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -56,7 +56,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-pv-binding
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -74,7 +74,7 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -88,7 +88,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -110,7 +110,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -125,7 +125,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 87d6ba0064e5eac1d15220e6aee50b09d7304d67ca843b840150d5c32020d5c9
+        checksum/config: 9010d1a940c0c862da8afb34e0248fd390d26e19570f5b2d72729da0160e7029
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -178,7 +178,7 @@ metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.5.1
+    helm.sh/chart: provisioner-2.6.0-alpha.0
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -193,7 +193,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 87d6ba0064e5eac1d15220e6aee50b09d7304d67ca843b840150d5c32020d5c9
+        checksum/config: 9010d1a940c0c862da8afb34e0248fd390d26e19570f5b2d72729da0160e7029
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -232,21 +232,13 @@ spec:
               mountPath: \\.\pipe\csi-proxy-volume-v1
             - name: csi-proxy-filesystem-v1
               mountPath: \\.\pipe\csi-proxy-filesystem-v1
-            - name: csi-proxy-disk-v1
-              mountPath: \\.\pipe\csi-proxy-disk-v1
-            # these paths are still included for compatibility, they're used
+            # these csi-proxy paths are still included for compatibility, they're used
             # only if the node has still the beta version of the CSI proxy
             - name: csi-proxy-volume-v1beta2
               mountPath: \\.\pipe\csi-proxy-volume-v1beta2
-            - name: csi-proxy-filesystem-v1beta1
-              mountPath: \\.\pipe\csi-proxy-filesystem-v1beta1
-            - name: csi-proxy-disk-v1beta2
-              mountPath: \\.\pipe\csi-proxy-disk-v1beta2
+            - name: csi-proxy-filesystem-v1beta2
+              mountPath: \\.\pipe\csi-proxy-filesystem-v1beta2
       volumes:
-        - name: csi-proxy-disk-v1
-          hostPath:
-            path: \\.\pipe\csi-proxy-disk-v1
-            type: ""
         - name: csi-proxy-volume-v1
           hostPath:
             path: \\.\pipe\csi-proxy-volume-v1
@@ -255,19 +247,15 @@ spec:
           hostPath:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
-        # these paths are still included for compatibility, they're used
+        # these csi-proxy paths are still included for compatibility, they're used
         # only if the node has still the beta version of the CSI proxy
-        - name: csi-proxy-disk-v1beta2
-          hostPath:
-            path: \\.\pipe\csi-proxy-disk-v1beta2
-            type: ""
         - name: csi-proxy-volume-v1beta2
           hostPath:
             path: \\.\pipe\csi-proxy-volume-v1beta2
             type: ""
-        - name: csi-proxy-filesystem-v1beta1
+        - name: csi-proxy-filesystem-v1beta2
           hostPath:
-            path: \\.\pipe\csi-proxy-filesystem-v1beta1
+            path: \\.\pipe\csi-proxy-filesystem-v1beta2
             type: ""
         - name: provisioner-config
           configMap:

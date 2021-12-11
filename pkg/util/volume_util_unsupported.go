@@ -1,5 +1,5 @@
-//go:build !linux
-// +build !linux
+//go:build !linux && !windows
+// +build !linux,!windows
 
 /*
 Copyright 2017 The Kubernetes Authors.
@@ -23,6 +23,22 @@ import (
 	"fmt"
 )
 
+var _ VolumeUtil = &volumeUtil{}
+
+type volumeUtil struct{}
+
+// NewVolumeUtil returns a VolumeUtil object for performing local filesystem operations
+func NewVolumeUtil() (VolumeUtil, error) {
+	return &volumeUtil{}, nil
+}
+
+// GetFsCapacityByte returns capacity in bytes about a mounted filesystem.
+// fullPath is the pathname of any file within the mounted filesystem. Capacity
+// returned here is total capacity.
+func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string, mountPointMap map[string]interface{}) (int64, error) {
+	return 0, fmt.Errorf("GetFsCapacityByte is unsupported in this build")
+}
+
 // GetBlockCapacityByte is defined here for darwin and other platforms
 // so that make test succeeds on them.
 func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
@@ -34,10 +50,11 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
-func (u *volumeUtil) IsSymLink(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
+func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath, file string) (bool, error) {
+	return false, fmt.Errorf("IsLikelyMountPoint is unsupported in this build")
 }
 
-func (u *volumeUtil) IsMount(fullPath string) (bool, error) {
-	return false, fmt.Errorf("IsBlock is unsupported in this build")
+// DeleteContents deletes all the contents under the given directory
+func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
+	return fmt.Errorf("DeleteContents is unsupported in this build")
 }

@@ -87,6 +87,7 @@ func main() {
 
 	klog.Info("Starting controller\n")
 	procTable := deleter.NewProcTable()
+
 	go controller.StartLocalController(client, procTable, discoveryPeriod, &common.UserConfig{
 		Node:              node,
 		DiscoveryMap:      provisionerConfig.StorageClassConfig,
