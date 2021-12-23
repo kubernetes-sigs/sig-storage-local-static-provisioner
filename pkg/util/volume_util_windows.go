@@ -21,6 +21,9 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 var _ VolumeUtil = &volumeUtil{}
@@ -45,7 +48,38 @@ func NewVolumeUtil() (VolumeUtil, error) {
 // In Windows the path is in the context of the host, not in the context of the container
 // Capacity returned is total capacity.
 func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error) {
-	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
+	fi, err := os.Lstat(mountPath)
+	if err != nil {
+		return 0, err
+	}
+	if fi.Mode()&os.ModeSymlink == 0 {
+		return 0, fmt.Errorf("file mountPath=%q is not a symlink", mountPath)
+	}
+
+	// symlinkTarget is the result of dereferencing the symlink
+	// it could be in the form Volume{<volumeid>} or an actual file
+	// outside the mounted dir
+	symlinkTarget, err := os.Readlink(mountPath)
+	if err != nil {
+		return 0, err
+	}
+
+	// initially assume that the symlink points to a Volume{<volumeid>},
+	// the path to the volume is the hostPath
+	volumePath := hostPath
+	if !strings.HasPrefix(symlinkTarget, "Volume{") {
+		// the symlink is pointing to a directory, assume that it has this structure
+		//
+		// volume/ (symlink -> \\\Volume{}\)
+		//   dir0/
+		// disks/ (discovery directory)
+		//   dir0/ (symlink -> volume/dir0)
+		//
+		// symlinkTarget is volume/dir0 at this point, trim the last element of the path
+		volumePath = filepath.Dir(symlinkTarget)
+	}
+
+	volumeID, err := u.csiProxy.GetVolumeId(volumePath)
 	if err != nil {
 		return 0, err
 	}
@@ -56,17 +90,48 @@ func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error
 	return totalBytes, nil
 }
 
+func (u *volumeUtil) recreateDirectory(hostPath string) error {
+	err := u.csiProxy.Rmdir(hostPath, true)
+	if err != nil {
+		return err
+	}
+	err = u.csiProxy.Mkdir(hostPath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // DeleteContents deletes all the contents under the given directory
 func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
 	// mountPath is in the context of the volume inside local volume provisioner
 	// the path to use in Windows is the one that CSI Proxy will use and it should
 	// be in the context of the host (because CSI Proxy doesn't know about the context
 	// of the local volume provisioner volumes)
-	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
+
+	// symlinkTarget is the result of dereferencing the symlink
+	// it could be in the form Volume{<volumeid>} or an actual file
+	// outside the mounted dir
+	symlinkTarget, err := os.Readlink(mountPath)
 	if err != nil {
 		return err
 	}
-	err = u.csiProxy.FormatVolume(volumeID)
+
+	if strings.HasPrefix(symlinkTarget, "Volume{") {
+		// it's pointing to a Volume
+		volumeID, err := u.csiProxy.GetVolumeId(hostPath)
+		if err != nil {
+			return err
+		}
+		err = u.csiProxy.FormatVolume(volumeID)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// it's pointing to a directory in the host
+	err = u.recreateDirectory(symlinkTarget)
 	if err != nil {
 		return err
 	}
@@ -93,4 +158,13 @@ func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMa
 		return false, fmt.Errorf("hostPath %q is not a symlink", hostPath)
 	}
 	return isLikelyMountPoint, nil
+}
+
+// ReadDir returns a list all the files under the given directory
+func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
+	files, err := u.csiProxy.Lsdir(fullPath)
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }

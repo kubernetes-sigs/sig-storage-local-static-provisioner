@@ -21,6 +21,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 )
 
 var _ VolumeUtil = &volumeUtil{}
@@ -57,4 +58,9 @@ func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath, file string) (bool,
 // DeleteContents deletes all the contents under the given directory
 func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
 	return fmt.Errorf("DeleteContents is unsupported in this build")
+}
+
+// ReadDir returns a list all the files under the given directory
+func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
+	return fmt.Errorf("ReadDir is unsupported in this build")
 }

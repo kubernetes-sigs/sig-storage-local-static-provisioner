@@ -116,3 +116,46 @@ func (proxy *CSIProxyV1) IsSymlink(mountPath string) (isSymlink bool, err error)
 	}
 	return isSymlinkResponse.IsSymlink, nil
 }
+
+// Lsdir lists files under a directory.
+func (proxy *CSIProxyV1) Lsdir(path string) (files []string, err error) {
+	lsdirResponse, err := proxy.FilesystemClient.Lsdir(
+		context.Background(),
+		&filesystemapi.LsdirRequest{
+			Path: path,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return lsdirResponse.Files, nil
+}
+
+// Mkdir makes a directory.
+func (proxy *CSIProxyV1) Mkdir(path string) error {
+	_, err := proxy.FilesystemClient.Mkdir(
+		context.Background(),
+		&filesystemapi.MkdirRequest{
+			Path: path,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Rmdir removes a directory.
+func (proxy *CSIProxyV1) Rmdir(path string, force bool) error {
+	_, err := proxy.FilesystemClient.Rmdir(
+		context.Background(),
+		&filesystemapi.RmdirRequest{
+			Path:  path,
+			Force: force,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
