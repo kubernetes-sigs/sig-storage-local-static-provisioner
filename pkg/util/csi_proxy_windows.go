@@ -41,9 +41,6 @@ type CSIProxy interface {
 	// IsSymlink checks if the given path is a symlink
 	IsSymlink(mountPath string) (isSymlink bool, err error)
 
-	// Lsdir lists files under a directory.
-	Lsdir(path string) (files []string, err error)
-	
 	// Mkdir makes a directory.
 	Mkdir(path string) error
 

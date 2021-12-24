@@ -117,11 +117,6 @@ func (proxy *CSIProxyV1Beta) IsSymlink(mountPath string) (isSymlink bool, err er
 	return isSymlinkResponse.IsSymlink, nil
 }
 
-// Lsdir lists files under a directory.
-func (proxy *CSIProxyV1Beta) Lsdir(path string) (files []string, err error) {
-	return nil, fmt.Errorf("Lsdir is not implemented in v1beta")
-}
-
 // Mkdir makes a directory.
 func (proxy *CSIProxyV1Beta) Mkdir(path string) error {
 	_, err := proxy.FilesystemClient.Mkdir(
