@@ -23,22 +23,22 @@ import (
 	"context"
 	"fmt"
 
-	filesystemapi "github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v1"
-	volumeapi "github.com/kubernetes-csi/csi-proxy/client/api/volume/v1"
-	filesystemclient "github.com/kubernetes-csi/csi-proxy/client/groups/filesystem/v1"
-	volumeclient "github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1"
+	filesystemapi "github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v2alpha1"
+	volumeapi "github.com/kubernetes-csi/csi-proxy/client/api/volume/v2alpha1"
+	filesystemclient "github.com/kubernetes-csi/csi-proxy/client/groups/filesystem/v2alpha1"
+	volumeclient "github.com/kubernetes-csi/csi-proxy/client/groups/volume/v2alpha1"
 )
 
-// CSIProxyV1 is the CSI Proxy implementation that uses the v1 API
-type CSIProxyV1 struct {
+// CSIProxyV2 is the CSI Proxy implementation that uses the v2alpha1 API
+type CSIProxyV2 struct {
 	VolumeClient     *volumeclient.Client
 	FilesystemClient *filesystemclient.Client
 }
 
-// check that CSIProxyV1 implements CSIProxy
-var _ CSIProxy = &CSIProxyV1{}
+// check that CSIProxyV2 implements CSIProxy
+var _ CSIProxy = &CSIProxyV2{}
 
-func NewCSIProxyV1() (*CSIProxyV1, error) {
+func NewCSIProxyV2() (*CSIProxyV2, error) {
 	volumeClient, err := volumeclient.NewClient()
 	if err != nil {
 		return nil, err
@@ -47,14 +47,14 @@ func NewCSIProxyV1() (*CSIProxyV1, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CSIProxyV1{
+	return &CSIProxyV2{
 		VolumeClient:     volumeClient,
 		FilesystemClient: filesystemClient,
 	}, nil
 }
 
 // GetAPIVersions returns the versions of the client APIs.
-func (proxy *CSIProxyV1) GetAPIVersions() string {
+func (proxy *CSIProxyV2) GetAPIVersions() string {
 	return fmt.Sprintf(
 		"API Versions Volume: %s",
 		volumeclient.Version,
@@ -62,7 +62,7 @@ func (proxy *CSIProxyV1) GetAPIVersions() string {
 }
 
 // GetVolumeId returns the volumeId of the volume mounted at `mountPath`
-func (proxy *CSIProxyV1) GetVolumeId(mountPath string) (volumeId string, err error) {
+func (proxy *CSIProxyV2) GetVolumeId(mountPath string) (volumeId string, err error) {
 	getVolumeIdFromTargetPathResponse, err := proxy.VolumeClient.GetVolumeIDFromTargetPath(
 		context.Background(),
 		&volumeapi.GetVolumeIDFromTargetPathRequest{
@@ -76,7 +76,7 @@ func (proxy *CSIProxyV1) GetVolumeId(mountPath string) (volumeId string, err err
 }
 
 // GetVolumeStats gets the volume stats of a volume identified by `volumeId`
-func (proxy *CSIProxyV1) GetVolumeStats(volumeId string) (totalBytes int64, usedBytes int64, err error) {
+func (proxy *CSIProxyV2) GetVolumeStats(volumeId string) (totalBytes int64, usedBytes int64, err error) {
 	getVolumeStatsResponse, err := proxy.VolumeClient.GetVolumeStats(
 		context.Background(),
 		&volumeapi.GetVolumeStatsRequest{
@@ -89,12 +89,12 @@ func (proxy *CSIProxyV1) GetVolumeStats(volumeId string) (totalBytes int64, used
 	return getVolumeStatsResponse.TotalBytes, getVolumeStatsResponse.UsedBytes, nil
 }
 
-// FormatVolume formats a volume identified by `volumeId`
-func (proxy *CSIProxyV1) FormatVolume(volumeId string) (err error) {
-	_, err = proxy.VolumeClient.FormatVolume(
+// RmdirContents removes the contents of a directory in the host filesystem.
+func (proxy *CSIProxyV2) RmdirContents(path string) (err error) {
+	_, err = proxy.FilesystemClient.RmdirContents(
 		context.Background(),
-		&volumeapi.FormatVolumeRequest{
-			VolumeId: volumeId,
+		&filesystemapi.RmdirContentsRequest{
+			Path: path,
 		},
 	)
 	if err != nil {
@@ -104,7 +104,7 @@ func (proxy *CSIProxyV1) FormatVolume(volumeId string) (err error) {
 }
 
 // IsSymlink checks if the given path is a symlink
-func (proxy *CSIProxyV1) IsSymlink(mountPath string) (isSymlink bool, err error) {
+func (proxy *CSIProxyV2) IsSymlink(mountPath string) (isSymlink bool, err error) {
 	isSymlinkResponse, err := proxy.FilesystemClient.IsSymlink(
 		context.Background(),
 		&filesystemapi.IsSymlinkRequest{
@@ -115,4 +115,20 @@ func (proxy *CSIProxyV1) IsSymlink(mountPath string) (isSymlink bool, err error)
 		return false, err
 	}
 	return isSymlinkResponse.IsSymlink, nil
+}
+
+// GetClosestVolumeIDFromTargetPath gets the closest volume id for a given target path
+// by following symlinks and moving up in the filesystem, if after moving up in the filesystem
+// we get to a DriveLetter then the volume corresponding to this drive letter is returned instead.
+func (proxy *CSIProxyV2) GetClosestVolumeIDFromTargetPath(targetPath string) (volumeId string, err error) {
+	getClosestVolumeIDFromTargetPathResponse, err := proxy.VolumeClient.GetClosestVolumeIDFromTargetPath(
+		context.Background(),
+		&volumeapi.GetClosestVolumeIDFromTargetPathRequest{
+			TargetPath: targetPath,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	return getClosestVolumeIDFromTargetPathResponse.VolumeId, nil
 }
