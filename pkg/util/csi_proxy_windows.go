@@ -42,12 +42,12 @@ type CSIProxy interface {
 	IsSymlink(mountPath string) (isSymlink bool, err error)
 }
 
-// NewCSIProxy returns an instance of the CSIProxy client compatible with either v1 or v1beta
+// NewCSIProxy returns an instance of the CSIProxy client compatible with v2alpha1
 func NewCSIProxy() (CSIProxy, error) {
-	csiProxyV1, err := NewCSIProxyV1()
+	csiProxyV2, err := NewCSIProxyV2()
 	if err == nil {
-		klog.V(2).Infof("using CSIProxyV1, %s", csiProxyV1.GetAPIVersions())
-		return csiProxyV1, nil
+		klog.V(2).Infof("using CSIProxyV2Alpha1, %s", csiProxyV2.GetAPIVersions())
+		return csiProxyV2, nil
 	}
 	klog.V(4).Infof("failed to connect to csi-proxy v1 with error=%v, will try with v1Beta", err)
 

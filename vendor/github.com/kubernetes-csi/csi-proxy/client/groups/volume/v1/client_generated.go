@@ -8,7 +8,7 @@ import (
 
 	"github.com/Microsoft/go-winio"
 	"github.com/kubernetes-csi/csi-proxy/client"
-	v1 "github.com/kubernetes-csi/csi-proxy/client/api/volume/v1"
+	"github.com/kubernetes-csi/csi-proxy/client/api/volume/v1"
 	"github.com/kubernetes-csi/csi-proxy/client/apiversion"
 	"google.golang.org/grpc"
 )
