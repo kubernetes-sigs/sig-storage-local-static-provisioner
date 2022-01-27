@@ -35,11 +35,16 @@ type CSIProxy interface {
 	// GetVolumeStats gets the volume stats of a volume identified by `volumeId`
 	GetVolumeStats(volumeId string) (totalBytes int64, usedBytes int64, err error)
 
-	// FormatVolume formats a volume identified by `volumeId`
-	FormatVolume(volumeId string) (err error)
+	// RmdirContents removes the contents of a directory in the host filesystem.
+	RmdirContents(path string) (err error)
 
 	// IsSymlink checks if the given path is a symlink
 	IsSymlink(mountPath string) (isSymlink bool, err error)
+
+	// GetClosestVolumeIDFromTargetPath gets the closest volume id for a given target path
+	// by following symlinks and moving up in the filesystem, if after moving up in the filesystem
+	// we get to a DriveLetter then the volume corresponding to this drive letter is returned instead.
+	GetClosestVolumeIDFromTargetPath(targetPath string) (volumeID string, err error)
 }
 
 // NewCSIProxy returns an instance of the CSIProxy client compatible with v2alpha1
@@ -49,13 +54,6 @@ func NewCSIProxy() (CSIProxy, error) {
 		klog.V(2).Infof("using CSIProxyV2Alpha1, %s", csiProxyV2.GetAPIVersions())
 		return csiProxyV2, nil
 	}
-	klog.V(4).Infof("failed to connect to csi-proxy v1 with error=%v, will try with v1Beta", err)
-
-	csiProxyV1Beta, err := NewCSIProxyV1Beta()
-	if err == nil {
-		klog.V(4).Infof("using CSIProxyV1Beta, %s", csiProxyV1Beta.GetAPIVersions())
-		return csiProxyV1Beta, nil
-	}
-	klog.Errorf("failed to connect to csi-proxy v1beta with error=%v", err)
+	klog.V(4).Infof("failed to connect to csi-proxy v1 with error=%v", err)
 	return nil, err
 }

@@ -45,7 +45,7 @@ func NewVolumeUtil() (VolumeUtil, error) {
 // In Windows the path is in the context of the host, not in the context of the container
 // Capacity returned is total capacity.
 func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error) {
-	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
+	volumeID, err := u.csiProxy.GetClosestVolumeIDFromTargetPath(mountPath)
 	if err != nil {
 		return 0, err
 	}
@@ -58,15 +58,7 @@ func (u *volumeUtil) GetFsCapacityByte(hostPath, mountPath string) (int64, error
 
 // DeleteContents deletes all the contents under the given directory
 func (u *volumeUtil) DeleteContents(hostPath, mountPath string) error {
-	// mountPath is in the context of the volume inside local volume provisioner
-	// the path to use in Windows is the one that CSI Proxy will use and it should
-	// be in the context of the host (because CSI Proxy doesn't know about the context
-	// of the local volume provisioner volumes)
-	volumeID, err := u.csiProxy.GetVolumeId(hostPath)
-	if err != nil {
-		return err
-	}
-	err = u.csiProxy.FormatVolume(volumeID)
+	err := u.csiProxy.RmdirContents(mountPath)
 	if err != nil {
 		return err
 	}
