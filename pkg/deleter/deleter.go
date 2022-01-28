@@ -72,6 +72,9 @@ func (d *Deleter) DeletePVs() {
 		if pv.Status.Phase != v1.VolumeReleased {
 			continue
 		}
+		if d.Cache.SuccessfullyCleanedPV(pv) {
+			continue
+		}
 		name := pv.Name
 		switch pv.Spec.PersistentVolumeReclaimPolicy {
 		case v1.PersistentVolumeReclaimRetain:
@@ -162,6 +165,7 @@ func (d *Deleter) deletePV(pv *v1.PersistentVolume) error {
 	switch state {
 	case CSSucceeded:
 		// Found a completed cleaning entry
+		d.Cache.CleanPV(pv)
 		klog.Infof("Deleting pv %s after successful cleanup", pv.Name)
 		if err = d.APIUtil.DeletePV(pv.Name); err != nil {
 			if !errors.IsNotFound(err) {

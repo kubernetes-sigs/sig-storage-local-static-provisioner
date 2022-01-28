@@ -28,13 +28,17 @@ import (
 // It is periodically updated by the Populator.
 // The Deleter and Discoverer use the VolumeCache to check on created PVs
 type VolumeCache struct {
-	mutex sync.Mutex
-	pvs   map[string]*v1.PersistentVolume
+	mutex   sync.Mutex
+	pvs     map[string]*v1.PersistentVolume
+	cleaned map[string]bool
 }
 
 // NewVolumeCache creates a new PV cache object for storing PVs created by this provisioner.
 func NewVolumeCache() *VolumeCache {
-	return &VolumeCache{pvs: map[string]*v1.PersistentVolume{}}
+	return &VolumeCache{
+		pvs:     map[string]*v1.PersistentVolume{},
+		cleaned: map[string]bool{},
+	}
 }
 
 // GetPV returns the PV object given the PV name
@@ -52,6 +56,7 @@ func (cache *VolumeCache) AddPV(pv *v1.PersistentVolume) {
 	defer cache.mutex.Unlock()
 
 	cache.pvs[pv.Name] = pv
+	cache.cleaned[pv.Name] = false
 	klog.Infof("Added pv %q to cache", pv.Name)
 }
 
@@ -70,6 +75,7 @@ func (cache *VolumeCache) DeletePV(pvName string) {
 	defer cache.mutex.Unlock()
 
 	delete(cache.pvs, pvName)
+	delete(cache.cleaned, pvName)
 	klog.Infof("Deleted pv %q from cache", pvName)
 }
 
@@ -83,6 +89,25 @@ func (cache *VolumeCache) ListPVs() []*v1.PersistentVolume {
 		pvs = append(pvs, pv)
 	}
 	return pvs
+}
+
+// CleanPV marks the PV object as cleaned in the cache
+func (cache *VolumeCache) CleanPV(pv *v1.PersistentVolume) {
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+
+	cache.cleaned[pv.Name] = true
+	klog.Infof("Marked pv %q as cleaned in the cache", pv.Name)
+}
+
+// SuccessfullyCleanedPV returns true if the PV was already cleaned once
+// since the cache entry was created, or if the cache entry no longer exists.
+func (cache *VolumeCache) SuccessfullyCleanedPV(pv *v1.PersistentVolume) bool {
+	cache.mutex.Lock()
+	defer cache.mutex.Unlock()
+
+	cleaned, exists := cache.cleaned[pv.Name]
+	return !exists || cleaned
 }
 
 // LookupPVsByPath returns a list of all of the PVs in the cache with a given local path
