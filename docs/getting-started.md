@@ -47,7 +47,7 @@ pre-generated deployment spec and skip to [step
 the provisioner spec or storage classes. We need to download the release from https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG.
 
 ``` console
-$ https://dl.k8s.io/v1.23.5/kubernetes.tar.gz
+$ wget https://dl.k8s.io/v1.23.5/kubernetes.tar.gz
 $ tar -xzf kubernetes.tar.gz
 $ cd kubernetes
 $ NODE_LOCAL_SSDS_EXT=<n>,<scsi|nvme>,fs cluster/kube-up.sh
