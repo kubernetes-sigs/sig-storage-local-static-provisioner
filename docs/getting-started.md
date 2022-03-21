@@ -44,10 +44,11 @@ repository](https://github.com/kubernetes/kubernetes) will automatically format
 and mount the requested Local SSDs, so you can deploy the provisioner with the
 pre-generated deployment spec and skip to [step
 4](#step-4-create-local-persistent-volume-claim), unless you want to customize
-the provisioner spec or storage classes.
+the provisioner spec or storage classes. We need to download the release from https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG.
 
 ``` console
-$ git clone --depth=1 https://github.com/kubernetes/kubernetes
+$ wget https://dl.k8s.io/v1.23.5/kubernetes.tar.gz
+$ tar -xzf kubernetes.tar.gz
 $ cd kubernetes
 $ NODE_LOCAL_SSDS_EXT=<n>,<scsi|nvme>,fs cluster/kube-up.sh
 $ cd ../
