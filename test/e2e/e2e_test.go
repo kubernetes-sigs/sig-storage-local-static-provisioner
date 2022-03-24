@@ -69,8 +69,7 @@ const (
 	provisionerDefaultMountRoot = "/mnt/local-storage"
 	// provisioner node/pv cluster role binding
 	nodeBindingName         = "local-storage:provisioner-node-binding"
-	pvBindingName           = "local-storage:provisioner-pv-binding"
-	systemRoleNode          = "system:node"
+	nodeClusterRoleName     = "local-storage:provisioner-node-cluster-role"
 	systemRolePVProvisioner = "system:persistent-volume-provisioner"
 
 	// A sample request size
@@ -490,21 +489,41 @@ func createProvisionerClusterRoleBinding(config *localTestConfig) {
 		},
 	}
 
-	pvBinding := rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: rbacv1.SchemeGroupVersion.String(),
-			Kind:       "ClusterRoleBinding",
-		},
+	// from https://github.com/kubernetes/kubernetes/blob/24a71990e02edbfd0a05f4abfdedcab991525874/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go#L439
+	// it has the same rules minus the PVC rules
+	nodeClusterRole := rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: pvBindingName,
+			Name: nodeClusterRoleName,
 		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     systemRolePVProvisioner,
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"get", "list", "watch", "create", "delete"},
+			},
+			{
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"storageclasses"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"watch"},
+			},
+			{
+				APIGroups: []string{"", "events.k8s.io"},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"get"},
+			},
 		},
-		Subjects: subjects,
 	}
+
 	nodeBinding := rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -516,13 +535,13 @@ func createProvisionerClusterRoleBinding(config *localTestConfig) {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     systemRoleNode,
+			Name:     nodeClusterRoleName,
 		},
 		Subjects: subjects,
 	}
 
 	deleteClusterRoleBinding(config)
-	_, err := config.client.RbacV1().ClusterRoleBindings().Create(context.TODO(), &pvBinding, metav1.CreateOptions{})
+	_, err := config.client.RbacV1().ClusterRoles().Create(context.TODO(), &nodeClusterRole, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	_, err = config.client.RbacV1().ClusterRoleBindings().Create(context.TODO(), &nodeBinding, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
@@ -562,8 +581,8 @@ func createProvisionerClusterRoleBinding(config *localTestConfig) {
 func deleteClusterRoleBinding(config *localTestConfig) {
 	// These role bindings are created in provisioner; we just ensure it's
 	// deleted and do not panic on error.
+	config.client.RbacV1().ClusterRoles().Delete(context.TODO(), nodeClusterRoleName, metav1.DeleteOptions{})
 	config.client.RbacV1().ClusterRoleBindings().Delete(context.TODO(), nodeBindingName, metav1.DeleteOptions{})
-	config.client.RbacV1().ClusterRoleBindings().Delete(context.TODO(), pvBindingName, metav1.DeleteOptions{})
 }
 
 func createAndSetupLoopDevice(config *localTestConfig, file string, node *v1.Node, size int) {

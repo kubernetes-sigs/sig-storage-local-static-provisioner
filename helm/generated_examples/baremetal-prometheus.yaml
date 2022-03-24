@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -18,7 +18,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -38,7 +38,7 @@ kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -52,11 +52,23 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["watch"]
+- apiGroups: ["", "events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "update", "patch"]
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get"]
@@ -65,28 +77,9 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: local-static-provisioner-pv-binding
-  labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/instance: local-static-provisioner
-subjects:
-- kind: ServiceAccount
-  name: local-static-provisioner
-  namespace: default
-roleRef:
-  kind: ClusterRole
-  name: system:persistent-volume-provisioner
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: provisioner/templates/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -106,7 +99,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -127,7 +120,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -142,7 +135,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: a0c128c2d71995e6a20053e0d70b0b720c9b0109e5766a645693c87fdcbe58de
+        checksum/config: 49fd0db6c0e3bc6c0607d6f94132b4bd3a4b7445efd977e564038e93320045cf
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -193,7 +186,7 @@ metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -208,7 +201,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: a0c128c2d71995e6a20053e0d70b0b720c9b0109e5766a645693c87fdcbe58de
+        checksum/config: 49fd0db6c0e3bc6c0607d6f94132b4bd3a4b7445efd977e564038e93320045cf
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -293,7 +286,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner

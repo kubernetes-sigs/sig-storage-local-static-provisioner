@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -27,7 +27,7 @@ kind: StorageClass
 metadata:
   name: local-scsi
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -44,7 +44,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -53,33 +53,27 @@ metadata:
 # Source: provisioner/templates/rbac.yaml
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: local-static-provisioner-pv-binding
-  labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
-    app.kubernetes.io/name: provisioner
-    app.kubernetes.io/managed-by: Tiller
-    app.kubernetes.io/instance: local-static-provisioner
-subjects:
-- kind: ServiceAccount
-  name: local-static-provisioner
-  namespace: default
-roleRef:
-  kind: ClusterRole
-  name: system:persistent-volume-provisioner
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
 rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["watch"]
+- apiGroups: ["", "events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "update", "patch"]
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get"]
@@ -89,7 +83,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -111,7 +105,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -126,7 +120,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: d2564e3bcba3eb8833c1c9dc00e4c856ac6d87b1cd83b1d42172ccb14e85c5b5
+        checksum/config: 91df71eb1cc82914d775917fe1cd44932652d4f09b03cec7c42ac1beec7a0f52
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -179,7 +173,7 @@ metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.0
+    helm.sh/chart: provisioner-2.6.0-alpha.1
     app.kubernetes.io/name: provisioner
     app.kubernetes.io/managed-by: Tiller
     app.kubernetes.io/instance: local-static-provisioner
@@ -194,7 +188,7 @@ spec:
         app.kubernetes.io/name: provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: d2564e3bcba3eb8833c1c9dc00e4c856ac6d87b1cd83b1d42172ccb14e85c5b5
+        checksum/config: 91df71eb1cc82914d775917fe1cd44932652d4f09b03cec7c42ac1beec7a0f52
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
