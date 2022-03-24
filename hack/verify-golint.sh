@@ -26,13 +26,13 @@ TMP_DIR=$(mktemp -d)
 trap "rm -rf ${TMP_DIR}" EXIT
 
 pushd "${TMP_DIR}" &>/dev/null
-GO111MODULE=on GOBIN=${TMP_DIR} go get golang.org/x/lint/golint@v0.0.0-20200302205851-738671d3881b
+GO111MODULE=on GOBIN=${TMP_DIR} go install golang.org/x/lint/golint@v0.0.0-20200302205851-738671d3881b
 popd &>/dev/null
 export PATH="${TMP_DIR}:${PATH}"
 
 PKGS=($(go list ./... | grep -v /vendor/))
 
-errors=$(golint ${PKGS[*]} | grep -v -P '(zz_generated\.\w+\.go|generated\.pb\.go)') || true 
+errors=$(golint ${PKGS[*]} | grep -v -P '(zz_generated\.\w+\.go|generated\.pb\.go)') || true
 
 if [[ -n "${errors}" ]]; then
     echo "${errors}"
