@@ -2,8 +2,12 @@ name: Release Helm Charts
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#patterns-to-match-branches-and-tags
+      # matches v1.2.3
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # matches v1.2.3-alpha.1
+      - 'v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+.[0-9]+'
 
 jobs:
   release:
