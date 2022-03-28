@@ -1,5 +1,3 @@
-# HEAD
-
 # [v2.4.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.4.0)
 
 Image updates:
