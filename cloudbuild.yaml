@@ -1,10 +1,12 @@
 # See https://cloud.google.com/cloud-build/docs/build-config
-# 
+#
 # Test locally:
 #
 #    gcloud builds submit --verbosity info --substitutions _STAGING_PROJECT=<your-project>,_PULL_BASE_REF=master [SOURCE]
 #
 timeout: 1800s
+# This prevents errors if you don't use both _GIT_TAG and _PULL_BASE_REF,
+# or any new substitutions added in the future.
 options:
   substitution_option: ALLOW_LOOSE
 steps:
@@ -12,17 +14,24 @@ steps:
   entrypoint: hack/release.sh
   env:
   - REGISTRY=gcr.io/${_STAGING_PROJECT}
-  - ALL_ARCH=${_ALL_ARCH}
   - ALLOW_DIRTY=yes
   - ALLOW_UNSTABLE=yes
   - CONFIRM=yes
   - SKIP_PUSH_LATEST=yes
+  - GIT_TAG=${_GIT_TAG}
   - PULL_BASE_REF=${_PULL_BASE_REF}
+  - HOME=/root
+  # intentionally not setting LINUX_ARCH and WINDOWS_DISTROS
+  # the default ones in hack/release.sh will be used instead
 substitutions:
+  # _GIT_TAG will be filled with a git-based tag for the image, of the form vYYYYMMDD-hash, and
+  # can be used as a substitution.
+  _GIT_TAG: '12345'
   # _PULL_BASE_REF will contain the ref that was pushed to trigger this build -
   # a branch like 'master' or 'release-0.2', or a tag like 'v0.2'.
   _PULL_BASE_REF: 'master'
-  # The default gcr.io staging project for Kubernetes sig-storage.
+  # The default gcr.io staging project for Kubernetes-CSI
+  # (=> https://console.cloud.google.com/gcr/images/k8s-staging-sig-storage/GLOBAL).
+  # Might be overridden in the Prow build job for a repo which wants
+  # images elsewhere.
   _STAGING_PROJECT: 'k8s-staging-sig-storage'
-  # All arches to build
-  _ALL_ARCH: 'amd64 arm arm64 ppc64le s390x'
