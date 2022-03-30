@@ -27,8 +27,6 @@ DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
 STAGINGVERSION=${VERSION}
 STAGINGIMAGE=${REGISTRY}/local-volume-provisioner
 
-SUDO = $(if $(filter 0,$(shell id -u)),,sudo)
-
 # $(call pos,slice,wanted)
 # finds the index of `wanted` in `slice`
 _pos = $(if $(findstring $1,$2),$(call _pos,$1,\

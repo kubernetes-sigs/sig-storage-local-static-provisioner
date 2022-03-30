@@ -21,7 +21,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
+set -o xtrace
 
 ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 cd $ROOT
@@ -91,7 +91,7 @@ ALLOW_OVERRIDE=${ALLOW_OVERRIDE:-}
 SKIP_BUILD=${SKIP_BUILD:-}
 SKIP_PUSH_LATEST=${SKIP_PUSH_LATEST:-}
 LINUX_ARCH=${LINUX_ARCH:-amd64 arm arm64 ppc64le s390x}
-WINDOWS_DISTROS=${WINDOWS_DISTROS:-ltsc2019 1909 2004 20H2}
+WINDOWS_DISTROS=${WINDOWS_DISTROS:-ltsc2019 20H2}
 
 echo "REGISTRY: $REGISTRY"
 echo "VERSION: $VERSION"
@@ -198,6 +198,7 @@ if [ -z "$ALLOW_OVERRIDE" ] && is_stable_version "$VERSION"; then
 fi
 
 # build & push multi-arch images
+export DOCKER_CLI_EXPERIMENTAL=enabled
 if [ -z "$SKIP_BUILD" ]; then
     echo "info: build and push $image"
     make cross \
@@ -211,8 +212,6 @@ fi
 
 echo "info: create multi-arch manifest for $IMAGE:$VERSION"
 function docker_create_multi_arch() {
-    export DOCKER_CLI_EXPERIMENTAL=enabled
-
     # tag_version is the version used in the docker manifest that ties
     # all of the images that were tagged with $VERSION
     local tag_version=${1}
