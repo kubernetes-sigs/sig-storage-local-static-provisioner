@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package v1;
+package v2alpha1;
 
-option go_package = "github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v1";
+option go_package = "github.com/kubernetes-csi/csi-proxy/client/api/filesystem/v2alpha1";
 
 service Filesystem {
     // PathExists checks if the requested path exists in the host filesystem.
@@ -14,6 +14,10 @@ service Filesystem {
     // Rmdir removes the directory at the requested path in the host filesystem.
     // This may be used for unlinking a symlink created through CreateSymlink.
     rpc Rmdir(RmdirRequest) returns (RmdirResponse) {}
+
+    // RmdirContents removes the contents of a directory in the host filesystem.
+    // Unlike Rmdir it won't delete the requested path, it'll only delete its contents.
+    rpc RmdirContents(RmdirContentsRequest) returns (RmdirContentsResponse) {}
 
     // CreateSymlink creates a symbolic link called target_path that points to source_path
     // in the host filesystem (target_path is the name of the symbolic link created,
@@ -83,6 +87,29 @@ message RmdirRequest {
 }
 
 message RmdirResponse {
+    // Intentionally empty.
+}
+
+message RmdirContentsRequest {
+    // The path whose contents will be removed in the host's filesystem.
+    // All special characters allowed by Windows in path names will be allowed
+    // except for restrictions noted below. For details, please check:
+    // https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+    //
+    // Restrictions:
+    // Only absolute path (indicated by a drive letter prefix: e.g. "C:\") is accepted.
+    // Depending on the context parameter of this function, the path prefix needs
+    // to match the paths specified either as kubelet-csi-plugins-path
+    // or as kubelet-pod-path parameters of csi-proxy.
+    // UNC paths of the form "\\server\share\path\file" are not allowed.
+    // All directory separators need to be backslash character: "\".
+    // Characters: .. / : | ? * in the path are not allowed.
+    // Path cannot be a file of type symlink.
+    // Maximum path length will be capped to 260 characters.
+    string path = 1;
+}
+
+message RmdirContentsResponse {
     // Intentionally empty.
 }
 
