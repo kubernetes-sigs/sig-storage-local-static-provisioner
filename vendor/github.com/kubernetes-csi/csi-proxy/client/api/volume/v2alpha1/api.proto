@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package v1;
+package v2alpha1;
 
-option go_package = "github.com/kubernetes-csi/csi-proxy/client/api/volume/v1";
+option go_package = "github.com/kubernetes-csi/csi-proxy/client/api/volume/v2alpha1";
 
 service Volume {
     // ListVolumesOnDisk returns the volume IDs (in \\.\Volume{GUID} format) for all volumes from a
@@ -32,6 +32,11 @@ service Volume {
 
     // GetVolumeIDFromTargetPath gets the volume id for a given target path.
     rpc GetVolumeIDFromTargetPath(GetVolumeIDFromTargetPathRequest) returns (GetVolumeIDFromTargetPathResponse) {}
+
+    // GetClosestVolumeIDFromTargetPath gets the closest volume id for a given target path
+    // by following symlinks and moving up in the filesystem, if after moving up in the filesystem
+    // we get to a DriveLetter then the volume corresponding to this drive letter is returned instead.
+    rpc GetClosestVolumeIDFromTargetPath(GetClosestVolumeIDFromTargetPathRequest) returns (GetClosestVolumeIDFromTargetPathResponse) {}
 
     // WriteVolumeCache write volume cache to disk.
     rpc WriteVolumeCache(WriteVolumeCacheRequest) returns (WriteVolumeCacheResponse) {}
@@ -129,6 +134,16 @@ message GetVolumeIDFromTargetPathRequest {
 }
 
 message GetVolumeIDFromTargetPathResponse {
+    // The volume device ID.
+    string volume_id = 1;
+}
+
+message GetClosestVolumeIDFromTargetPathRequest {
+    // The target path.
+    string target_path = 1;
+}
+
+message GetClosestVolumeIDFromTargetPathResponse {
     // The volume device ID.
     string volume_id = 1;
 }
