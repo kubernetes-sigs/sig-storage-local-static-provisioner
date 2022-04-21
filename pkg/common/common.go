@@ -345,7 +345,7 @@ func ConfigMapDataToVolumeConfig(data map[string]string, provisionerConfig *Prov
 		}
 
 		provisionerConfig.StorageClassConfig[class] = config
-		klog.Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q, NamePattern %q",
+		klog.V(5).Infof("StorageClass %q configured with MountDir %q, HostDir %q, VolumeMode %q, FsType %q, BlockCleanerCommand %q, NamePattern %q",
 			class,
 			config.MountDir,
 			config.HostDir,
@@ -379,6 +379,23 @@ func insertSpaces(original string) string {
 		spaced += "\n"
 	}
 	return spaced
+}
+
+// UserConfigFromProvisionerConfig creates a UserConfig from the provided ProvisionerConfiguration struct
+func UserConfigFromProvisionerConfig(node *v1.Node, namespace, jobImage string, config ProvisionerConfiguration) *UserConfig {
+	return &UserConfig{
+		Node:              node,
+		DiscoveryMap:      config.StorageClassConfig,
+		NodeLabelsForPV:   config.NodeLabelsForPV,
+		UseAlphaAPI:       config.UseAlphaAPI,
+		UseJobForCleaning: config.UseJobForCleaning,
+		MinResyncPeriod:   config.MinResyncPeriod,
+		UseNodeNameOnly:   config.UseNodeNameOnly,
+		Namespace:         namespace,
+		JobContainerImage: jobImage,
+		LabelsForPV:       config.LabelsForPV,
+		SetPVOwnerRef:     config.SetPVOwnerRef,
+	}
 }
 
 // LoadProvisionerConfigs loads all configuration into a string and unmarshal it into ProvisionerConfiguration struct.

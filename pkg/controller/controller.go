@@ -42,9 +42,56 @@ import (
 	"k8s.io/utils/mount"
 )
 
+// signal represents an indication to from client to terminate a service and waits for a callback
+// indicating that the service has successfully stopped.
+type signal struct {
+	closing chan chan struct{}
+}
+
+func newSignal() *signal {
+	return &signal{
+		closing: make(chan chan struct{}),
+	}
+}
+
+func (s *signal) stop() {
+	stopped := make(chan struct{})
+	s.closing <- stopped
+	<-stopped
+}
+
+func (s *signal) close() {
+	close(s.closing)
+}
+
+// RunLocalController facilitates and manages the sync loop.
+// It launches the main sync loop and if there is an updated configuration from the ConfigWatcher,
+// it will inform the main sync loop to terminate and then will launch a new sync loop with the
+// updated configuration.
+func RunLocalController(configUpdate <-chan common.ProvisionerConfiguration, client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, node *v1.Node, namespace, jobImage string, config common.ProvisionerConfiguration) {
+	s := newSignal()
+	defer s.close()
+
+	startController := func(config common.ProvisionerConfiguration) {
+		StartLocalController(s, client, ptable, discoveryPeriod, common.UserConfigFromProvisionerConfig(node, namespace, jobImage, config))
+	}
+	go startController(config)
+
+	for {
+		select {
+		case newConfig := <-configUpdate:
+			s.stop()
+			go startController(newConfig)
+		}
+	}
+}
+
 // StartLocalController starts the sync loop for the local PV discovery and deleter
-func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, config *common.UserConfig) error {
+func StartLocalController(signal *signal, client *kubernetes.Clientset, ptable deleter.ProcTable, discoveryPeriod time.Duration, config *common.UserConfig) {
 	klog.Info("Initializing volume cache\n")
+
+	informerStopChan := make(chan struct{})
+	jobControllerStopChan := make(chan struct{})
 
 	var provisionerName string
 	if config.UseNodeNameOnly {
@@ -102,7 +149,7 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	deleter := deleter.NewDeleter(runtimeConfig, cleanupTracker)
 
 	// Start informers after all event listeners are registered.
-	runtimeConfig.InformerFactory.Start(wait.NeverStop)
+	runtimeConfig.InformerFactory.Start(informerStopChan)
 	// Wait for all started informers' cache were synced.
 	for v, synced := range runtimeConfig.InformerFactory.WaitForCacheSync(wait.NeverStop) {
 		if !synced {
@@ -111,12 +158,23 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 	}
 	// Run controller logic.
 	if jobController != nil {
-		go jobController.Run(wait.NeverStop)
+		go jobController.Run(jobControllerStopChan)
 	}
 	klog.Info("Controller started\n")
 	for {
-		deleter.DeletePVs()
-		discoverer.DiscoverLocalVolumes()
-		time.Sleep(discoveryPeriod)
+		select {
+		case stopped := <-signal.closing:
+			close(informerStopChan)
+			if jobController != nil {
+				close(jobControllerStopChan)
+			}
+			stopped <- struct{}{}
+			klog.Info("Controller stopped\n")
+			return
+		default:
+			deleter.DeletePVs()
+			discoverer.DiscoverLocalVolumes()
+			time.Sleep(discoveryPeriod)
+		}
 	}
 }

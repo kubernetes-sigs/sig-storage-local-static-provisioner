@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/collectors"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/watcher"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,7 @@ var (
 	optListenAddress string
 	optMetricsPath   string
 	discoveryPeriod  time.Duration
+	configSyncPeriod time.Duration
 )
 
 func main() {
@@ -53,6 +55,7 @@ func main() {
 	flag.StringVar(&optListenAddress, "listen-address", ":8080", "address on which to expose metrics and readiness status")
 	flag.StringVar(&optMetricsPath, "metrics-path", "/metrics", "path under which to expose metrics")
 	flag.DurationVar(&discoveryPeriod, "discovery-period", 10*time.Second, "the period for local volume discovery")
+	flag.DurationVar(&configSyncPeriod, "config-sync-period", 5*time.Second, "the period to check if there has been any config changes")
 	flag.Parse()
 	flag.Set("logtostderr", "true")
 
@@ -85,22 +88,16 @@ func main() {
 	client := common.SetupClient()
 	node := getNode(client, nodeName)
 
+	configUpdate := make(chan common.ProvisionerConfiguration)
+	defer close(configUpdate)
+
+	configWatcher := watcher.NewConfigWatcher(common.ProvisionerConfigPath, configSyncPeriod, provisionerConfig)
+	klog.Info("Starting config watcher\n")
+	go configWatcher.Run(configUpdate)
+
 	klog.Info("Starting controller\n")
 	procTable := deleter.NewProcTable()
-
-	go controller.StartLocalController(client, procTable, discoveryPeriod, &common.UserConfig{
-		Node:              node,
-		DiscoveryMap:      provisionerConfig.StorageClassConfig,
-		NodeLabelsForPV:   provisionerConfig.NodeLabelsForPV,
-		UseAlphaAPI:       provisionerConfig.UseAlphaAPI,
-		UseJobForCleaning: provisionerConfig.UseJobForCleaning,
-		MinResyncPeriod:   provisionerConfig.MinResyncPeriod,
-		UseNodeNameOnly:   provisionerConfig.UseNodeNameOnly,
-		Namespace:         namespace,
-		JobContainerImage: jobImage,
-		LabelsForPV:       provisionerConfig.LabelsForPV,
-		SetPVOwnerRef:     provisionerConfig.SetPVOwnerRef,
-	})
+	go controller.RunLocalController(configUpdate, client, procTable, discoveryPeriod, node, namespace, jobImage, provisionerConfig)
 
 	klog.Infof("Starting metrics server at %s\n", optListenAddress)
 	prometheus.MustRegister([]prometheus.Collector{
