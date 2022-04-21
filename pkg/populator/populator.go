@@ -102,7 +102,7 @@ func (p *Populator) handlePVUpdate(pv *v1.PersistentVolume) {
 				}
 				if strings.HasPrefix(provisioner, p.Name+"-") {
 					// This PV was created by this provisioner with useNodeNameOnly disabled
-					klog.Infof("cacheing pv %q (useNodeNameOnly mode)", pv.Name)
+					klog.Infof("caching pv %q (useNodeNameOnly mode)", pv.Name)
 					p.Cache.AddPV(pv)
 				}
 			}

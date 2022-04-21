@@ -47,7 +47,7 @@ Environments:
     KUBERNETES_SRC                      if specified, kubetest will skip extracting kubernetes src from GCS, use it instead
     DEPLOYMENT                          none/bash/gke/local/kind
     GKE_ENVIRONMENT                     (gke only) test/staging/prod
-    GOOGLE_APPLICATION_CREDENTIALS      (for gce/gke) google applcation credentials which is used to access google cloud platform
+    GOOGLE_APPLICATION_CREDENTIALS      (for gce/gke) google application credentials which is used to access google cloud platform
     JENKINS_GCE_SSH_PRIVATE_KEY_FILE    (for gce/gke) GCP ssh key private file
     JENKINS_GCE_SSH_PUBLIC_KEY_FILE     (for gce/gke) GCP ssh key public file
 
@@ -82,8 +82,8 @@ Examples:
   You need install Google Cloud SDK first, then prepare google application
   credentials and configure ssh key pairs.
 
-  You can create ssh keypair with ssh-keygen at  ~/.ssh/google_compute_engine
-  or specifc existing ssh keypair with following environments:
+  You can create ssh key pair with ssh-keygen at  ~/.ssh/google_compute_engine
+  or specific existing ssh key pair with following environments:
 
     export JENKINS_GCE_SSH_PRIVATE_KEY_FILE=<path-to-your-ssh-private-key>
     export JENKINS_GCE_SSH_PUBLIC_KEY_FILE=<path-to-your-ssh-public-key>
@@ -209,7 +209,7 @@ if [ "$PROVIDER" == "gce" -o "$PROVIDER" == "gke" ]; then
         )
     fi
 
-    # kubetest needs ssh keypair to ssh into nodes
+    # kubetest needs ssh key pair to ssh into nodes
     if [ ! -d ~/.ssh ]; then
         mkdir ~/.ssh
     fi

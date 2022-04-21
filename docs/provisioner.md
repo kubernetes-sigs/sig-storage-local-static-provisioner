@@ -124,13 +124,13 @@ data:
   #       blockCleanerCommand:
   #       - "/scripts/shred.sh"
   #       - "2"
-  #       # The volume mode of PV. It defines whehter a device volume is #
+  #       # The volume mode of PV. It defines whether a device volume is #
   #       # intended to use as a formatted filesystem volume or to remain in block
   #       # state. Value of Filesystem is implied when omitted.
   #       volumeMode: Filesystem
   #       # The filesystem to format before mounting on the node. This applies
   #       # only when the volume source is a device and mode is Filesystem.
-  #       # The default value is to auto-select a fileystem in Kubernetes if unspecified.
+  #       # The default value is to auto-select a filesystem in Kubernetes if unspecified.
   #       fsType: ext4
   #       # name pattern check
   #       # only discover file name matching pattern("*" by default).

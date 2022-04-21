@@ -53,7 +53,7 @@ create PV and describe it
 ``` kubectl describe pv example-local-pv-1
 Name:            example-local-pv-1
 Labels:          <none>
-Annotations:     volume.alpha.kubernetes.io/node-affinity={ "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [ { "matchExpressions": [ { "key": "kubernetes.io/hostname", "operator": "In", "valu...
+Annotations:     volume.alpha.kubernetes.io/node-affinity={ "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [ { "matchExpressions": [ { "key": "kubernetes.io/hostname", "operator": "In", "value...
 Finalizers:      [kubernetes.io/pv-protection]
 StorageClass:    local-storage
 Status:          Available
