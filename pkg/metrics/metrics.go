@@ -31,9 +31,9 @@ const (
 	APIServerRequestCreate = "create"
 	// APIServerRequestDelete represents metrics related to delete resource request.
 	APIServerRequestDelete = "delete"
-	// DeleteTypeProcess represents metrics releated deletion in process.
+	// DeleteTypeProcess represents metrics related deletion in process.
 	DeleteTypeProcess = "process"
-	// DeleteTypeJob represents metrics releated deletion by job.
+	// DeleteTypeJob represents metrics related deletion by job.
 	DeleteTypeJob = "job"
 )
 
@@ -71,7 +71,7 @@ var (
 		prometheus.CounterOpts{
 			Subsystem: LocalVolumeProvisionerSubsystem,
 			Name:      "persistentvolume_delete_total",
-			Help:      "Total number of persistent volumes deleteed. Broken down by persistent volume mode, delete type (process or job).",
+			Help:      "Total number of persistent volumes deleted. Broken down by persistent volume mode, delete type (process or job).",
 		},
 		[]string{"mode", "type"},
 	)

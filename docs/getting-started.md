@@ -127,7 +127,7 @@ by symlinking the Instance Storage disks for discovery using udev automatically.
 This has the benefit of not needing an additional component like
 `eks-nvme-ssd-provisioner` to be deployed.
 
-The following udev rule will symlink all Instance Storage disks under `/dev/disk/kubernetes/<uniqe id>`:
+The following udev rule will symlink all Instance Storage disks under `/dev/disk/kubernetes/<unique id>`:
 ```
 # /etc/udev/rules.d/90-kubernetes-discovery.rules
 
