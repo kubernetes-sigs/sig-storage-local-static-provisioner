@@ -4,7 +4,8 @@
 #
 #    gcloud builds submit --verbosity info --substitutions _STAGING_PROJECT=<your-project>,_PULL_BASE_REF=master [SOURCE]
 #
-timeout: 1800s
+# 5400s = 1h30m
+timeout: 5400s
 # This prevents errors if you don't use both _GIT_TAG and _PULL_BASE_REF,
 # or any new substitutions added in the future.
 options:
