@@ -38,6 +38,8 @@ pos = $(words $(call _pos,$1,$2))
 # at that index
 lookup = $(word $(call pos,$1,$2),$3)
 
+include release-tools/build.make
+
 all: build-container-linux-amd64
 .PHONY: all
 
@@ -86,10 +88,6 @@ test: build-container-linux-amd64
 	go test ./cmd/... ./pkg/...
 	docker run --privileged -v $(PWD)/deployment/docker/test.sh:/test.sh --entrypoint bash $(STAGINGIMAGE):$(STAGINGVERSION)_linux_amd64 /test.sh
 .PHONY: test
-
-clean:
-	rm -rf _output
-.PHONY: clean
 
 init-buildx:
 	# Ensure we use a builder that can leverage it (the default on linux will not)
