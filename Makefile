@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REGISTRY ?= k8s.gcr.io/sig-storage
+REGISTRY ?= registry.k8s.io/sig-storage
 VERSION ?= latest
 GOVERSION ?= 1.17
 

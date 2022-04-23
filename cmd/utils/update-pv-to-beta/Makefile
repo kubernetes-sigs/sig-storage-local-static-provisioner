@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ifeq ($(REGISTRY),)
-	REGISTRY = k8s.gcr.io/sig-storage/
+	REGISTRY = registry.k8s.io/sig-storage/
 endif
 
 ifeq ($(VERSION),)
