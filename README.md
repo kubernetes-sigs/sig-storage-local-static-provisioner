@@ -2,7 +2,7 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/sig-storage-local-static-provisioner/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/sig-storage-local-static-provisioner?branch=master)
 
-The local volume static provisioner manages the PersistentVolume lifecycle for
+The local volume static provisioner manages PersistentVolume lifecycle for
 pre-allocated disks by detecting and creating PVs for each local disk on the
 host, and cleaning up the disks when released. It does not support dynamic
 provisioning.
