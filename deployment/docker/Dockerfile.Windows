@@ -12,19 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ARG BASE_IMAGE
-ARG GOVERSION=1.17
-ARG STAGINGVERSION
-
-FROM --platform=$BUILDPLATFORM golang:${GOVERSION}-alpine AS builder
-ARG STAGINGVERSION
-WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
-ADD . .
-RUN echo "OS: windows ARCH: amd64"
-RUN GO111MODULE=off CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
-
 FROM ${BASE_IMAGE}
 LABEL description="Local Volume Provisioner"
-COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/windows/amd64/local-volume-provisioner.exe /local-provisioner.exe
+
+ARG OS=windows
+ARG ARCH=amd64
+ARG binary=./_output/${OS}/${ARCH}/local-volume-provisioner.exe
+COPY ${binary} /local-provisioner.exe
 
 # this image can't run in privileged mode so even porting these scripts to
 # powershell might not help, CSI Proxy can help with some privileged
