@@ -61,14 +61,14 @@ release:
 # used in `make test` and `make e2e`
 # builds without pushing to the registry
 build-container-linux-%:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
+	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
 build-and-push-container-linux-%: init-buildx
-	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
+	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
 		--build-arg OS=linux \
@@ -76,7 +76,7 @@ build-and-push-container-linux-%: init-buildx
 		--push .
 
 build-and-push-container-windows-%: init-buildx
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* \
 		--build-arg BASE_IMAGE=$(call lookup,$*,$(WINDOWS_DISTROS),$(WINDOWS_BASE_IMAGES)) \
