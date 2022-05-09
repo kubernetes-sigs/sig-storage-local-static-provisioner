@@ -12,21 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG ARCH=amd64
-ARG GOVERSION=1.17
-FROM golang:$GOVERSION-alpine as builder
-ARG OS=linux
-ARG ARCH=amd64
-WORKDIR /go/src/sigs.k8s.io/sig-storage-local-static-provisioner
-ADD . .
-RUN echo "OS: $OS ARCH: $ARCH"
-RUN GO111MODULE=off CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -a -ldflags '-extldflags "-static"' -o _output/${OS}/${ARCH}/local-volume-provisioner ./cmd/local-volume-provisioner
-
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/release/tree/master/images/build/debian-base
 FROM registry.k8s.io/build-image/debian-base:bullseye-v1.2.0
 ARG OS=linux
 ARG ARCH=amd64
+ARG binary=./_output/${OS}/${ARCH}/local-volume-provisioner
+COPY ${binary} /local-provisioner
 
 # Keep packages up to date and install packages for our needs.
 RUN apt-get update \
@@ -36,6 +28,5 @@ RUN apt-get update \
     e2fsprogs \
     bash
 
-COPY --from=builder /go/src/sigs.k8s.io/sig-storage-local-static-provisioner/_output/${OS}/${ARCH}/local-volume-provisioner /local-provisioner
 ADD deployment/docker/scripts /scripts
 ENTRYPOINT ["/local-provisioner"]
