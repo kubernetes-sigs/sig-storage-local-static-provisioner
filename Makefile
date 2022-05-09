@@ -21,7 +21,7 @@ GOVERSION ?= 1.17
 LINUX_ARCH ?= amd64
 WINDOWS_DISTROS ?=
 
-WINDOWS_BASE_IMAGES=$(addprefix mcr.microsoft.com/windows/servercore:,$(WINDOWS_DISTROS))
+WINDOWS_BASE_IMAGES=$(addprefix mcr.microsoft.com/windows/nanoserver:,$(WINDOWS_DISTROS))
 
 DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
 STAGINGVERSION=${VERSION}
