@@ -105,6 +105,7 @@ echo "SKIP_BUILD: $SKIP_BUILD"
 echo "SKIP_PUSH_LATEST: $SKIP_PUSH_LATEST"
 echo "LINUX_ARCH: $LINUX_ARCH"
 echo "WINDOWS_DISTROS: $WINDOWS_DISTROS"
+go version
 
 IMAGE="$REGISTRY/local-volume-provisioner"
 
