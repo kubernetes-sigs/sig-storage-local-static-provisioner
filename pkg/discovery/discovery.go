@@ -276,19 +276,31 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		mountPointMap[mp.Path] = empty{}
 	}
 
+	var namePatterns []string
+	if config.NamePattern != "" {
+		namePatterns = strings.Split(config.NamePattern, ",")
+	}
+
 	var discoErrors []error
 	var totalCapacityBlockBytes, totalCapacityFSBytes int64
 	for _, file := range files {
-		if config.NamePattern != "" {
-			matched, err := filepath.Match(config.NamePattern, file)
-			if err != nil {
-				return err
-			}
-			if !matched {
-				klog.V(5).Infof("file(%s) under(%s) does not match pattern(%s)", file, config.MountDir, config.NamePattern)
-				continue
+		var matched bool
+		for _, pattern := range namePatterns {
+			if pattern != "" {
+				matched, err = filepath.Match(pattern, file)
+				if err != nil {
+					return err
+				}
+				if matched {
+					break
+				}
 			}
 		}
+		if config.NamePattern != "" && !matched {
+			klog.V(5).Infof("file(%s) under(%s) does not match pattern(%s)", file, config.MountDir, config.NamePattern)
+			continue
+		}
+
 		startTime := time.Now()
 		filePath := filepath.Join(config.MountDir, file)
 		volMode, err := common.GetVolumeMode(d.VolUtil, filePath)
