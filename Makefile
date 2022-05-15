@@ -26,6 +26,8 @@ WINDOWS_BASE_IMAGES=$(addprefix mcr.microsoft.com/windows/nanoserver:,$(WINDOWS_
 DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
 STAGINGVERSION=${VERSION}
 STAGINGIMAGE=${REGISTRY}/local-volume-provisioner
+# Output type of docker buildx build
+OUTPUT_TYPE ?= docker
 
 # $(call pos,slice,wanted)
 # finds the index of `wanted` in `slice`
@@ -63,7 +65,7 @@ release:
 build-container-linux-%:
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
-		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
+		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* --output=type=$(OUTPUT_TYPE) \
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
