@@ -1,4 +1,4 @@
-name: Go
+name: Build & Unit Test
 
 on:
   push:
@@ -31,3 +31,12 @@ jobs:
       run: |
         GO111MODULE=off go get github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
+
+    - name: Build Windows images from Dockerfile
+      run: |
+        export REGISTRY=test
+        export DOCKER_CLI_EXPERIMENTAL=enabled
+        export OUTPUT_TYPE=docker
+        make build-container-windows-1809
+        make build-container-windows-20H2
+        make build-container-windows-2022
