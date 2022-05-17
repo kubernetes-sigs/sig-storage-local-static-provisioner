@@ -84,7 +84,7 @@ const (
 	// DefaultVolumeMode is the default volume mode of created PV object.
 	DefaultVolumeMode = "Filesystem"
 
-	// DefaultNamePattern is the default name pattern of in PV discovery.
+	// DefaultNamePattern is the default name pattern list (separated by comma) of in PV discovery.
 	DefaultNamePattern = "*"
 )
 
