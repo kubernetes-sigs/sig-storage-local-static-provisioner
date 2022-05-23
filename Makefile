@@ -21,8 +21,6 @@ GOVERSION ?= 1.17
 LINUX_ARCH ?= amd64
 WINDOWS_DISTROS ?=
 
-WINDOWS_BASE_IMAGES=$(addprefix mcr.microsoft.com/windows/nanoserver:,$(WINDOWS_DISTROS))
-
 DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
 STAGINGVERSION=${VERSION}
 STAGINGIMAGE=${REGISTRY}/local-volume-provisioner
@@ -34,11 +32,6 @@ OUTPUT_TYPE ?= docker
 _pos = $(if $(findstring $1,$2),$(call _pos,$1,\
        $(wordlist 2,$(words $2),$2),x $3),$3)
 pos = $(words $(call _pos,$1,$2))
-
-# $(call lookup,wanted,list1,list2)
-# finds the index of `wanted` in list1, then, it returns the element of `list2`
-# at that index
-lookup = $(word $(call pos,$1,$2),$3)
 
 all: build-container-linux-amd64
 .PHONY: all
@@ -69,6 +62,12 @@ build-container-linux-%:
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
+build-container-windows-%:
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
+	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
+		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* --output=type=$(OUTPUT_TYPE) \
+		--build-arg OSVERSION=$* .
+
 build-and-push-container-linux-%: init-buildx
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
@@ -81,7 +80,7 @@ build-and-push-container-windows-%: init-buildx
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* \
-		--build-arg BASE_IMAGE=$(call lookup,$*,$(WINDOWS_DISTROS),$(WINDOWS_BASE_IMAGES)) \
+		--build-arg OSVERSION=$* \
 		--push .
 
 test: build-container-linux-amd64
