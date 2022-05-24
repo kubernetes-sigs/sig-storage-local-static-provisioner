@@ -62,12 +62,6 @@ build-container-linux-%:
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
-build-container-windows-%:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
-	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
-		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* --output=type=$(OUTPUT_TYPE) \
-		--build-arg OSVERSION=$* .
-
 build-and-push-container-linux-%: init-buildx
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
