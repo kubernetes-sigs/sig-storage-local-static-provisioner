@@ -3,7 +3,7 @@ kind: ServiceAccount
 metadata:
   name: local-storage-update
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: local-storage:updater
