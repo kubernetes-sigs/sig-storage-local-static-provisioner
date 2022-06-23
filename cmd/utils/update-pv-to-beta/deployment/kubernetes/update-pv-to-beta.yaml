@@ -18,5 +18,4 @@ spec:
               #  in-cluster config, then specify the following environment variable:
               # - name: KUBECONFIG
               #   value: /path/to/kubeconfig
-      # this is just a short-term workaround, need to set restartPolicy to "OnFailure" when kubernetes repo #58972 get merged
-      restartPolicy: Never
+      restartPolicy: OnFailure
