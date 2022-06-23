@@ -30,7 +30,7 @@ Required helm version: >= 2.7.2+
 
 Our chart provides a variety of options to configure deployment, see [provisioner/values.yaml](./provisioner/values.yaml).
 
-And there are [a lot of examples](./helm) to help you get started quickly.
+And there are [a lot of examples](./examples) to help you get started quickly.
 
 ## Install local-volume-provisioner
 
