@@ -336,15 +336,15 @@ func (d *Deleter) execScript(pvName string, blkdevPath string, exe string, exeAr
 
 // runJob runs a cleaning job.
 // The advantages of using a Job to do block cleaning (which is a process that can take several hours) is as follows
-// 1) By naming the job based on the specific name of the volume, one ensures that only one instance of a cleaning
-//    job will be active for any given volume. Any attempt to create another will fail due to name collision. This
-//    avoids any concurrent cleaning problems.
-// 2) The above approach also ensures that we don't accidentally create a new PV when a cleaning job is in progress.
-//    Even if a user accidentally deletes the PV, the presence of the cleaning job would prevent the provisioner from
-//    attempting to re-create it. This would be the case even if the Daemonset had two provisioners running on the same
-//    host (which can sometimes happen as the Daemonset controller follows "at least one" semantics).
-// 3) Admins get transparency on what is going on with a released volume by just running kubectl commands
-//    to check for any corresponding cleaning job for a given volume and looking into its progress or failure.
+//  1. By naming the job based on the specific name of the volume, one ensures that only one instance of a cleaning
+//     job will be active for any given volume. Any attempt to create another will fail due to name collision. This
+//     avoids any concurrent cleaning problems.
+//  2. The above approach also ensures that we don't accidentally create a new PV when a cleaning job is in progress.
+//     Even if a user accidentally deletes the PV, the presence of the cleaning job would prevent the provisioner from
+//     attempting to re-create it. This would be the case even if the Daemonset had two provisioners running on the same
+//     host (which can sometimes happen as the Daemonset controller follows "at least one" semantics).
+//  3. Admins get transparency on what is going on with a released volume by just running kubectl commands
+//     to check for any corresponding cleaning job for a given volume and looking into its progress or failure.
 //
 // To achieve these advantages, the provisioner names the cleaning job with a constant name based on the PV name.
 // If a job completes successfully, then the job is first deleted and then the cleaned PV (to enable its rediscovery).
