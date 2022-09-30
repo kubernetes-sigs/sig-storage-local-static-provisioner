@@ -132,6 +132,10 @@ daemonset:
   # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   nodeSelector: {}
   #
+  # Deploy individual Daemonsets to support multiple Node Operating Systems
+  supportWindowsOS: true
+  supportLinuxOS: true
+  #
   # If configured KubeConfigEnv will (optionally) specify the location of kubeconfig file on the node.
   #  kubeConfigEnv: KUBECONFIG
   #
@@ -169,6 +173,38 @@ daemonset:
 #
 # Configure Prometheus monitoring
 #
+
+# Prometheus Operator PodMonitors
+# May be desirable compared to serviceMonitor due to endpointslice complications
+# Especially if > 1000 nodes
+podMonitor:
+  # enable support for Prometheus Operator
+  enabled: false
+
+  # optional additionnal labels for podMonitors
+  additionalLabels: {}
+
+  ## Interval at which Prometheus scrapes the provisioner
+  interval: 10s
+
+  # Namespace Prometheus is installed in defaults to release namespace
+  namespace:
+
+  # metric relabel configs to apply to samples before ingestion.
+  metricRelabelings: []
+  # - action: keep
+  #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+  #   sourceLabels: [__name__]
+
+  # relabel configs to apply to samples before ingestion.
+  relabelings: []
+  # - sourceLabels: [__meta_kubernetes_pod_node_name]
+  #   separator: ;
+  #   regex: ^(.*)$
+  #   target_label: nodename
+  #   replacement: $1
+  #   action: replace
+
 serviceMonitor:
   enabled: false
   ## Interval at which Prometheus scrapes the provisioner
@@ -179,6 +215,13 @@ serviceMonitor:
   ## [Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/prometheus/templates/prometheus.yaml#L65)
   ## [Kube Prometheus Selector Label](https://github.com/coreos/prometheus-operator/blob/master/helm/kube-prometheus/values.yaml#L298)
   additionalLabels: {}
+
+  # metric relabel configs to apply to samples before ingestion.
+  metricRelabelings: []
+  # - action: keep
+  #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+  #   sourceLabels: [__name__]  
+
   relabelings: []
   # - sourceLabels: [__meta_kubernetes_pod_node_name]
   #   separator: ;

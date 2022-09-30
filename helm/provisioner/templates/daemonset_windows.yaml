@@ -1,3 +1,4 @@
+{{- if .Values.daemonset.supportWindowsOS }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -34,6 +35,9 @@ spec:
 {{- end }}
       nodeSelector:
         kubernetes.io/os: windows
+{{- if .Values.daemonset.nodeSelector }}
+        {{ toYaml .Values.daemonset.nodeSelector | nindent 8 }}
+{{- end }}
       tolerations:
         # an empty key operator Exists matches all keys, values and effects
         # which meants that this will tolerate everything
@@ -141,3 +145,4 @@ spec:
           hostPath:
             path: {{ quote $path }}
         {{- end }}
+{{- end }}

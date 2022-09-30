@@ -1,0 +1,37 @@
+{{- if .Values.podMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "provisioner.fullname" . }}
+  namespace: {{ .Values.podMonitor.namespace | default .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ template "provisioner.chart" . }}
+    app.kubernetes.io/name: {{ template "provisioner.name" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- range $k, $v := .Values.podMonitor.additionalLabels }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+spec:
+  jobLabel: app.kubernetes.io/name
+  podMetricsEndpoints:
+  - port: metrics
+    interval: {{ .Values.podMonitor.interval }}
+    scheme: http
+{{- if .Values.podMonitor.metricRelabelings }}
+    metricRelabelings:
+{{- toYaml .Values.podMonitor.metricRelabelings | nindent 4 }}
+{{- end }}
+{{- if .Values.podMonitor.relabelings }}
+    relabelings:
+{{- toYaml .Values.podMonitor.relabelings | nindent 4 }}
+{{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "provisioner.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
