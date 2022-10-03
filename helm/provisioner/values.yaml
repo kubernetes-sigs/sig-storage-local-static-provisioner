@@ -64,7 +64,7 @@ common:
 # Configure storage classes.
 #
 classes:
-- name: fast-disks # Defines name of storage classe.
+- name: fast-disks # Defines name of storage classes.
   # Path on the host where local volumes of this storage class are mounted
   # under.
   hostDir: /mnt/fast-disks
