@@ -25,4 +25,5 @@ COPY ${binary} /local-provisioner.exe
 # storage operations
 # ADD deployment/docker/scripts /scripts
 
+USER ContainerAdministrator
 ENTRYPOINT ["/local-provisioner.exe"]
