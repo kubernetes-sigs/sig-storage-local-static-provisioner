@@ -52,7 +52,9 @@ spec:
               readOnly: true             
             - mountPath:  /mnt/fast-disks 
               name: fast-disks
-              mountPropagation: "HostToContainer" 
+              mountPropagation: "HostToContainer"
+            - mountPath: /dev
+              name:  provisioner-dev
       volumes:
         - name: provisioner-config
           configMap:
@@ -60,6 +62,9 @@ spec:
         - name: fast-disks
           hostPath:
             path: /mnt/fast-disks 
+        - name: provisioner-dev
+          hostPath:
+            path: /dev
 
 ---
 # Source: provisioner/templates/provisioner-service-account.yaml
