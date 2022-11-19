@@ -34,6 +34,9 @@ spec:
 {{- end }}
       nodeSelector:
         kubernetes.io/os: windows
+{{- if .Values.daemonset.nodeSelectorWindows }}
+        {{ toYaml .Values.daemonset.nodeSelectorWindows | nindent 8 }}
+{{- end }}
       tolerations:
         # an empty key operator Exists matches all keys, values and effects
         # which meants that this will tolerate everything
