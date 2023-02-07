@@ -57,16 +57,34 @@ $ kubectl create -f helm/generated_examples/gce.yaml
 
 #### Option 2: GKE
 
-GKE clusters will automatically format and mount the
-requested Local SSDs. Please see
+GKE clusters have raw block local NVMe SSDs attached. Please see
 [GKE
-documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/local-ssd)
+documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/local-ssd#raw-block)
 for instructions for how to create a cluster with Local SSDs.
 
-Then skip to [step 4](#step-4-create-local-persistent-volume-claim).
+After you create the cluster, use the [examples/gke-daemonset-raid-disks.yaml](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/examples/gke-daemonset-raid-disks.yaml) to 
+RAID and format your local SSD disks. This DaemonSet will set RAID0 array on all 
+local SSD disks and format the device to an ext4 filesystem.
 
-**Note:** The raw block feature is only supported on GKE Kubernetes alpha clusters.
-
+```
+$ kubectl create -f examples/gke-daemonset-raid-disks.yaml
+```
+Use [helm/generated_examples/gke-nvme-ssd-block-raid.yaml](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/helm/generated_examples/gke-nvme-ssd-block-raid.yaml) to setup provisioner
+```
+$ kubectl create -f helm/generated_examples/gke-nvme-ssd-block-raid.yaml
+```
+Use [examples/gke-pvc-nvme-ssd-block.yaml](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/examples/gke-pvc-nvme-ssd-block.yaml) to create a local persistent volume claim
+```
+$ kubectl create -f examples/gke-pvc-nvme-ssd-block.yaml
+```
+Use [examples/gke-pod-nvme-ssd-block.yaml](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/examples/gke-pod-nvme-ssd-block.yaml) to create an example pod
+```
+$ kubectl create -f examples/gke-pod-nvme-ssd-block.yaml
+```
+Check the output from the pod
+```
+$ kubectl logs local-pv-test
+```
 #### Option 3: Baremetal environments
 
 1. Partition and format the disks on each node according to your application's
