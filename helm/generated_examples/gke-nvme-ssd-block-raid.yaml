@@ -1,0 +1,163 @@
+# 1. Run gcloud CLI with --local-nvme-ssd-block option to create a node pool with
+# raw block Local SSDs attached.
+# 2. Use gke-daemonset-raid-disks-raid.yaml to create DaemonSet. It will set RAID0 array
+# on all raw block Local SSD disks and format the device to an ext4 filesystem on each node.
+# 3. Use the gke-nvme-ssd-block.yaml to create PV and StorageClass
+# 4. Use gke-pvc-nvme-ssd-block.yaml and gke-pod-nvme-ssd-block.yaml to create
+# PVC and Pod
+---
+# Source: local-volume-static-provisioner/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-static-provisioner-local-volume-static-provisioner
+  namespace: default
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+---
+# Source: local-volume-static-provisioner/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-static-provisioner-local-volume-static-provisioner-config
+  namespace: default
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+data:
+  useNodeNameOnly: "true"
+  storageClassMap: |
+    nvme-ssd-block:
+      hostDir: /mnt/disks/raid
+      mountDir: /mnt/disks/raid
+---
+# Source: local-volume-static-provisioner/templates/storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nvme-ssd-block
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+---
+# Source: local-volume-static-provisioner/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-static-provisioner-local-volume-static-provisioner-node-clusterrole
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["watch"]
+- apiGroups: ["", "events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
+# Source: local-volume-static-provisioner/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-static-provisioner-local-volume-static-provisioner-node-binding
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+subjects:
+- kind: ServiceAccount
+  name: local-static-provisioner-local-volume-static-provisioner
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: local-static-provisioner-local-volume-static-provisioner-node-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: local-volume-static-provisioner/templates/daemonset_linux.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-static-provisioner-local-volume-static-provisioner
+  namespace: default
+  labels:
+    helm.sh/chart: local-volume-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-volume-static-provisioner
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: local-static-provisioner
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-volume-static-provisioner
+      app.kubernetes.io/instance: local-static-provisioner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: local-volume-static-provisioner
+        app.kubernetes.io/instance: local-static-provisioner
+      annotations:
+        checksum/config: 450fc8f06342a5f9238c60cf3f1f9563f6e1fc24dffc754a0eebf0313b3f2f1c
+    spec:
+      serviceAccountName: local-static-provisioner-local-volume-static-provisioner
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: provisioner
+          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          securityContext:
+            privileged: true
+          env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: JOB_CONTAINER_IMAGE
+            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          ports:
+          - name: metrics
+            containerPort: 8080
+          volumeMounts:
+            - name: provisioner-config
+              mountPath: /etc/provisioner/config
+              readOnly: true
+            - name: provisioner-dev
+              mountPath: /dev
+            - name: nvme-ssd-block
+              mountPath: /mnt/disks/raid
+              mountPropagation: HostToContainer
+      volumes:
+        - name: provisioner-config
+          configMap:
+            name: local-static-provisioner-local-volume-static-provisioner-config
+        - name: provisioner-dev
+          hostPath:
+            path: /dev
+        - name: nvme-ssd-block
+          hostPath:
+            path: /mnt/disks/raid

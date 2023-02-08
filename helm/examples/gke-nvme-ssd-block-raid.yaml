@@ -1,0 +1,6 @@
+common:
+  useNodeNameOnly: true
+classes:
+- name: nvme-ssd-block
+  hostDir: /mnt/disks/raid
+  storageClass: true
