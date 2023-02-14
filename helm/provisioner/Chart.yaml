@@ -1,5 +1,5 @@
 apiVersion: v2
-name: local-volume-static-provisioner
+name: local-static-provisioner
 description: Helm chart for the SIG Storage Local Volume Static Provisioner.
 type: application
 version: 1.0.0

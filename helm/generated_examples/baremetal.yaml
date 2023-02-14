@@ -1,25 +1,25 @@
 ---
-# Source: provisioner/templates/serviceaccount.yaml
+# Source: local-static-provisioner/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 ---
-# Source: provisioner/templates/configmap.yaml
+# Source: local-static-provisioner/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 data:
@@ -32,28 +32,28 @@ data:
         - "2"
       volumeMode: Block
 ---
-# Source: provisioner/templates/storageclass.yaml
+# Source: local-static-provisioner/templates/storageclass.yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 ---
-# Source: provisioner/templates/rbac.yaml
+# Source: local-static-provisioner/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 rules:
@@ -73,14 +73,14 @@ rules:
   resources: ["nodes"]
   verbs: ["get"]
 ---
-# Source: provisioner/templates/rbac.yaml
+# Source: local-static-provisioner/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 subjects:
@@ -92,36 +92,36 @@ roleRef:
   name: local-static-provisioner-node-clusterrole
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: provisioner/templates/daemonset_linux.yaml
+# Source: local-static-provisioner/templates/daemonset_linux.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: provisioner
+      app.kubernetes.io/name: local-static-provisioner
       app.kubernetes.io/instance: local-static-provisioner
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: provisioner
+        app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 49fd0db6c0e3bc6c0607d6f94132b4bd3a4b7445efd977e564038e93320045cf
+        checksum/config: 26ec1983f036e7702e8b97e6294f51995f9e78c8bb812e7ca5468a45a2df2a04
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
         kubernetes.io/os: linux
       containers:
         - name: provisioner
-          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0
           securityContext:
             privileged: true
           env:
@@ -134,7 +134,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0
           ports:
           - name: metrics
             containerPort: 8080
@@ -158,29 +158,29 @@ spec:
           hostPath:
             path: /mnt/disks
 ---
-# Source: provisioner/templates/daemonset_windows.yaml
+# Source: local-static-provisioner/templates/daemonset_windows.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: local-static-provisioner-win
   namespace: default
   labels:
-    helm.sh/chart: provisioner-2.6.0-alpha.1
-    app.kubernetes.io/name: provisioner
+    helm.sh/chart: local-static-provisioner-1.0.0
+    app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: provisioner
+      app.kubernetes.io/name: local-static-provisioner
       app.kubernetes.io/instance: local-static-provisioner
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: provisioner
+        app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 49fd0db6c0e3bc6c0607d6f94132b4bd3a4b7445efd977e564038e93320045cf
+        checksum/config: 26ec1983f036e7702e8b97e6294f51995f9e78c8bb812e7ca5468a45a2df2a04
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
@@ -191,7 +191,7 @@ spec:
         - operator: "Exists"
       containers:
         - name: provisioner
-          image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0
           env:
           - name: MY_NODE_NAME
             valueFrom:
@@ -202,7 +202,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0
           ports:
           - name: metrics
             containerPort: 8080

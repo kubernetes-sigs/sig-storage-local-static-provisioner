@@ -110,12 +110,21 @@ helm upgrade ./helm/provisioner -f <path-to-your-values-file> <release-name>
 
 ### helm version  >= v3.0.0
 
-Install via helm template:
+Install by adding the repo as a Helm repo:
+
+```sh
+helm repo add sig-storage-local-static-provisioner https://kubernetes-sigs.github.io/sig-storage-local-static-provisioner
+helm template --debug sig-storage-local-static-provisioner/local-static-provisioner --version <version> --namespace <namespace> > local-volume-provisioner.generated.yaml
+# edit local-volume-provisioner.generated.yaml if necessary
+kubectl create -f local-volume-provisioner.generated.yaml
+```
+
+Or install by cloning the repo locally:
 
 ```console
 git clone --depth=1 https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner.git
 helm template -f <path-to-your-values-file> <release-name> --namespace <namespace> ./helm/provisioner > local-volume-provisioner.generated.yaml
-edit local-volume-provisioner.generated.yaml if necessary
+# edit local-volume-provisioner.generated.yaml if necessary
 kubectl create -f local-volume-provisioner.generated.yaml
 ```
 
