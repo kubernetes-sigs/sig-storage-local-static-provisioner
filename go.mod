@@ -91,7 +91,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.0-20220521103104-8f96da9f5d5e // indirect
 	k8s.io/cloud-provider v0.24.0-alpha.4 // indirect
 	k8s.io/component-helpers v0.24.0-alpha.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20220316025549-ddc66922ab18 // indirect
