@@ -37,7 +37,7 @@ jobs:
         run: ct lint --chart-dirs=helm --charts=helm/provisioner --lint-conf=helm/lintconf.yaml --check-version-increment=false --validate-maintainers=false
 
       - name: Create Kind cluster
-        uses: helm/kind-action@28ee08d2676d31cf4ccf6b1564d60886b31046c8
+        uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67
 
       - name: Run chart-testing (install)
         run: ct install --chart-dirs=helm --charts=helm/provisioner
