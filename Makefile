@@ -89,7 +89,7 @@ clean:
 init-buildx:
 	# Ensure we use a builder that can leverage it (the default on linux will not)
 	-$(DOCKER) buildx rm multiarch-multiplatform-builder
-	$(DOCKER) buildx create --use --name=multiarch-multiplatform-builder
+	$(DOCKER) buildx create --use --name=multiarch-multiplatform-builder --driver-opt image=moby/buildkit:v0.10.6
 	$(DOCKER) run --rm --privileged multiarch/qemu-user-static --reset --credential yes --persistent yes
 	# Register gcloud as a Docker credential helper.
 	# Required for "docker buildx build --push".

@@ -53,9 +53,13 @@ However, it's safe to add a new storage class.
 
 ### How to update
 
-Currently, the provisioner does not reload configuration automatically. When
-you finish updating the ConfigMap, you must delete the pods of provisioner
-DaemonSet to take effect.
+Provisioner supports reloading updated ConfigMap without needing to
+restart the pod. Please understand all fields in provisioner
+[configuration](/docs/provisioner.md#configuration) and limitations
+around effect on existing provisioned PVs. After the ConfigMap have been
+updated, the provisioner will restart its main sync loop (including
+informer and job controller) to pick up the configuration on the
+next ConfigMap load and compare cycle.
 
 Note that if you add new discovery directory in provisioner configuration, you
 must update provisioner pod template spec too. This is not necessary if you

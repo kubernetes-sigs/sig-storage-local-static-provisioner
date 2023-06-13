@@ -113,7 +113,7 @@ daemonset:
   #
   # Defines Provisioner's image name including container registry.
   #
-  image: k8s.gcr.io/sig-storage/local-volume-provisioner:v2.4.0
+  image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0
   #
   # Defines Image download policy, see kubernetes documentation for available values.
   #
@@ -131,6 +131,7 @@ daemonset:
   # NodeSelector constraint for local-volume-provisioner scheduling to nodes.
   # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   nodeSelector: {}
+  nodeSelectorWindows: {}
   #
   # Deploy individual Daemonsets to support multiple Node Operating Systems
   supportWindowsOS: true

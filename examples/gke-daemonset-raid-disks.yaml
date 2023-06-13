@@ -1,0 +1,67 @@
+# 1. Run gcloud CLI with --local-nvme-ssd-block option to create a node pool with
+# raw block Local SSDs attached.
+# 2. Deploy this DaemonSet. It will set RAID0 array on all raw block Local SSD
+# disks and format the device to an ext4 filesystem on each node.
+# 3. Use the gke-nvme-ssd-block-raid.yaml to create PV and StorageClass
+# 4. Use gke-pvc-nvme-ssd-block.yaml and gke-pod-nvme-ssd-block.yaml to create
+# pvc and pod
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gke-raid-disks
+  namespace: default
+  labels:
+    k8s-app: gke-raid-disks
+spec:
+  selector:
+    matchLabels:
+      name: gke-raid-disks
+  template:
+    metadata:
+      labels:
+        name: gke-raid-disks
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-local-nvme-ssd: "true"
+      hostPID: true
+      containers:
+      - name: startup-script
+        image: gcr.io/google-containers/startup-script:v1
+        securityContext:
+          privileged: true
+        env:
+        - name: STARTUP_SCRIPT
+          value: |
+            set -o errexit
+            set -o nounset
+            set -o pipefail
+
+            devices=()
+            for ssd in /dev/disk/by-id/google-local-ssd-block*; do
+              if [ -e "${ssd}" ]; then
+                devices+=("${ssd}")
+              fi
+            done
+            if [ "${#devices[@]}" -eq 0 ]; then
+              echo "No Local NVMe SSD disks found."
+              exit 0
+            fi
+
+            seen_arrays=(/dev/md/*)
+            device=${seen_arrays[0]}
+            echo "Setting RAID array with Local SSDs on device ${device}"
+            if [ ! -e "$device" ]; then
+              device="/dev/md/0"
+              echo "y" | mdadm --create "${device}" --level=0 --force --raid-devices=${#devices[@]} "${devices[@]}"
+            fi
+
+            if ! tune2fs -l "${device}" ; then
+              echo "Formatting '${device}'"
+              mkfs.ext4 -F "${device}"
+            fi
+
+            mountpoint=/mnt/disks/raid/0
+            mkdir -p "${mountpoint}"
+            echo "Mounting '${device}' at '${mountpoint}'"
+            mount -o discard,defaults "${device}" "${mountpoint}"
+            chmod a+w "${mountpoint}"

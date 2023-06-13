@@ -1,18 +1,43 @@
 name: Lint Helm Charts
 
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "helm/provisioner/**"
 
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.1.0
+      - name: Set-up Helm
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+
+      - name: Set-up Python
+        uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0
+        with:
+          python-version: "3.x"
+
+      - name: Set-up chart-testing
+        uses: helm/chart-testing-action@e8788873172cb653a90ca2e819d79d65a66d4e76
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs=helm --lint-conf helm/lintconf.yaml --validate-maintainers=false
+        run: ct lint --chart-dirs=helm --charts=helm/provisioner --lint-conf=helm/lintconf.yaml --check-version-increment=false --validate-maintainers=false
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67
+
+      - name: Run chart-testing (install)
+        run: ct install --chart-dirs=helm --charts=helm/provisioner

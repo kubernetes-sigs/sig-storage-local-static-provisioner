@@ -51,7 +51,7 @@ The basic components of the provisioner are as follows:
 We configure local volume provisioner using ConfigMap. The explanation and
 default value of each key are as follows:
 
-```
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -142,6 +142,23 @@ data:
 
 Note that, when you deploy provisioner with `helm`. You must configure
 provisioner via helm values, please refer to our [helm docs](/helm).
+
+### Updating configuration without restarting provisioner
+
+Provisioner supports reloading updated ConfigMap without needing to restart the pod.
+Please see [updating configuration](/docs/faqs.md#can-i-update-the-provisioner-configuration-without-restarting-the-provisioner)
+in the FAQ section for details. The following table summarizes the effect of each field have
+when updating provisioner configuration for "existing PVs" and "PVs to be provisioned"
+
+| Field              | Existing PVs                | PVs to be provisioned
+| -----              | ------------                | ---------------------
+| useAlphaAPI        | NO effect                   | Will apply during provisioning
+| useJobForCleaning  | Effective on clean up       | Effective on clean up
+| useNodeNameOnly    | NO effect                   | Will apply during provisioning
+| setPVOwnerRef      | NO effect                   | Will apply during provisioning
+| labelsForPV        | NO effect                   | Will apply during provisioning
+| NodeLabelsForPV    | NO effect                   | Will apply during provisioning
+| StorageClassConfig | NO effect                   | Will apply during provisioning
 
 ## Monitoring
 

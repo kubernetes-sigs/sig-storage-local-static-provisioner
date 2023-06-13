@@ -23,7 +23,7 @@ cd $ROOT
 
 source "${ROOT}/hack/lib.sh"
 
-hack::install_helm2
+# hack::install_helm2
 hack::install_helm3
 
 cd helm
@@ -36,15 +36,15 @@ sure generated files are what you expected.
 EOF
 echo "*** IMPORTANT NOTE ***"
 
-echo "====== HELM v2 ========"
+# echo "====== HELM v2 ========"
 
-FILES=$(ls examples/)
-for f in $FILES; do
-    input="examples/$f"
-    generated="generated_examples/helm2/$f"
-    printf "Generating with helm v${HELM2_VERSION} %s from %s\n" $generated $input
-    $HELM2_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > $generated
-done
+# FILES=$(ls examples/)
+# for f in $FILES; do
+#     input="examples/$f"
+#     generated="generated_examples/helm2/$f"
+#     printf "Generating with helm v${HELM2_VERSION} %s from %s\n" $generated $input
+#     $HELM2_BIN template -f examples/$f  --name local-static-provisioner --namespace default ./provisioner > $generated
+# done
 
 echo "====== HELM v3 ========"
 

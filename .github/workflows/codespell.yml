@@ -8,9 +8,9 @@ jobs:
     name: Check for spelling errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: codespell-project/actions-codespell@master
         with:
           check_filenames: true
           skip: ./.git,./.github/workflows/codespell.yml,.git,*.png,*.jpg,*.svg,*.sum,./vendor,go.sum,./release-tools/prow.sh,./helm/provisioner/values.yaml
-          ignore_words_list: "AKS,aks,LKE,lke"
+          ignore_words_list: "AKS,aks,LKE,lke,ro"

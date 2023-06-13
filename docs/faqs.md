@@ -4,10 +4,10 @@
 
 - [Why it's best to use UUID of disk in mount point path](#why-its-best-to-use-uuid-of-disk-in-mount-point-path)
 - [Why I need to bind mount normal directories to create PVs for them](#why-i-need-to-bind-mount-normal-directories-to-create-pvs-for-them)
-- [I updated provisioner configuration but volumes are not discovered](#i-updated-provisioner-configuration-but-volumes-are-not-discovered)
 - [I bind mounted a directory into sub-directory of discovery directory, but no PVs created](#i-bind-mounted-a-directory-into-sub-directory-of-discovery-directory-but-no-pvs-created)
 - [Failed to start when docker --init flag is enabled.](#failed-to-start-when-docker---init-flag-is-enabled)
 - [Can I clean volume data by deleting PV object?](#can-i-clean-volume-data-by-deleting-pv-object)
+- [Can I update the provisioner configuration without restarting the provisioner?](#can-i-update-the-provisioner-configuration-without-restarting-the-provisioner)
 - [PV with delete reclaimPolicy is released but not going to be reclaimed](#pv-with-delete-reclaimpolicy-is-released-but-not-going-to-be-reclaimed)
 - [Why my application uses an empty volume when node gets recreated in GCP](#why-my-application-uses-an-empty-volume-when-node-gets-recreated-in-gcp)
 - [Can I change storage class name after some volumes has been provisioned](#can-i-change-storage-class-name-after-some-volumes-has-been-provisioned)
@@ -40,29 +40,6 @@ directories which do not have a mount point, you need to bind mount them onto
 another directory under discovery directory, or themselves if they are already
 in. Mount point on directory explicitly express it is ready to have a PV
 created for it.
-
-## I updated provisioner configuration but volumes are not discovered
-
-Currently, provisioner will not reload configuration automatically. You need to restart them.
-
-
-Check your local volume provisioners:
-
-```
-kubectl -n <provisioner-namespace> get pods -l app=local-volume-provisioner
-```
-
-Delete them:
-
-```
-kubectl -n <provisioner-namespace> delete pods -l app=local-volume-provisioner
-```
-
-Check new pods are created by daemon set, also please make sure they are running in the last.
-
-```
-kubectl -n <provisioner-namespace> get pods -l app=local-volume-provisioner
-```
 
 ## I bind mounted a directory into sub-directory of discovery directory, but no PVs created
 
@@ -99,6 +76,23 @@ data in it may leak other applications.
 So you must not delete PV objects by yourself, always delete PVC objects and
 set `PersistentVolumeReclaimPolicy` to `Delete` to clean volume data of
 associated PVs.
+
+## Can I update the provisioner configuration without restarting the provisioner? 
+
+Yes, provisioner will periodically load the configuration and compare with
+its in memory configuration. If there is a difference, then the main
+sync loop (including informer and job controller) will be restarted
+to pick up the updated configuration.
+
+#### NOTE
+
+Changing just the configuration may not have any effect for existing 
+PVs that have already been provisioned with the old configuration. Please see
+[configuration](/docs/provisioner.md#configuration) documentation and look
+for fields which changing it will have no effect on current PVs. For those cases,
+the migration/backwards-compatibility of those PVs will not be handled by the
+provisioner, and it is up to the user/operator to handle the cleanup and/or
+migration process.
 
 ## PV with delete reclaimPolicy is released but not going to be reclaimed
 
