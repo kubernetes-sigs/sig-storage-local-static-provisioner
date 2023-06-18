@@ -100,7 +100,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// Delete any namespaces except those created by the system. This ensures no
 	// lingering resources are left over from a previous test run.
 	if framework.TestContext.CleanStart {
-		deleted, err := framework.DeleteNamespaces(c, nil, /* deleteFilter */
+		deleted, err := framework.DeleteNamespaces(context.Background(), c, nil, /* deleteFilter */
 			[]string{
 				metav1.NamespaceSystem,
 				metav1.NamespaceDefault,
@@ -111,7 +111,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 			framework.Failf("Error deleting orphaned namespaces: %v", err)
 		}
 		klog.Infof("Waiting for deletion of the following namespaces: %v", deleted)
-		if err := framework.WaitForNamespacesDeleted(c, deleted, namespaceCleanupTimeout); err != nil {
+		if err := framework.WaitForNamespacesDeleted(context.Background(), c, deleted, namespaceCleanupTimeout); err != nil {
 			framework.Failf("Failed to delete orphaned namespaces %v: %v", deleted, err)
 		}
 	}
