@@ -85,7 +85,10 @@ func NewGenericWebhook(scheme *runtime.Scheme, codecFactory serializer.CodecFact
 	codec := codecFactory.LegacyCodec(groupVersions...)
 	clientConfig.ContentConfig.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
 
-	clientConfig.Wrap(x509metrics.NewMissingSANRoundTripperWrapperConstructor(x509MissingSANCounter))
+	clientConfig.Wrap(x509metrics.NewDeprecatedCertificateRoundTripperWrapperConstructor(
+		x509MissingSANCounter,
+		x509InsecureSHA1Counter,
+	))
 
 	restClient, err := rest.UnversionedRESTClientFor(clientConfig)
 	if err != nil {
@@ -118,7 +121,7 @@ func WithExponentialBackoff(ctx context.Context, retryBackoff wait.Backoff, webh
 	// having a webhook error allows us to track the last actual webhook error for requests that
 	// are later cancelled or time out.
 	var webhookErr error
-	err := wait.ExponentialBackoffWithContext(ctx, retryBackoff, func() (bool, error) {
+	err := wait.ExponentialBackoffWithContext(ctx, retryBackoff, func(_ context.Context) (bool, error) {
 		webhookErr = webhookFn()
 		if shouldRetry(webhookErr) {
 			return false, nil
