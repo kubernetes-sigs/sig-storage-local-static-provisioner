@@ -3,12 +3,12 @@ package deleter
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
@@ -36,12 +36,25 @@ func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolu
 	}
 }
 
+func (d *Deleter) Run(ctx context.Context, discoveryInterval time.Duration) {
+	for {
+		select {
+		case <-ctx.Done():
+			klog.Info("Deleter stopped")
+			return
+		default:
+			d.DeletePVs(ctx)
+			time.Sleep(discoveryInterval)
+		}
+	}
+}
+
 // Delete PVs will scan through PVs and delete those that are
 // local PVs with a given StorageClass and have an affinity to a deleted Node.
-func (d *Deleter) DeletePVs() {
+func (d *Deleter) DeletePVs(ctx context.Context) {
 	pvs, err := d.pvLister.List(labels.Everything())
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("error listing pvs: %s", err.Error()))
+		klog.Errorf("error listing pvs: %s", err.Error())
 		return
 	}
 
@@ -53,7 +66,7 @@ func (d *Deleter) DeletePVs() {
 
 		referencesDeletedNode, err := d.referencesNonExistentNode(pv)
 		if err != nil {
-			utilruntime.HandleError(err)
+			klog.Errorf("error determining if pv %q references deleted node: %w", pv.Name, err)
 			continue
 		}
 		if !referencesDeletedNode {
@@ -67,7 +80,7 @@ func (d *Deleter) DeletePVs() {
 		isAvailable := pv.Status.Phase == v1.VolumeAvailable
 		if isReleasedWithDeleteReclaim || isAvailable {
 			klog.Infof("Deleting PV that has NodeAffinity to deleted Node, pv: %s", pv.Name)
-			if err = d.deletePV(pv.Name); err != nil {
+			if err = d.deletePV(ctx, pv.Name); err != nil {
 				klog.Errorf("Error deleting PV: %s", pv.Name)
 			}
 		}
@@ -96,13 +109,11 @@ func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) (bool,
 	return !exists && err == nil, err
 }
 
-func (d *Deleter) deletePV(pvName string) error {
-	err := d.client.CoreV1().PersistentVolumes().Delete(context.TODO(), pvName, metav1.DeleteOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			utilruntime.HandleError(fmt.Errorf("PV '%s' no longer exists", pvName))
-			return nil
-		}
+func (d *Deleter) deletePV(ctx context.Context, pvName string) error {
+	err := d.client.CoreV1().PersistentVolumes().Delete(ctx, pvName, metav1.DeleteOptions{})
+	if err != nil && errors.IsNotFound(err) {
+		klog.Errorf("PV %q no longer exists", pvName)
+		return nil
 	}
 	return err
 }

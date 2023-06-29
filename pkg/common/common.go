@@ -509,7 +509,7 @@ func NodeExists(nodeLister corelisters.NodeLister, nodeName string) (bool, error
 //	        operator: In
 //	        values:
 //	        - <node1>
-func NodeAttachedToLocalPV(pv *v1.PersistentVolume) (nodeName string, ok bool) {
+func NodeAttachedToLocalPV(pv *v1.PersistentVolume) (string, bool) {
 	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
 	if nodeNames == nil || len(nodeNames) == 0 {
 		return "", false

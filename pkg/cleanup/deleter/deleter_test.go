@@ -1,6 +1,7 @@
 package deleter
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -135,11 +136,10 @@ func TestDeleter(t *testing.T) {
 			}
 
 			// Start test by simulating an event.
-			deleter.DeletePVs()
+			deleter.DeletePVs(context.TODO())
 
 			actions := client.Actions()
 			for i, action := range actions {
-				print(action.GetVerb())
 				if len(test.expectedActions) < i+1 {
 					t.Errorf("Test %q: %d unexpected actions: %+v", test.name, len(actions)-len(test.expectedActions), actions[i:])
 					break
@@ -154,7 +154,7 @@ func TestDeleter(t *testing.T) {
 			if len(test.expectedActions) > len(actions) {
 				t.Errorf("Test %q: %d additional expected actions", test.name, len(test.expectedActions)-len(actions))
 				for _, a := range test.expectedActions[len(actions):] {
-					t.Logf("    %+v", a)
+					t.Logf("additional action: %+v", a)
 				}
 			}
 		})

@@ -551,8 +551,11 @@ func TestNodeAttachedToLocalPV(t *testing.T) {
 
 	for _, test := range tests {
 		nodeName, ok := NodeAttachedToLocalPV(test.pv)
-		if nodeName != test.expectedNodeName || ok != test.expectedStatus {
-			t.Errorf("test: %s, nodeName: %s, expectedNodeName: %s, status: %t, expectedStaus: %t", test.name, nodeName, test.expectedNodeName, ok, test.expectedStatus)
+		if ok != test.expectedStatus {
+			t.Errorf("test: %s, status: %t, expectedStaus: %t", test.name, ok, test.expectedStatus)
+		}
+		if nodeName != test.expectedNodeName {
+			t.Errorf("test: %s, nodeName: %s, expectedNodeName: %s", test.name, nodeName, test.expectedNodeName)
 		}
 	}
 }
