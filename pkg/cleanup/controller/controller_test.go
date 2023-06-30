@@ -182,11 +182,11 @@ func TestCleanupController(t *testing.T) {
 					t.Errorf("Test %q: timed out", test.name)
 					break
 				}
-				if ctrl.entryQueue.Len() > 0 {
-					klog.V(5).Infof("Test %q: %d events queue, processing one", test.name, ctrl.entryQueue.Len())
+				if ctrl.pvQueue.Len() > 0 {
+					klog.V(5).Infof("Test %q: %d events queue, processing one", test.name, ctrl.pvQueue.Len())
 					ctrl.processNextWorkItem(context.TODO())
 				}
-				if ctrl.entryQueue.Len() > 0 {
+				if ctrl.pvQueue.Len() > 0 {
 					// There is still some work in the queue, process it now
 					continue
 				}

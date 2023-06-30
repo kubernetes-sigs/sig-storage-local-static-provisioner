@@ -25,18 +25,13 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
-type EntryPair struct {
-	nodeName string
-	pv       *v1.PersistentVolume
-}
-
 type CleanupController struct {
 	client kubernetes.Interface
 
-	// entryQueue is a rate-limited delayed queue. PVs and their corresponding Node are added
-	// as an EntryPair to this queue when the Node is deleted. The queue's delay allows to wait
+	// pvQueue is a rate-limited delayed queue. PVs names are added
+	// to this queue when its corresponding Node is deleted. The queue's delay allows to wait
 	// for the Node to come back up before cleaning up resources.
-	entryQueue workqueue.RateLimitingInterface
+	pvQueue workqueue.RateLimitingInterface
 
 	nodeLister       corelisters.NodeLister
 	nodeListerSynced cache.InformerSynced
@@ -66,7 +61,7 @@ func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.
 		client:           client,
 		storageClassName: storageClassName,
 		// Delayed queue with rate limiting
-		entryQueue: workqueue.NewRateLimitingQueueWithConfig(
+		pvQueue: workqueue.NewRateLimitingQueueWithConfig(
 			workqueue.DefaultControllerRateLimiter(),
 			workqueue.RateLimitingQueueConfig{
 				Name: "stale",
@@ -95,7 +90,7 @@ func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.
 // workers to finish processing their current work items.
 func (c *CleanupController) Run(ctx context.Context, workers int) error {
 	defer utilruntime.HandleCrash()
-	defer c.entryQueue.ShutDown()
+	defer c.pvQueue.ShutDown()
 
 	klog.Info("Starting to Run CleanupController")
 
@@ -108,7 +103,7 @@ func (c *CleanupController) Run(ctx context.Context, workers int) error {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.Infof("Starting workers, count: &d", workers)
+	klog.Infof("Starting workers, count: %d", workers)
 	// Launch workers to process
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
@@ -139,35 +134,55 @@ func (c *CleanupController) runWorker(ctx context.Context) {
 // processNextWorkItem will read a single work item off the entryQueue and
 // attempt to process it, by calling the syncHandler.
 func (c *CleanupController) processNextWorkItem(ctx context.Context) bool {
-	obj, shutdown := c.entryQueue.Get()
+	key, shutdown := c.pvQueue.Get()
 	if shutdown {
 		return false
 	}
-	defer c.entryQueue.Done(obj)
+	defer c.pvQueue.Done(key)
 
-	entryPair, ok := obj.(EntryPair)
+	pvName, ok := key.(string)
 	if !ok {
 		// Item is invalid so we can forget it.
-		c.entryQueue.Forget(obj)
-		klog.Errorf("expected EntryPair in workqueue but got %+v", obj)
+		c.pvQueue.Forget(key)
+		klog.Errorf("expected string in workqueue but got %+v", key)
 		return true
 	}
 
-	err := c.syncHandler(ctx, entryPair)
+	err := c.syncHandler(ctx, pvName)
 	if err != nil {
 		// An error occurred so re-add the item to the queue to work on later (has backoff to avoid
 		// hot-looping).
-		c.entryQueue.AddRateLimited(obj)
-		klog.Errorf("error syncing %q: %w, requeuing", entryPair.pv.Name, err)
+		c.pvQueue.AddRateLimited(key)
+		klog.Errorf("error syncing %q: %w, requeuing", pvName, err)
 		return true
 	}
 
-	c.entryQueue.Forget(obj)
+	c.pvQueue.Forget(key)
 	return true
 }
 
-func (c *CleanupController) syncHandler(ctx context.Context, entryPair EntryPair) error {
-	nodeExists, err := common.NodeExists(c.nodeLister, entryPair.nodeName)
+// syncHandler processes a PV by deleting the PVC bound to if it's
+// associated Node is gone.
+func (c *CleanupController) syncHandler(ctx context.Context, pvName string) error {
+	pv, err := c.pvLister.Get(pvName)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// PV was deleted in the meantime, ignore.
+			klog.Infof("PV %q in queue no longer exists", pvName)
+			return nil
+		}
+		return err
+	}
+
+	nodeName, ok := common.NodeAttachedToLocalPV(pv)
+	if !ok {
+		// For whatever reason the PV isn't formatted properly so we will
+		// never be able to get its corresponding Node, so ignore.
+		klog.Errorf("error getting node attached to pv: %s", pv)
+		return nil
+	}
+
+	nodeExists, err := common.NodeExists(c.nodeLister, nodeName)
 	if err != nil {
 		return err
 	}
@@ -177,23 +192,18 @@ func (c *CleanupController) syncHandler(ctx context.Context, entryPair EntryPair
 		return nil
 	}
 
-	pvClaimRef := entryPair.pv.Spec.ClaimRef
+	pvClaimRef := pv.Spec.ClaimRef
 	if pvClaimRef == nil {
 		return nil
 	}
 
-	err = c.client.CoreV1().PersistentVolumeClaims(pvClaimRef.Namespace).Delete(ctx, pvClaimRef.Name, metav1.DeleteOptions{})
+	err = c.deletePVC(ctx, pvClaimRef.Name, pvClaimRef.Namespace)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// The PVC could already be deleted by some other process, in
-			// which case we stop processing.
-			klog.Infof("PVC %q in queue no longer exists", pvClaimRef.Name)
-			return nil
-		}
+		klog.Errorf("failed to delete pvc %q in namespace &q: %w", pvClaimRef.Name, pvClaimRef.Namespace, err)
 		return err
 	}
 
-	klog.Infof("Deleted PVC %q that pointed to Node %q", pvClaimRef.Name, entryPair.nodeName)
+	klog.Infof("Deleted PVC %q that pointed to Node %q", pvClaimRef.Name, nodeName)
 	return nil
 }
 
@@ -217,9 +227,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 			continue
 		}
 
-		entry := &EntryPair{nodeName, pv}
-
-		shouldEnqueue, err := c.shouldEnqueueEntry(entry)
+		shouldEnqueue, err := c.shouldEnqueueEntry(pv, nodeName)
 		if err != nil {
 			klog.Errorf("error determining whether to enqueue entry with pv %q: %w", pv.Name, err)
 			continue
@@ -229,7 +237,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.delay.String())
 			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.delay.String()))
 
-			c.entryQueue.AddAfter(*entry, c.delay)
+			c.pvQueue.AddAfter(pv.Name, c.delay)
 		}
 	}
 }
@@ -237,11 +245,23 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 // shouldEnqueuePV checks if a PV should be enqueued to the entryQueue.
 // The PV must be a local PV, have a given StorageClass, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
-func (c *CleanupController) shouldEnqueueEntry(entry *EntryPair) (bool, error) {
-	if !common.IsLocalPVWithStorageClass(entry.pv, c.storageClassName) || entry.pv.Spec.ClaimRef == nil {
+func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName string) (bool, error) {
+	if !common.IsLocalPVWithStorageClass(pv, c.storageClassName) || pv.Spec.ClaimRef == nil {
 		return false, nil
 	}
 
-	exists, err := common.NodeExists(c.nodeLister, entry.nodeName)
+	exists, err := common.NodeExists(c.nodeLister, nodeName)
 	return !exists && err == nil, err
+}
+
+// deletePVC deletes the PVC with the given name and namespace
+// and returns nil if the operation was successful or if the PVC doesn't exist
+func (c *CleanupController) deletePVC(ctx context.Context, pvcName string, pvcNamespace string) error {
+	err := c.client.CoreV1().PersistentVolumeClaims(pvcNamespace).Delete(ctx, pvcName, metav1.DeleteOptions{})
+	if err != nil && errors.IsNotFound(err) {
+		// The PVC could already be deleted by some other process
+		klog.Infof("PVC %q in namespace %q no longer exists", pvcName, pvcNamespace)
+		return nil
+	}
+	return err
 }
