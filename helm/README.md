@@ -199,6 +199,7 @@ provisioner chart and their default values.
 | common.setPVOwnerRef                         | If set to true, PVs are set to be dependents of the owner Node.                                       | bool     | `false`                                                    |
 | common.mountDevVolume                        | If set to false, the node's `/dev` path will not be mounted into containers.                          | bool     | `true`                                                     |
 | common.labelsForPV                           | Map of label key-value pairs to apply to the PVs created by the provisioner.                          | map      | `-`                                                        |
+| common.additionalVolumes                     | List of additional volumes to create.                                                  | list      | `-`                                                        |
 | classes.[n].name                             | StorageClass name.                                                                                    | str      | `-`                                                        |
 | classes.[n].hostDir                          | Path on the host where local volumes of this storage class are mounted under.                         | str      | `-`                                                        |
 | classes.[n].mountDir                         | Optionally specify mount path of local volumes. By default, we use same path as hostDir in container. | str      | `-`                                                        |
@@ -221,6 +222,8 @@ provisioner chart and their default values.
 | daemonset.resources                          | Map of resource request and limits to be applied to the Provisioner Daemonset.                        | map      | `-`                                                 |
 | daemonset.affinity                           | List of affinity to be applied to the provisioner Daemonset.                                                 | list     | `-`
 | daemonset.privileged                         | If set to false, containers created by the Provisioner Daemonset will run without extra privileges.   | bool     | `true`                                                     |
+| daemonset.initContainers                     |  Init containers.                                                | list       | `-` |
+| daemonset.additionalVolumeMounts                     |  Additional volumes to mount to the default container, the volumes should be defined by common. | list       | `-` |
 | serviceMonitor.enabled                       | If set to true, Prometheus servicemonitor will be applied                                             | bool     | `false`                                                    |
 | serviceMonitor.interval                      | Interval at which Prometheus scrapes the provisioner                                                  | str      | `10s`                                                      |
 | serviceMonitor.namespace                     | The namespace Prometheus servicemonitor will be installed                                             | str      | `.Release.Namespace`                                       |

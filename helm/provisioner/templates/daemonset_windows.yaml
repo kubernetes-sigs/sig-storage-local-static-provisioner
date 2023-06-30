@@ -103,6 +103,9 @@ spec:
               mountPath: \\.\pipe\csi-proxy-volume-v1beta2
             - name: csi-proxy-filesystem-v1beta2
               mountPath: \\.\pipe\csi-proxy-filesystem-v1beta2
+            {{- with .Values.daemonset.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: csi-proxy-volume-v1
           hostPath:
@@ -139,8 +142,11 @@ spec:
           hostPath:
             path: {{ $classConfig.hostDir }}
         {{- end }}
-        {{- range $name, $path := .Values.daemonset.additionalHostPathVolumes }}
+        {{- range $name, $path := .Values.common.additionalHostPathVolumes }}
         - name: {{ quote $name }}
           hostPath:
             path: {{ quote $path }}
+        {{- end }}
+        {{- with .Values.common.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}

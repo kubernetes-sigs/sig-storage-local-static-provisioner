@@ -92,6 +92,9 @@ spec:
               mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
               mountPropagation: HostToContainer
             {{- end }}
+            {{- with .Values.daemonset.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: provisioner-config
           configMap:
@@ -106,8 +109,11 @@ spec:
           hostPath:
             path: {{ $classConfig.hostDir }}
         {{- end }}
-        {{- range $name, $path := .Values.daemonset.additionalHostPathVolumes }}
+        {{- range $name, $path := .Values.common.additionalHostPathVolumes }}
         - name: {{ quote $name }}
           hostPath:
             path: {{ quote $path }}
+        {{- end }}
+        {{- with .Values.common.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}

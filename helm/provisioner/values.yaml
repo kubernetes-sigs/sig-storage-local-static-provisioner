@@ -60,6 +60,11 @@ common:
   #
   #labelsForPV:
   #  pv-labels: can-be-selected
+  #
+  # Additional volumes to create, for the default container and init containers
+  # to consume
+  #
+  additionalVolumes: []
 #
 # Configure storage classes.
 #
@@ -164,9 +169,16 @@ daemonset:
   #
   # If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
   privileged: true
+  #
   # Any init containers can be configured here.
   # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  #
   initContainers: []
+  #
+  # Additional volumes to mount to the default container, the volumes should be
+  # defined by common.additionalVolumes
+  #
+  additionalVolumeMounts: []
 #
 # Configure Prometheus monitoring
 #
