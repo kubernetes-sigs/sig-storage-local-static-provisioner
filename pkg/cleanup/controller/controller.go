@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cleanup/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
@@ -113,10 +112,6 @@ func (c *CleanupController) Run(ctx context.Context, workers int) error {
 
 	// Look for stale PVs and start timers for resource cleanup
 	c.startCleanupTimersIfNeeded()
-
-	// Run Deleter and block until channel is closed
-	deleter := deleter.NewDeleter(c.client, c.pvLister, c.nodeLister, c.storageClassName)
-	deleter.Run(ctx, c.stalePVDiscoveryInterval)
 
 	<-ctx.Done()
 	klog.Info("Shutting down workers")
