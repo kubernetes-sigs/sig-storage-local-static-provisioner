@@ -42,56 +42,65 @@ func TestDeleter(t *testing.T) {
 		// PV object. This will automatically be added to initialObjects.
 		pv *v1.PersistentVolume
 		// Node object. This will automatically be added to initialObjects.
-		node            *v1.Node
-		expectedActions []core.Action
+		node *v1.Node
+		// Names of StorageClasses that the PV/PVC need to belong to to be cleaned up.
+		storageClassNames []string
+		expectedActions   []core.Action
 	}{
 		{
-			name: "released local pv with delete reclaim",
-			pv:   localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete),
+			name:              "released local pv with delete reclaim",
+			pv:                localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName),
+			storageClassNames: []string{testStorageClassName},
 			expectedActions: []core.Action{
-				deletePVAction(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete)),
+				deletePVAction(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName)),
 			},
 		},
 		{
-			name: "available local pv with delete reclaim",
-			pv:   localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimDelete),
+			name:              "available local pv with delete reclaim",
+			pv:                localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimDelete, testStorageClassName),
+			storageClassNames: []string{testStorageClassName},
 			expectedActions: []core.Action{
-				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimDelete)),
+				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimDelete, testStorageClassName)),
 			},
 		},
 		{
-			name: "available local pv with recycle reclaim",
-			pv:   localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRecycle),
+			name:              "available local pv with recycle reclaim",
+			pv:                localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRecycle, testStorageClassName),
+			storageClassNames: []string{testStorageClassName},
 			expectedActions: []core.Action{
-				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRecycle)),
+				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRecycle, testStorageClassName)),
 			},
 		},
 		{
-			name: "available local pv with retain reclaim",
-			pv:   localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain),
+			name:              "available local pv with retain reclaim",
+			pv:                localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain, testStorageClassName),
+			storageClassNames: []string{testStorageClassName},
 			expectedActions: []core.Action{
-				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain)),
+				deletePVAction(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain, testStorageClassName)),
 			},
 		},
 		{
-			name:            "local pv has wrong storage class name",
-			pv:              pvWithCustomStorageClass(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain)),
-			expectedActions: []core.Action{
+			name:              "local pv has wrong storage class name",
+			pv:                pvWithCustomStorageClass(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain, testStorageClassName)),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
 		{
-			name:            "pv is not a local pv",
-			pv:              pvWithRemoteSource(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain)), // change source to be remote
-			expectedActions: []core.Action{
+			name:              "pv is not a local pv",
+			pv:                pvWithRemoteSource(localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain, testStorageClassName)), // change source to be remote
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
 		{
-			name:            "local pv has affinity to node that still exists",
-			pv:              localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain),
-			node:            node,
-			expectedActions: []core.Action{
+			name:              "local pv has affinity to node that still exists",
+			pv:                localPV(node, v1.VolumeAvailable, v1.PersistentVolumeReclaimRetain, testStorageClassName),
+			storageClassNames: []string{testStorageClassName},
+			node:              node,
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
@@ -120,7 +129,7 @@ func TestDeleter(t *testing.T) {
 			pvInformer := informers.Core().V1().PersistentVolumes()
 			nodeInformer := informers.Core().V1().Nodes()
 
-			deleter := NewDeleter(client, pvInformer.Lister(), nodeInformer.Lister(), testStorageClassName)
+			deleter := NewDeleter(client, pvInformer.Lister(), nodeInformer.Lister(), test.storageClassNames)
 
 			// Populate the informers with initial objects so the controller can
 			// Get() and List() it.
@@ -171,7 +180,7 @@ func pvWithCustomStorageClass(pv *v1.PersistentVolume) *v1.PersistentVolume {
 	return pv
 }
 
-func localPV(node *v1.Node, phase v1.PersistentVolumePhase, reclaimPolicy v1.PersistentVolumeReclaimPolicy) *v1.PersistentVolume {
+func localPV(node *v1.Node, phase v1.PersistentVolumePhase, reclaimPolicy v1.PersistentVolumeReclaimPolicy, storageClassName string) *v1.PersistentVolume {
 	return &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testPVName,

@@ -511,17 +511,25 @@ func NodeExists(nodeLister corelisters.NodeLister, nodeName string) (bool, error
 //	        - <node1>
 func NodeAttachedToLocalPV(pv *v1.PersistentVolume) (string, bool) {
 	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
-	if nodeNames == nil || len(nodeNames) == 0 {
+	// We assume that there should only be one matching node.
+	if nodeNames == nil || len(nodeNames) != 1 {
 		return "", false
 	}
-	// We assume that there should only be one matching node.
 	return nodeNames[0], true
 }
 
-// IsLocalPVWithStorageClass checks that a PV is a local PV with a specific StorageClass name.
-func IsLocalPVWithStorageClass(pv *v1.PersistentVolume, storageClassName string) bool {
-	if pv.Spec.Local == nil || pv.Spec.StorageClassName != storageClassName {
+// IsLocalPVWithStorageClass checks that a PV is a local PV that belongs to any of the passed in StorageClasses.
+func IsLocalPVWithStorageClass(pv *v1.PersistentVolume, storageClassNames []string) bool {
+	if pv.Spec.Local == nil {
 		return false
 	}
-	return true
+
+	// Return true if the PV's StorageClass matches any of the passed in
+	for _, storageClassName := range storageClassNames {
+		if pv.Spec.StorageClassName == storageClassName {
+			return true
+		}
+	}
+
+	return false
 }

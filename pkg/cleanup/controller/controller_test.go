@@ -50,68 +50,106 @@ func TestCleanupController(t *testing.T) {
 		// PVC object. This will automatically be added to initialObjects.
 		pvc *v1.PersistentVolumeClaim
 		// Node object. This will automatically be added to initialObjects.
-		node                *v1.Node
-		expectedActions     []core.Action
-		nodeIsInitialObject bool // whether the Node exists when the controller starts
-		bringBackNode       bool // whether to bring up a Node in the middle of the test
+		node *v1.Node
+		// Names of StorageClasses that the PV/PVC need to belong to to be cleaned up.
+		storageClassNames []string
+		expectedActions   []core.Action
+		// Whether the give node exists when the controller starts
+		nodeIsInitialObject bool
+		// Whether to bring up the given node in the middle of the test
+		bringBackNode bool
 	}{
 		{
-			name: "pv with affinity to deleted node + node still deleted -> delete pvc",
-			pv:   pvWithPVCAndNode(pvc, node),
-			pvc:  pvc,
+			name:              "pv with affinity to deleted node + node still deleted -> delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
 			expectedActions: []core.Action{
 				deletePVCAction(pvc),
 			},
 		},
 		{
-			name:            "pv with affinity to deleted node + node brought back up -> don't delete pvc",
-			pv:              pvWithPVCAndNode(pvc, node),
-			pvc:             pvc,
-			node:            node,
+			name:              "pv with affinity to deleted node + pv references pvc but pvc doesn't reference pv -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvcWithVolumeName("different-volume"),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "multiple storageclass names + pv with affinity to deleted node -> delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName, alternativeStorageClassName},
 			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "no storageclass names + pv with affinity to deleted node -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			storageClassNames: []string{},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "pv with affinity to deleted node + node brought back up -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 			bringBackNode: true,
 		},
 		{
-			name:            "pv with affinity to node that exists -> don't delete pvc",
-			pv:              pvWithPVCAndNode(pvc, node),
-			pvc:             pvc,
-			node:            node,
-			expectedActions: []core.Action{
+			name:              "pv with affinity to node that exists -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 			nodeIsInitialObject: true,
 		},
 		{
-			name:            "remote PV with affinity to deleted node -> don't delete pvc",
-			pv:              pvWithRemoteSource(pvWithPVCAndNode(pvc, node)),
-			pvc:             pvc,
-			node:            node,
-			expectedActions: []core.Action{
+			name:              "remote PV with affinity to deleted node -> don't delete pvc",
+			pv:                pvWithRemoteSource(pvWithPVCAndNode(pvc, node)),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
 		{
-			name:            "PV with wrong storageclass + affinity to deleted node -> don't delete pvc",
-			pv:              pvWithCustomStorageClass(pvWithPVCAndNode(pvc, node)),
-			pvc:             pvc,
-			node:            node,
-			expectedActions: []core.Action{
+			name:              "PV with wrong storageclass + affinity to deleted node -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{alternativeStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
 		{
-			name: "PV with affinity to deleted node + PVC already deleted -> tries to delete PVC",
-			pv:   pvWithPVCAndNode(pvc, node),
-			expectedActions: []core.Action{
-				deletePVCAction(pvc),
+			name:              "PV with affinity to deleted node + PVC already deleted -> don't try to delete PVC",
+			pv:                pvWithPVCAndNode(pvc, node),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
 			},
 		},
 		{
-			name:            "PV without PVC -> do nothing",
-			pv:              pv(),
-			expectedActions: []core.Action{
+			name:              "PV without PVC -> do nothing",
+			pv:                pv(),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
 				// Intentionally left empty
 			},
 		},
@@ -136,18 +174,19 @@ func TestCleanupController(t *testing.T) {
 
 			informers := informers.NewSharedInformerFactory(client, noResyncPeriodFunc())
 			pvInformer := informers.Core().V1().PersistentVolumes()
+			pvcInformer := informers.Core().V1().PersistentVolumeClaims()
 			nodeInformer := informers.Core().V1().Nodes()
 
 			// Set delay for entryQueue. Delay only needed when the test
 			// adds back a deleted Node before the processing deadline.
 			var queueDelay time.Duration
 			if test.bringBackNode {
-				queueDelay = 3 * time.Second
+				queueDelay = 1 * time.Second
 			} else {
 				queueDelay = time.Duration(0)
 			}
 
-			ctrl := NewCleanupController(client, pvInformer, nodeInformer, testStorageClassName, queueDelay, time.Duration(0))
+			ctrl := NewCleanupController(client, pvInformer, pvcInformer, nodeInformer, test.storageClassNames, queueDelay, time.Duration(0))
 
 			// Populate the informers with initial objects so the controller can
 			// Get() and List() it.
@@ -158,9 +197,7 @@ func TestCleanupController(t *testing.T) {
 				case *v1.Node:
 					nodeInformer.Informer().GetStore().Add(obj)
 				case *v1.PersistentVolumeClaim:
-					// There is no PVC informer in the CleanupController
-					// so adding to a Store is not needed.
-					continue
+					pvcInformer.Informer().GetStore().Add(obj)
 				default:
 					t.Fatalf("Unknown initalObject type: %+v", obj)
 				}
@@ -175,7 +212,7 @@ func TestCleanupController(t *testing.T) {
 
 			// Process the controller queue until we get expected results
 			timeout := time.Now().Add(10 * time.Second)
-			queueWaitPeriod := time.Now().Add(queueDelay + 2*time.Second)
+			queueWaitPeriod := time.Now().Add(queueDelay + 1*time.Second)
 			lastReportedActionCount := 0
 			for {
 				if time.Now().After(timeout) {
@@ -250,11 +287,6 @@ func pvWithRemoteSource(pv *v1.PersistentVolume) *v1.PersistentVolume {
 	return pv
 }
 
-func pvWithCustomStorageClass(pv *v1.PersistentVolume) *v1.PersistentVolume {
-	pv.Spec.StorageClassName = alternativeStorageClassName
-	return pv
-}
-
 func pvWithPVCAndNode(pvc *v1.PersistentVolumeClaim, node *v1.Node) *v1.PersistentVolume {
 	pv := pv()
 	pv.Spec.ClaimRef = &v1.ObjectReference{
@@ -277,6 +309,7 @@ func pvWithPVCAndNode(pvc *v1.PersistentVolumeClaim, node *v1.Node) *v1.Persiste
 			},
 		},
 	}
+	pvc.Spec.VolumeName = pv.Name
 	return pv
 }
 
@@ -287,6 +320,12 @@ func pvc() *v1.PersistentVolumeClaim {
 			Namespace: defaultNamespace,
 		},
 	}
+}
+
+func pvcWithVolumeName(volumeName string) *v1.PersistentVolumeClaim {
+	pvc := pvc()
+	pvc.Spec.VolumeName = volumeName
+	return pvc
 }
 
 func node() *v1.Node {

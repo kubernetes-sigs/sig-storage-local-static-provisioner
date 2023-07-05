@@ -531,19 +531,25 @@ func TestNodeAttachedToLocalPV(t *testing.T) {
 	}{
 		{
 			name:             "NodeAffinity will all necessary fields",
-			pv:               withNodeAffinity(pv(), nodeName, NodeLabelKey),
+			pv:               withNodeAffinity(pv(), []string{nodeName}, NodeLabelKey),
 			expectedNodeName: nodeName,
 			expectedStatus:   true,
 		},
 		{
-			name:             "empty Values array",
-			pv:               removeAllNodeNames(withNodeAffinity(pv(), nodeName, NodeLabelKey)),
+			name:             "empty nodeNames array",
+			pv:               withNodeAffinity(pv(), []string{}, NodeLabelKey),
+			expectedNodeName: "",
+			expectedStatus:   false,
+		},
+		{
+			name:             "multiple nodeNames",
+			pv:               withNodeAffinity(pv(), []string{nodeName, "newNode"}, NodeLabelKey),
 			expectedNodeName: "",
 			expectedStatus:   false,
 		},
 		{
 			name:             "wrong node label key",
-			pv:               withNodeAffinity(pv(), nodeName, "wrongLabel"),
+			pv:               withNodeAffinity(pv(), []string{nodeName}, "wrongLabel"),
 			expectedNodeName: "",
 			expectedStatus:   false,
 		},
@@ -562,10 +568,10 @@ func TestNodeAttachedToLocalPV(t *testing.T) {
 
 func TestIsLocalPVWithStorageClass(t *testing.T) {
 	tests := []struct {
-		name             string
-		pv               *v1.PersistentVolume
-		storageClassName string
-		expected         bool
+		name              string
+		pv                *v1.PersistentVolume
+		storageClassNames []string
+		expected          bool
 	}{
 		{
 			name: "local PV with matching StorageClass",
@@ -575,8 +581,19 @@ func TestIsLocalPVWithStorageClass(t *testing.T) {
 					StorageClassName:       "testStorageClassName",
 				},
 			},
-			storageClassName: "testStorageClassName",
-			expected:         true,
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          true,
+		},
+		{
+			name: "local PV with matching StorageClass + multiple storageClassNames",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{"testStorageClassName", "alternative"},
+			expected:          true,
 		},
 		{
 			name: "local PV without matching StorageClass",
@@ -586,8 +603,19 @@ func TestIsLocalPVWithStorageClass(t *testing.T) {
 					StorageClassName:       "wrongName",
 				},
 			},
-			storageClassName: "testStorageClassName",
-			expected:         false,
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          false,
+		},
+		{
+			name: "local PV  + empty storageClassNames",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{},
+			expected:          false,
 		},
 		{
 			name: "non-local PV with matching StorageClass",
@@ -597,15 +625,15 @@ func TestIsLocalPVWithStorageClass(t *testing.T) {
 					StorageClassName:       "testStorageClassName",
 				},
 			},
-			storageClassName: "testStorageClassName",
-			expected:         false,
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          false,
 		},
 	}
 
 	for _, test := range tests {
-		result := IsLocalPVWithStorageClass(test.pv, test.storageClassName)
+		result := IsLocalPVWithStorageClass(test.pv, test.storageClassNames)
 		if result != test.expected {
-			t.Errorf("name: %s, pv: %v, storageClassName: %s, expected result: %t, actual: %t", test.name, test.pv, test.storageClassName, test.expected, result)
+			t.Errorf("name: %s, pv: %v, storageClassName: %s, expected result: %t, actual: %t", test.name, test.pv, test.storageClassNames, test.expected, result)
 		}
 	}
 }
@@ -616,7 +644,7 @@ func pv() *v1.PersistentVolume {
 	}
 }
 
-func withNodeAffinity(pv *v1.PersistentVolume, nodeName string, nodeLabelKey string) *v1.PersistentVolume {
+func withNodeAffinity(pv *v1.PersistentVolume, nodeNames []string, nodeLabelKey string) *v1.PersistentVolume {
 	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{
 		Required: &v1.NodeSelector{
 			NodeSelectorTerms: []v1.NodeSelectorTerm{
@@ -625,7 +653,7 @@ func withNodeAffinity(pv *v1.PersistentVolume, nodeName string, nodeLabelKey str
 						{
 							Key:      nodeLabelKey,
 							Operator: v1.NodeSelectorOpIn,
-							Values:   []string{nodeName},
+							Values:   nodeNames,
 						},
 					},
 				},

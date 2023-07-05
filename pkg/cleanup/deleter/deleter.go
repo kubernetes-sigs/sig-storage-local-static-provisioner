@@ -17,22 +17,22 @@ import (
 )
 
 // Deleter handles cleanup of local PVs with an affinity to a deleted Node.
-// Only PVs with the passed-in storageClassName will be considered for cleanup.
+// Only PVs with a StorageClass listed in the storageClassNames will be considered for cleanup.
 type Deleter struct {
-	client           kubernetes.Interface
-	pvLister         corelisters.PersistentVolumeLister
-	nodeLister       corelisters.NodeLister
-	storageClassName string
+	client            kubernetes.Interface
+	pvLister          corelisters.PersistentVolumeLister
+	nodeLister        corelisters.NodeLister
+	storageClassNames []string
 }
 
 // NewDeleter creates a Deleter object to handle the deletion of local PVs
-// that use a given StorageClass and have an affinity to a deleted Node.
-func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolumeLister, nodeLister corelisters.NodeLister, storageClassName string) *Deleter {
+// that have an affinity to a deleted Node and have a StorageClass listed in storageClassNames.
+func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolumeLister, nodeLister corelisters.NodeLister, storageClassNames []string) *Deleter {
 	return &Deleter{
-		client:           client,
-		pvLister:         pvLister,
-		nodeLister:       nodeLister,
-		storageClassName: storageClassName,
+		client:            client,
+		pvLister:          pvLister,
+		nodeLister:        nodeLister,
+		storageClassNames: storageClassNames,
 	}
 }
 
@@ -50,7 +50,7 @@ func (d *Deleter) Run(ctx context.Context, discoveryInterval time.Duration) {
 }
 
 // Delete PVs will scan through PVs and delete those that are
-// local PVs with a given StorageClass and have an affinity to a deleted Node.
+// local PVs with a StorageClass listed in storageClassNames and have an affinity to a deleted Node.
 func (d *Deleter) DeletePVs(ctx context.Context) {
 	pvs, err := d.pvLister.List(labels.Everything())
 	if err != nil {
@@ -59,7 +59,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 	}
 
 	for _, pv := range pvs {
-		if !common.IsLocalPVWithStorageClass(pv, d.storageClassName) {
+		if !common.IsLocalPVWithStorageClass(pv, d.storageClassNames) {
 			// Either isn't a local PV or doesn't have matching storage class.
 			continue
 		}
@@ -112,7 +112,7 @@ func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) (bool,
 func (d *Deleter) deletePV(ctx context.Context, pvName string) error {
 	err := d.client.CoreV1().PersistentVolumes().Delete(ctx, pvName, metav1.DeleteOptions{})
 	if err != nil && errors.IsNotFound(err) {
-		klog.Errorf("PV %q no longer exists", pvName)
+		klog.Warningf("PV %q no longer exists", pvName)
 		return nil
 	}
 	return err

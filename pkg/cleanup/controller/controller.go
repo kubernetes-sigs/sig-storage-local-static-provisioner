@@ -38,40 +38,45 @@ type CleanupController struct {
 	pvLister       corelisters.PersistentVolumeLister
 	pvListerSynced cache.InformerSynced
 
+	pvcLister       corelisters.PersistentVolumeClaimLister
+	pvcListerSynced cache.InformerSynced
+
 	eventRecorder record.EventRecorder
 	broadcaster   record.EventBroadcaster
 
-	// storageClassName is the name of the StorageClass that PVs and PVCs
-	// must belong to in order to be cleaned up.
-	storageClassName string
+	// storageClassNames is the list StorageClasses that PVs and PVCs
+	// can belong to in order to be eligible for cleanup
+	storageClassNames []string
 
-	// delay is the amount of time to wait after Node deletion to cleanup resources.
-	delay time.Duration
+	// pvcDeletionDelay is the amount of time to wait after Node deletion to cleanup resources.
+	pvcDeletionDelay time.Duration
 
 	// stalePVDiscoveryInterval is how often to scan for and delete PVs with affinity to a deleted Node.
 	stalePVDiscoveryInterval time.Duration
 }
 
-func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, nodeInformer coreinformers.NodeInformer, storageClassName string, delay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
+func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
 	broadcaster := record.NewBroadcaster()
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: fmt.Sprintf("cleanup-controller")})
 
 	controller := &CleanupController{
-		client:           client,
-		storageClassName: storageClassName,
+		client:            client,
+		storageClassNames: storageClassNames,
 		// Delayed queue with rate limiting
 		pvQueue: workqueue.NewRateLimitingQueueWithConfig(
 			workqueue.DefaultControllerRateLimiter(),
 			workqueue.RateLimitingQueueConfig{
-				Name: "stale",
+				Name: "stalePVCQueue",
 			}),
 		nodeLister:               nodeInformer.Lister(),
 		nodeListerSynced:         nodeInformer.Informer().HasSynced,
 		pvLister:                 pvInformer.Lister(),
 		pvListerSynced:           pvInformer.Informer().HasSynced,
+		pvcLister:                pvcInformer.Lister(),
+		pvcListerSynced:          pvcInformer.Informer().HasSynced,
 		eventRecorder:            eventRecorder,
 		broadcaster:              broadcaster,
-		delay:                    delay,
+		pvcDeletionDelay:         pvcDeletionDelay,
 		stalePVDiscoveryInterval: stalePVDiscoveryInterval,
 	}
 
@@ -98,7 +103,7 @@ func (c *CleanupController) Run(ctx context.Context, workers int) error {
 
 	klog.Info("Waiting for informer caches to sync")
 	// Wait for the caches to be synced before starting workers
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.nodeListerSynced, c.pvListerSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.nodeListerSynced, c.pvListerSynced, c.pvcListerSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -181,9 +186,8 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 	if err != nil {
 		return err
 	}
-
+	// Check that the node the PV/PVC reference is still deleted
 	if nodeExists {
-		// Node is back up so cleanup is not needed.
 		return nil
 	}
 
@@ -192,7 +196,22 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return nil
 	}
 
-	err = c.deletePVC(ctx, pvClaimRef.Name, pvClaimRef.Namespace)
+	pvc, err := c.pvcLister.PersistentVolumeClaims(pvClaimRef.Namespace).Get(pvClaimRef.Name)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// PVC was deleted in the meantime, ignore.
+			klog.Infof("PVC %q in namespace %q no longer exists", pvClaimRef.Name, pvClaimRef.Namespace)
+			return nil
+		}
+		return err
+	}
+	// Check that the PVC we're about to delete still points back to the PV that enqueued it.
+	if pvc.Spec.VolumeName != pv.Name {
+		klog.Infof("PVC %q no longer references PV %q so will not be cleaned up", pvc.Name, pv.Name)
+		return nil
+	}
+
+	err = c.deletePVC(ctx, pvc)
 	if err != nil {
 		klog.Errorf("failed to delete pvc %q in namespace &q: %w", pvClaimRef.Name, pvClaimRef.Namespace, err)
 		return err
@@ -207,7 +226,7 @@ func (c *CleanupController) nodeDeleted(obj interface{}) {
 }
 
 // startCleanupTimersIfNeeded enqueues any local PVs
-// with a given StorageClass and a NodeAffinity to a deleted Node.
+// with a NodeAffinity to a deleted Node and a StorageClass listed in storageClassNames.
 func (c *CleanupController) startCleanupTimersIfNeeded() {
 	pvs, err := c.pvLister.List(labels.Everything())
 	if err != nil {
@@ -229,19 +248,19 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 		}
 
 		if shouldEnqueue {
-			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.delay.String())
-			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.delay.String()))
+			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String())
+			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.pvcDeletionDelay.String()))
 
-			c.pvQueue.AddAfter(pv.Name, c.delay)
+			c.pvQueue.AddAfter(pv.Name, c.pvcDeletionDelay)
 		}
 	}
 }
 
 // shouldEnqueuePV checks if a PV should be enqueued to the entryQueue.
-// The PV must be a local PV, have a given StorageClass, have a NodeAffinity
+// The PV must be a local PV, have a StorageClass present in the list of storageClassNames, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
 func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName string) (bool, error) {
-	if !common.IsLocalPVWithStorageClass(pv, c.storageClassName) || pv.Spec.ClaimRef == nil {
+	if !common.IsLocalPVWithStorageClass(pv, c.storageClassNames) || pv.Spec.ClaimRef == nil {
 		return false, nil
 	}
 
@@ -251,11 +270,11 @@ func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName
 
 // deletePVC deletes the PVC with the given name and namespace
 // and returns nil if the operation was successful or if the PVC doesn't exist
-func (c *CleanupController) deletePVC(ctx context.Context, pvcName string, pvcNamespace string) error {
-	err := c.client.CoreV1().PersistentVolumeClaims(pvcNamespace).Delete(ctx, pvcName, metav1.DeleteOptions{})
+func (c *CleanupController) deletePVC(ctx context.Context, pvc *v1.PersistentVolumeClaim) error {
+	err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
 	if err != nil && errors.IsNotFound(err) {
 		// The PVC could already be deleted by some other process
-		klog.Infof("PVC %q in namespace %q no longer exists", pvcName, pvcNamespace)
+		klog.Infof("PVC %q in namespace %q no longer exists", pvc.Name, pvc.Namespace)
 		return nil
 	}
 	return err
