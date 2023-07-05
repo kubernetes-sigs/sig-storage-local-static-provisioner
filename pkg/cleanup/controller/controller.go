@@ -40,6 +40,9 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
+// CleanupController handles the deletion of PVCs that reference deleted Nodes.
+// Once a Node is deleted, if there was a PVC associated with that Node, a timer is started
+// for resource deletion. The PVC is deleted if the Node doesn't come back in a user-defined amount of time.
 type CleanupController struct {
 	client kubernetes.Interface
 
@@ -71,6 +74,8 @@ type CleanupController struct {
 	stalePVDiscoveryInterval time.Duration
 }
 
+// NewCleanupController creates a CleanupController that handles the
+// deletion of stale PVCs.
 func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
 	broadcaster := record.NewBroadcaster()
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: fmt.Sprintf("cleanup-controller")})

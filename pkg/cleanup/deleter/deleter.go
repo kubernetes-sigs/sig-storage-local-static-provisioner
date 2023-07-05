@@ -52,6 +52,7 @@ func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolu
 	}
 }
 
+// Run will delete stale PVs on a given interval until the given context is done.
 func (d *Deleter) Run(ctx context.Context, discoveryInterval time.Duration) {
 	for {
 		select {
@@ -65,7 +66,7 @@ func (d *Deleter) Run(ctx context.Context, discoveryInterval time.Duration) {
 	}
 }
 
-// Delete PVs will scan through PVs and delete those that are
+// DeletePVs will scan through PVs and delete those that are
 // local PVs with a StorageClass listed in storageClassNames and have an affinity to a deleted Node.
 func (d *Deleter) DeletePVs(ctx context.Context) {
 	pvs, err := d.pvLister.List(labels.Everything())

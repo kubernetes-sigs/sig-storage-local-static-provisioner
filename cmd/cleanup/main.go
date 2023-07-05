@@ -34,7 +34,7 @@ import (
 // Command line flags
 var (
 	kubeconfig               = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Either this or kube-api-endpoint needs to be set if the provisioner is being run out of cluster.")
-	kubeApiEndpoint          = flag.String("kube-api-endpoint", "", "Master URL to build a client config from. Either this or kubeconfig needs to be set if the provisioner is being run out of cluster.")
+	kubeAPIEndpoint          = flag.String("kube-api-endpoint", "", "Master URL to build a client config from. Either this or kubeconfig needs to be set if the provisioner is being run out of cluster.")
 	resync                   = flag.Duration("resync", 10*time.Minute, "Duration, in minutes, of the resync interval of the controller.")
 	storageClassNames        = flag.StringSlice("storageclass-names", []string{}, "Comma separated list of names of StorageClasses to opt-in PVs and PVCs for cleanup.")
 	workerThreads            = flag.Uint("worker-threads", 10, "Number of controller worker threads.")
@@ -48,7 +48,7 @@ func main() {
 
 	ctx := context.Background()
 
-	config, err := buildConfig(*kubeconfig, *kubeApiEndpoint)
+	config, err := buildConfig(*kubeconfig, *kubeAPIEndpoint)
 	if err != nil {
 		klog.Error(err, "Error building kubeconfig")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
@@ -87,11 +87,11 @@ func main() {
 	}
 }
 
-func buildConfig(kubeconfig string, kubeApiEndpoint string) (*rest.Config, error) {
+func buildConfig(kubeconfig string, kubeAPIEndpoint string) (*rest.Config, error) {
 	// If kubeconfig was passed in then try to build from that
 	// since we may be out-of-cluster.
 	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags(kubeApiEndpoint, kubeconfig)
+		return clientcmd.BuildConfigFromFlags(kubeAPIEndpoint, kubeconfig)
 	}
 	// Otherwise we are in-cluster.
 	return rest.InClusterConfig()
