@@ -66,7 +66,7 @@ func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.
 		pvQueue: workqueue.NewRateLimitingQueueWithConfig(
 			workqueue.DefaultControllerRateLimiter(),
 			workqueue.RateLimitingQueueConfig{
-				Name: "stalePVCQueue",
+				Name: "stalePVQueue",
 			}),
 		nodeLister:               nodeInformer.Lister(),
 		nodeListerSynced:         nodeInformer.Informer().HasSynced,
