@@ -1,4 +1,5 @@
 ---
+{{- if .Values.enableWindows }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -144,3 +145,4 @@ spec:
           hostPath:
             path: {{ quote $path }}
         {{- end }}
+{{- end }}
