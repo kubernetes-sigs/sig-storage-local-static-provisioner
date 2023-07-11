@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2023 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -226,9 +226,10 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		}
 		return err
 	}
-	// Check that the PVC we're about to delete still points back to the PV that enqueued it.
-	if pvc.Spec.VolumeName != pv.Name {
-		klog.Infof("PVC %q no longer references PV %q so will not be cleaned up", pvc.Name, pv.Name)
+	// Check that the PVC we're about to delete still points back to the PV that enqueued it
+	// and that it is the exact same PVC from the PV's claimRef
+	if pvc.Spec.VolumeName != pv.Name || pvc.UID != pvClaimRef.UID {
+		klog.Infof("Original bond between PVC %q and PV %q was severed. The original objects don't reference eachother", pvc.Name, pv.Name)
 		return nil
 	}
 
@@ -292,7 +293,10 @@ func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName
 // deletePVC deletes the PVC with the given name and namespace
 // and returns nil if the operation was successful or if the PVC doesn't exist
 func (c *CleanupController) deletePVC(ctx context.Context, pvc *v1.PersistentVolumeClaim) error {
-	err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
+	options := metav1.DeleteOptions{
+		Preconditions: &metav1.Preconditions{UID: &pvc.UID},
+	}
+	err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(ctx, pvc.Name, options)
 	if err != nil && errors.IsNotFound(err) {
 		// The PVC could already be deleted by some other process
 		klog.Infof("PVC %q in namespace %q no longer exists", pvc.Name, pvc.Namespace)

@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2023 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
@@ -42,6 +43,7 @@ const (
 	defaultPVCName              = "defaultPVC"
 	defaultNamespace            = "default"
 	alternativeStorageClassName = "alternative-storageclass"
+	defaultPVCUID               = "123"
 )
 
 var (
@@ -88,6 +90,15 @@ func TestCleanupController(t *testing.T) {
 			name:              "pv with affinity to deleted node + pv references pvc but pvc doesn't reference pv -> don't delete pvc",
 			pv:                pvWithPVCAndNode(pvc, node),
 			pvc:               pvcWithVolumeName("different-volume"),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "pv with affinity to deleted node and node still deleted + pvc uid changed -> don't delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvcWithUID("randomUID"),
 			storageClassNames: []string{testStorageClassName},
 			expectedActions:   []core.Action{
 				// Intentionally left empty
@@ -163,7 +174,7 @@ func TestCleanupController(t *testing.T) {
 		},
 		{
 			name:              "PV without PVC -> do nothing",
-			pv:                pv(),
+			pv:                pvWithNode(node),
 			storageClassNames: []string{testStorageClassName},
 			expectedActions:   []core.Action{
 				// Intentionally left empty
@@ -309,6 +320,7 @@ func pvWithPVCAndNode(pvc *v1.PersistentVolumeClaim, node *v1.Node) *v1.Persiste
 		Kind:      "PersistentVolumeClaim",
 		Name:      pvc.Name,
 		Namespace: pvc.Namespace,
+		UID:       pvc.UID,
 	}
 	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{
 		Required: &v1.NodeSelector{
@@ -329,11 +341,32 @@ func pvWithPVCAndNode(pvc *v1.PersistentVolumeClaim, node *v1.Node) *v1.Persiste
 	return pv
 }
 
+func pvWithNode(node *v1.Node) *v1.PersistentVolume {
+	pv := pv()
+	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{
+		Required: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
+						{
+							Key:      common.NodeLabelKey,
+							Operator: v1.NodeSelectorOpIn,
+							Values:   []string{node.Name},
+						},
+					},
+				},
+			},
+		},
+	}
+	return pv
+}
+
 func pvc() *v1.PersistentVolumeClaim {
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultPVCName,
 			Namespace: defaultNamespace,
+			UID:       defaultPVCUID,
 		},
 	}
 }
@@ -341,6 +374,12 @@ func pvc() *v1.PersistentVolumeClaim {
 func pvcWithVolumeName(volumeName string) *v1.PersistentVolumeClaim {
 	pvc := pvc()
 	pvc.Spec.VolumeName = volumeName
+	return pvc
+}
+
+func pvcWithUID(uid string) *v1.PersistentVolumeClaim {
+	pvc := pvc()
+	pvc.UID = types.UID(uid)
 	return pvc
 }
 
@@ -353,5 +392,5 @@ func node() *v1.Node {
 }
 
 func deletePVCAction(pvc *v1.PersistentVolumeClaim) core.DeleteActionImpl {
-	return core.NewDeleteAction(schema.GroupVersionResource{Version: "v1", Resource: "persistentvolumeclaims"}, pvc.Namespace, pvc.Name)
+	return core.NewDeleteActionWithOptions(schema.GroupVersionResource{Version: "v1", Resource: "persistentvolumeclaims"}, pvc.Namespace, pvc.Name, metav1.DeleteOptions{Preconditions: &metav1.Preconditions{UID: &pvc.UID}})
 }
