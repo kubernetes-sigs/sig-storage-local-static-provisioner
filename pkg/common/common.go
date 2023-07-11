@@ -34,13 +34,16 @@ import (
 	"hash/fnv"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
+	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/utils/mount"
 )
 
@@ -483,4 +486,50 @@ func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolum
 		return "", fmt.Errorf("Directory check for %q failed: %s", fullPath, errdir)
 	}
 	return "", fmt.Errorf("Block device check for %q failed: %s", fullPath, errblk)
+}
+
+// NodeExists checks to see if a Node exists in the Indexer of a NodeLister.
+func NodeExists(nodeLister corelisters.NodeLister, nodeName string) (bool, error) {
+	_, err := nodeLister.Get(nodeName)
+	if errors.IsNotFound(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// NodeAttachedToLocalPV gets the name of the Node that a local PV has a NodeAffinity to.
+// It assumes that there should be only one matching Node for a local PV and that
+// the local PV follows the form:
+//
+//	nodeAffinity:
+//	  required:
+//	    nodeSelectorTerms:
+//	    - matchExpressions:
+//	      - key: kubernetes.io/hostname
+//	        operator: In
+//	        values:
+//	        - <node1>
+func NodeAttachedToLocalPV(pv *v1.PersistentVolume) (string, bool) {
+	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
+	// We assume that there should only be one matching node.
+	if nodeNames == nil || len(nodeNames) != 1 {
+		return "", false
+	}
+	return nodeNames[0], true
+}
+
+// IsLocalPVWithStorageClass checks that a PV is a local PV that belongs to any of the passed in StorageClasses.
+func IsLocalPVWithStorageClass(pv *v1.PersistentVolume, storageClassNames []string) bool {
+	if pv.Spec.Local == nil {
+		return false
+	}
+
+	// Return true if the PV's StorageClass matches any of the passed in
+	for _, storageClassName := range storageClassNames {
+		if pv.Spec.StorageClassName == storageClassName {
+			return true
+		}
+	}
+
+	return false
 }

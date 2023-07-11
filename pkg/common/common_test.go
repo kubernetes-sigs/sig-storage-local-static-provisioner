@@ -30,7 +30,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
@@ -472,4 +475,195 @@ func TestGetVolumeMode(t *testing.T) {
 			t.Errorf("volumeUtil: %v, fullPath: %v, expected mode: %v, got mode: %v, expected error: %v, got error: %v", test.volumeUtil, test.fullPath, test.expected, mode, test.expectedErr, err)
 		}
 	}
+}
+
+func TestNodeExists(t *testing.T) {
+	node := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-node",
+		},
+	}
+
+	tests := []struct {
+		nodeAdded *v1.Node
+		// Required.
+		nodeQueried    *v1.Node
+		expectedResult bool
+	}{
+		{
+			nodeAdded:      node,
+			nodeQueried:    node,
+			expectedResult: true,
+		},
+		{
+			nodeQueried:    node,
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		client := fake.NewSimpleClientset()
+		informers := informers.NewSharedInformerFactory(client, time.Duration(0))
+		nodeInformer := informers.Core().V1().Nodes()
+
+		if test.nodeAdded != nil {
+			nodeInformer.Informer().GetStore().Add(test.nodeAdded)
+		}
+
+		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Name)
+		if err != nil {
+			t.Errorf("Got unexpected error: %s", err.Error())
+		}
+		if exists != test.expectedResult {
+			t.Errorf("expected result: %t, actual: %t", test.expectedResult, exists)
+		}
+	}
+}
+
+func TestNodeAttachedToLocalPV(t *testing.T) {
+	nodeName := "testNodeName"
+
+	tests := []struct {
+		name             string
+		pv               *v1.PersistentVolume
+		expectedNodeName string
+		expectedStatus   bool
+	}{
+		{
+			name:             "NodeAffinity will all necessary fields",
+			pv:               withNodeAffinity(pv(), []string{nodeName}, NodeLabelKey),
+			expectedNodeName: nodeName,
+			expectedStatus:   true,
+		},
+		{
+			name:             "empty nodeNames array",
+			pv:               withNodeAffinity(pv(), []string{}, NodeLabelKey),
+			expectedNodeName: "",
+			expectedStatus:   false,
+		},
+		{
+			name:             "multiple nodeNames",
+			pv:               withNodeAffinity(pv(), []string{nodeName, "newNode"}, NodeLabelKey),
+			expectedNodeName: "",
+			expectedStatus:   false,
+		},
+		{
+			name:             "wrong node label key",
+			pv:               withNodeAffinity(pv(), []string{nodeName}, "wrongLabel"),
+			expectedNodeName: "",
+			expectedStatus:   false,
+		},
+	}
+
+	for _, test := range tests {
+		nodeName, ok := NodeAttachedToLocalPV(test.pv)
+		if ok != test.expectedStatus {
+			t.Errorf("test: %s, status: %t, expectedStaus: %t", test.name, ok, test.expectedStatus)
+		}
+		if nodeName != test.expectedNodeName {
+			t.Errorf("test: %s, nodeName: %s, expectedNodeName: %s", test.name, nodeName, test.expectedNodeName)
+		}
+	}
+}
+
+func TestIsLocalPVWithStorageClass(t *testing.T) {
+	tests := []struct {
+		name              string
+		pv                *v1.PersistentVolume
+		storageClassNames []string
+		expected          bool
+	}{
+		{
+			name: "local PV with matching StorageClass",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          true,
+		},
+		{
+			name: "local PV with matching StorageClass + multiple storageClassNames",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{"testStorageClassName", "alternative"},
+			expected:          true,
+		},
+		{
+			name: "local PV without matching StorageClass",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "wrongName",
+				},
+			},
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          false,
+		},
+		{
+			name: "local PV  + empty storageClassNames",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{},
+			expected:          false,
+		},
+		{
+			name: "non-local PV with matching StorageClass",
+			pv: &v1.PersistentVolume{
+				Spec: v1.PersistentVolumeSpec{
+					PersistentVolumeSource: v1.PersistentVolumeSource{},
+					StorageClassName:       "testStorageClassName",
+				},
+			},
+			storageClassNames: []string{"testStorageClassName"},
+			expected:          false,
+		},
+	}
+
+	for _, test := range tests {
+		result := IsLocalPVWithStorageClass(test.pv, test.storageClassNames)
+		if result != test.expected {
+			t.Errorf("name: %s, pv: %v, storageClassName: %s, expected result: %t, actual: %t", test.name, test.pv, test.storageClassNames, test.expected, result)
+		}
+	}
+}
+
+func pv() *v1.PersistentVolume {
+	return &v1.PersistentVolume{
+		Spec: v1.PersistentVolumeSpec{},
+	}
+}
+
+func withNodeAffinity(pv *v1.PersistentVolume, nodeNames []string, nodeLabelKey string) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{
+		Required: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
+						{
+							Key:      nodeLabelKey,
+							Operator: v1.NodeSelectorOpIn,
+							Values:   nodeNames,
+						},
+					},
+				},
+			},
+		},
+	}
+	return pv
+}
+
+func removeAllNodeNames(pv *v1.PersistentVolume) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values = []string{}
+	return pv
 }
