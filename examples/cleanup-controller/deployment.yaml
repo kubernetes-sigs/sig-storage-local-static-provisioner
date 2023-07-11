@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanup-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cleanup
+  template:
+    metadata:
+        labels:
+          app: cleanup
+    spec:
+      serviceAccount: cleanup-controller
+      containers:
+      - name: cleanup-controller
+        image: gcr.io/justinblalock-joonix/local-volume-provisioner-cleanup:latest_linux_amd64
+        args:
+          - "--storageclass-names=nvme-ssd-block"
+          - "--pvc-deletion-delay=60s"
+          - "--stale-pv-discovery-interval=10s"
