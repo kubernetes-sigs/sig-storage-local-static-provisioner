@@ -15,7 +15,7 @@ spec:
       serviceAccount: cleanup-controller
       containers:
       - name: cleanup-controller
-        image: gcr.io/justinblalock-joonix/local-volume-provisioner-cleanup:latest_linux_amd64
+        image: gcr.io/k8s-staging-sig-storage/local-volume-node-cleanup:canary
         args:
           - "--storageclass-names=nvme-ssd-block"
           - "--pvc-deletion-delay=60s"

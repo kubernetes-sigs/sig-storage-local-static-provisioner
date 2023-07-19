@@ -15,7 +15,7 @@
 FROM gcr.io/distroless/static:latest
 ARG OS=linux
 ARG ARCH=amd64
-ARG binary=./_output/${OS}/${ARCH}/cleanup
+ARG binary=./_output/${OS}/${ARCH}/local-volume-node-cleanup
 COPY ${binary} main
 
 ENTRYPOINT ["/main"]
