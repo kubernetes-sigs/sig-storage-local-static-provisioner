@@ -1,6 +1,6 @@
-# Cleanup Controller
+# Local Volume Node Cleanup Controller
 
-The cleanup controller removes PersistentVolumes and PersistentVolumeClaims that reference deleted Nodes.
+The local volume node cleanup controller removes PersistentVolumes and PersistentVolumeClaims that reference deleted Nodes.
 
 ## Overview
 
@@ -12,7 +12,7 @@ Pods using a Local Persistent Volume are always scheduled to the same Node as th
 
 ## Usage
 
-Please see the example [deployment](./deployment.yaml) and [rbac](./rbac.yaml) for deploying the controller.
+Please see the example [deployment](../deployment/kubernetes/example/node-cleanup-controller/deployment.yaml) and [rbac](../deployment/kubernetes/example/node-cleanup-controller/rbac.yaml) for deploying the controller.
 
 ### CleanupController command line options
 
@@ -29,13 +29,13 @@ Please see the example [deployment](./deployment.yaml) and [rbac](./rbac.yaml) f
 
 ## Design
 
-There are two separate processes, a **CleanupController** and a **Deleter**, running to delete stale resources:
+There are two separate routines, a **CleanupController** and a **Deleter**, running to delete stale resources:
 
-- The [CleanupController](../../pkg/cleanup/controller/controller.go) looks for Local Persistent Volumes that have a [NodeAffinity](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity) to a deleted Node. When it finds such a PV, it starts a timer to wait and see if the deleted Node comes back up again. If at the end of the timer, the Node is not back up, the **PVC** bound to that PV is deleted. The PV is deleted in the next step.
+- The [CleanupController](../pkg/node-cleanup/controller/controller.go) looks for Local Persistent Volumes that have a [NodeAffinity](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity) to a deleted Node. When it finds such a PV, it starts a timer to wait and see if the deleted Node comes back up again. If at the end of the timer, the Node is not back up, the **PVC** bound to that PV is deleted. The PV is deleted in the next step.
 
     - Note: We wait to see if the Node comes back before cleaning up resources since there may be some edge cases in which a Node is deleted but comes back quickly without data loss. The wait duration is configurable.
 
-- The [Deleter](../../pkg/cleanup/deleter/deleter.go) looks for Local PVs with a NodeAffinity to deleted Nodes. When it finds such a PV it deletes the PV if (and only if) the PV's status is Available or if its status is Released and it has a Delete reclaim policy.
+- The [Deleter](../pkg/node-cleanup/deleter/deleter.go) looks for Local PVs with a NodeAffinity to deleted Nodes. When it finds such a PV it deletes the PV if (and only if) the PV's status is Available or if its status is Released and it has a Delete reclaim policy.
 
 The controller manages the lifecycle of the Deleter. Further, the controller is **opt-in per StorageClass**. It takes a command line argument that specifies which StorageClasses Local PVs/PVCs must belong to in order to be cleaned up.
 

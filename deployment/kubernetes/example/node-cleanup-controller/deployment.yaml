@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cleanup-controller
+  name: local-volume-node-cleanup-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cleanup
+      app: local-volume-node-cleanup
   template:
     metadata:
         labels:
-          app: cleanup
+          app: local-volume-node-cleanup
     spec:
-      serviceAccount: cleanup-controller
+      serviceAccount: local-volume-node-cleanup-controller
       containers:
-      - name: cleanup-controller
+      - name: local-volume-node-cleanup-controller
         image: gcr.io/k8s-staging-sig-storage/local-volume-node-cleanup:canary
         args:
           - "--storageclass-names=nvme-ssd-block"
