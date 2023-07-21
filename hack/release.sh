@@ -108,6 +108,7 @@ echo "WINDOWS_DISTROS: $WINDOWS_DISTROS"
 go version
 
 IMAGE="$REGISTRY/local-volume-provisioner"
+NODECLEANUPCONTROLLERIMAGE="$REGISTRY/local-volume-node-cleanup"
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
 # expects it is writable.
@@ -168,8 +169,9 @@ if [ -z "$ALLOW_UNSTABLE" ]; then
 fi
 
 image="$IMAGE:$VERSION"
+nodecleanupimage="$NODECLEANUPCONTROLLERIMAGE:$VERSION"
 if [ -z "$CONFIRM" ]; then
-    read -r -p "info: build and push to $image? [y/N]" response
+    read -r -p "info: build and push to $image and $nodecleanupimage? [y/N]" response
     if [[ ! $response =~ ^([yY][eE][sS]|[yY])$ ]]; then
         echo "Exited."
         exit 0
@@ -184,18 +186,23 @@ function get_manifest_url() {
     echo "https://${domain}/v2/${name}/manifests/${ref}"
 }
 
-if [ -z "$ALLOW_OVERRIDE" ] && is_stable_version "$VERSION"; then
-    echo "info: $image is stable image, checking if it does eixst"
-    manifest_url=$(get_manifest_url "$image")
+function check_if_image_exists() {
+    echo "info: $1 is stable image, checking if it does exist"
+    manifest_url=$(get_manifest_url "$1")
     code=$(curl -s -XHEAD -w '%{http_code}' "$manifest_url" || true)
     if [ "$code" == "200" ]; then
-        echo "error: $image does exist, skipped"
+        echo "error: $1 does exist, skipped"
         exit 1
     elif [ "$code" != "404" ]; then
         echo "error: unexpected http code '$code'"
         exit 1
     fi
-    echo "info: '$image' does not exist, continue"
+    echo "info: '$1' does not exist, continue"
+}
+
+if [ -z "$ALLOW_OVERRIDE" ] && is_stable_version "$VERSION"; then
+    check_if_image_exists $image
+    check_if_image_exists $nodecleanupimage
 fi
 
 # build & push multi-arch images

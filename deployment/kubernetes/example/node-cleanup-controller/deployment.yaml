@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-volume-node-cleanup-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-volume-node-cleanup
+  template:
+    metadata:
+        labels:
+          app: local-volume-node-cleanup
+    spec:
+      serviceAccount: local-volume-node-cleanup-controller
+      containers:
+      - name: local-volume-node-cleanup-controller
+        image: gcr.io/k8s-staging-sig-storage/local-volume-node-cleanup:canary
+        args:
+          - "--storageclass-names=nvme-ssd-block"
+          - "--pvc-deletion-delay=60s"
+          - "--stale-pv-discovery-interval=10s"

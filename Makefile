@@ -24,6 +24,7 @@ WINDOWS_DISTROS ?=
 DOCKER=DOCKER_CLI_EXPERIMENTAL=enabled docker
 STAGINGVERSION=${VERSION}
 STAGINGIMAGE=${REGISTRY}/local-volume-provisioner
+STAGINGIMAGENODECLEANUPCONTROLLER=${REGISTRY}/local-volume-node-cleanup
 # Output type of docker buildx build
 OUTPUT_TYPE ?= docker
 
@@ -38,6 +39,7 @@ all: build-container-linux-amd64
 
 cross: init-buildx \
 	$(addprefix build-and-push-container-linux-,$(LINUX_ARCH)) \
+	$(addprefix build-and-push-node-cleanup-controller-linux-,$(LINUX_ARCH)) \
 	$(addprefix build-and-push-container-windows-,$(WINDOWS_DISTROS))
 .PHONY: cross
 
@@ -62,10 +64,26 @@ build-container-linux-%:
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
+# used to build cleanup controller
+build-node-cleanup-controller-linux-%:
+	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-node-cleanup ./cmd/node-cleanup
+	$(DOCKER) buildx build --file=./cmd/node-cleanup/Dockerfile --platform=linux/$* \
+		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION) --output=type=$(OUTPUT_TYPE) \
+		--build-arg OS=linux \
+		--build-arg ARCH=$* .
+
 build-and-push-container-linux-%: init-buildx
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-provisioner ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile --platform=linux/$* \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_linux_$* \
+		--build-arg OS=linux \
+		--build-arg ARCH=$* \
+		--push .
+
+build-and-push-node-cleanup-controller-linux-%: init-buildx
+	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-node-cleanup ./cmd/node-cleanup
+	$(DOCKER) buildx build --file=./cmd/node-cleanup/Dockerfile --platform=linux/$* \
+		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION) \
 		--build-arg OS=linux \
 		--build-arg ARCH=$* \
 		--push .

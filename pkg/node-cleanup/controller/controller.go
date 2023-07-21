@@ -229,7 +229,7 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 	// Check that the PVC we're about to delete still points back to the PV that enqueued it
 	// and that it is the exact same PVC from the PV's claimRef
 	if pvc.Spec.VolumeName != pv.Name || pvc.UID != pvClaimRef.UID {
-		klog.Infof("Original bond between PVC %q and PV %q was severed. The original objects don't reference eachother", pvc.Name, pv.Name)
+		klog.Infof("Original bond between PVC %q and PV %q was severed. The original objects don't reference each other", pvc.Name, pv.Name)
 		return nil
 	}
 

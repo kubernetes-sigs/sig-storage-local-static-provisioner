@@ -27,8 +27,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cleanup/controller"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cleanup/deleter"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/controller"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/deleter"
 )
 
 // Command line flags
