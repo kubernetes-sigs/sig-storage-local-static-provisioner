@@ -15,6 +15,5 @@ classes:
   volumeMode: Block
   storageClass: true
 
-daemonset:
-  nodeSelector:
-    localVolume: present
+nodeSelector:
+  localVolume: present

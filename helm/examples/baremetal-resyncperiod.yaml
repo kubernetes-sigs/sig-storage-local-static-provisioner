@@ -1,5 +1,4 @@
-common:
-  minResyncPeriod: 1h
+minResyncPeriod: 1h
 classes:
 - name: local-storage
   hostDir: /mnt/disks

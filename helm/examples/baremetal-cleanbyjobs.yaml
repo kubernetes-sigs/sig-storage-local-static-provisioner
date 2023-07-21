@@ -1,5 +1,4 @@
-common:
-  useJobForCleaning: true
+useJobForCleaning: true
 classes:
 - name: local-storage
   hostDir: /mnt/disks

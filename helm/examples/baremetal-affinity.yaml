@@ -15,13 +15,12 @@ classes:
   volumeMode: Block
   storageClass: true
 
-daemonset:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: pool
-            operator: In
-            values: 
-             - localssd
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: pool
+          operator: In
+          values:
+            - localssd

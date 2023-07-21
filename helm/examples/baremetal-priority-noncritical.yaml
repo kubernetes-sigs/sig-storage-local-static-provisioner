@@ -14,6 +14,6 @@ classes:
   # - "/scripts/blkdiscard.sh"
   volumeMode: Block
   storageClass: true
-daemonset:
-  # Create priority-important priority class first.
-  priorityClassName: priority-important
+
+# Create priority-important priority class first.
+priorityClassName: priority-important

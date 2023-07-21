@@ -15,11 +15,10 @@ classes:
   volumeMode: Block
   storageClass: true
 
-daemonset:
-  resources:
-    limits:
-      cpu: 100m
-      memory: 200Mi
-    requests:
-      cpu: 50m
-      memory: 100Mi
+resources:
+  limits:
+    cpu: 100m
+    memory: 200Mi
+  requests:
+    cpu: 50m
+    memory: 100Mi

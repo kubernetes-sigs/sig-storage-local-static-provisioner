@@ -15,7 +15,6 @@ classes:
   volumeMode: Block
   storageClass: true
 
-daemonset:
-  tolerations:
-    - key: node-role.kubernetes.io/master
-      effect: NoSchedule
+tolerations:
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule

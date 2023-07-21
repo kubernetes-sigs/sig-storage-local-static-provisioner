@@ -1,5 +1,4 @@
-common:
-  useNodeNameOnly: true
+useNodeNameOnly: true
 classes:
 - name: local-scsi
   hostDir: "/mnt/disks"
