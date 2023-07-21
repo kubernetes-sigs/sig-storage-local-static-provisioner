@@ -51,6 +51,8 @@ preconfigure the local volumes on each node and if volumes are supposed to be
 The provisioner will manage the volumes under the discovery directories by creating
 and cleaning up PersistentVolumes for each volume.
 
+A caveat to scheduling a Pod on the same node as its local PV is that when the node hosting the PV is deleted, while the data is likely lost, the PV object still exists and therefore the system is indefinitely trying to schedule the Pod to a deleted node. See our [local volume node cleanup](docs/node-cleanup-controller.md) documentation which contains information on how to make your workloads automatically recover from node deletion.
+
 ## User Guide
 
 ### Getting started
