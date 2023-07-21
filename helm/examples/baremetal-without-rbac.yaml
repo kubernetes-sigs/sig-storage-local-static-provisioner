@@ -1,6 +1,5 @@
-common:
-  rbac:
-    create: false
+rbac:
+  create: false
 classes:
 - name: local-storage
   hostDir: /mnt/disks

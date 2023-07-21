@@ -34,9 +34,9 @@ If release name contains chart name it will be used as a full name.
 Create the name of the service account to use
 */}}
 {{- define "provisioner.serviceAccountName" -}}
-{{- if .Values.common.serviceAccount.create -}}
-    {{ default (include "provisioner.fullname" .) .Values.common.serviceAccount.name }}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "provisioner.fullname" .) .Values.serviceAccount.name }}
 {{- else -}}
-    {{ default "default" .Values.common.serviceAccount.name }}
+    {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}

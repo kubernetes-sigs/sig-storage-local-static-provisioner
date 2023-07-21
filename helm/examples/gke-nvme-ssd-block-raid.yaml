@@ -1,5 +1,4 @@
-common:
-  useNodeNameOnly: true
+useNodeNameOnly: true
 classes:
 - name: nvme-ssd-block
   hostDir: /mnt/disks/raid

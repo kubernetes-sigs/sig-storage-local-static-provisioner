@@ -9,32 +9,29 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 data:
-{{- if .Values.daemonset.nodeLabels }}
+{{- if .Values.nodeLabels }}
   nodeLabelsForPV: |
-   {{- range $label := .Values.daemonset.nodeLabels }}
+   {{- range $label := .Values.nodeLabels }}
     - {{$label}}
    {{- end }}
 {{- end }}
-{{- if .Values.common.labelsForPV }}
+{{- if .Values.labelsForPV }}
   labelsForPV: |
-   {{- range $label, $value := .Values.common.labelsForPV }}
+   {{- range $label, $value := .Values.labelsForPV }}
     {{$label}} : {{$value}}
    {{- end }}
 {{- end }}
-{{- if .Values.common.useAlphaAPI }}
-  useAlphaAPI: "true"
-{{- end }}
-{{- if .Values.common.setPVOwnerRef }}
+{{- if .Values.setPVOwnerRef }}
   setPVOwnerRef: "true"
 {{- end }}
-{{- if .Values.common.useJobForCleaning }}
+{{- if .Values.useJobForCleaning }}
   useJobForCleaning: "yes"
 {{- end}}
-{{- if .Values.common.useNodeNameOnly }}
+{{- if .Values.useNodeNameOnly }}
   useNodeNameOnly: "true"
 {{- end }}
-{{- if .Values.common.minResyncPeriod }}
-  minResyncPeriod: {{ .Values.common.minResyncPeriod | quote }}
+{{- if .Values.minResyncPeriod }}
+  minResyncPeriod: {{ .Values.minResyncPeriod | quote }}
 {{- end}}
   storageClassMap: |
     {{- range $classConfig := .Values.classes }}

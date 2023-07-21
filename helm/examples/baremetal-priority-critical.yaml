@@ -14,5 +14,5 @@ classes:
   # - "/scripts/blkdiscard.sh"
   volumeMode: Block
   storageClass: true
-daemonset:
-  priorityClassName: system-node-critical
+
+priorityClassName: system-node-critical
