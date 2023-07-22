@@ -19,6 +19,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io/ioutil"
 	"os"
 	"path"
@@ -26,12 +27,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/cache"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
-
-	"hash/fnv"
+	"sigs.k8s.io/yaml"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
