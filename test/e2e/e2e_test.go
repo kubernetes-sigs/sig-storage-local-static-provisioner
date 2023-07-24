@@ -82,7 +82,7 @@ const (
 
 var (
 	// provisioner image used for e2e tests
-	provisionerImageName                     = "quay.io/external_storage/local-volume-provisioner:latest"
+	provisionerImageName                     = "gcr.io/k8s-staging-sig-storage/local-volume-provisioner:canary"
 	provisionerImagePullPolicy v1.PullPolicy = "Never"
 	// storage class volume binding modes
 	waitMode      = storagev1.VolumeBindingWaitForFirstConsumer
