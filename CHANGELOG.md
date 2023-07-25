@@ -1,5 +1,28 @@
 # HEAD
 
+# [v2.6.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.6.0)
+
+### Feature
+
+- Optional controller to automatically clean up stale PV/PVC objects when a Node is deleted (#385, @justinblalock87)
+- Support for watching ConfigMap changes and restarting main sync loop including informer and job controller (if specified) (#265, @yibozhuang)
+
+### Bug or Regression
+
+- Fix: CVE-2022-1996
+  fix: CVE-2022-29526 (#335, @umagnus)
+- Fix: CVE-2022-27664 (#339, @andyzhangx)
+- Fix: CVE-2022-32149 (#342, @andyzhangx)
+- Fix: CVE-2022-41723 (#367, @andyzhangx)
+- Fix: CVE-2023-2431 (#383, @andyzhangx)
+- Fix: set admin user in windows image build (#338, @andyzhangx)
+
+### Other (Cleanup or Flake)
+
+- Chore: replace unmaintained `github.com/ghodss/yaml` dependency with `sigs.k8s.io/yaml` (#387, @Juneezee)
+- Cleanup: remove Windows 20H2 image build since 20H2 is not maintained and supported any more from more than 1 year ago (#382, @andyzhangx)
+- Images are no longer published on quay.io. Use registry.k8s.io for image access. (#394, @msau42)
+
 # [v2.5.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.5.0)
 
 Image updates:
