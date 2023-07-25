@@ -1,5 +1,35 @@
 # HEAD
 
+# [v2.5.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.5.0)
+
+Image updates:
+
+* change log level to V5 when discovering path not match pattern by @hellogdc in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/235
+* Update Klog to V2 by @Kartik494 in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/234
+* Duplicate volume guard by @davidmccormick in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/246
+* add local volume discovery period flag by @dabaooline in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/261
+* Multi linux arch and multi windows distro builds by @mauriciopoppe in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/273
+* Update discovery and deletion code to work in Windows nodes through CSI Proxy by @mauriciopoppe in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/276
+* feat: add lstc2022 windows image build by @andyzhangx in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/314
+* fix: golang.org/x/crypto for CVE-2022-27191 by @andyzhangx in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/321
+* feat: support namePattern as a list by @andyzhangx in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/320
+
+Deployment updates:
+
+* Helm chart init container support by @alice-sawatzky in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/251
+* Add Windows daemonset to the helm template by @mauriciopoppe in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/275
+* Release chart as a package and publish it on gh-pages branch by @skylenet in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/280
+* ClusterRole system:persistent-volume-provisioner replaced with a custom ClusterRole with the same contents minus permissions to access PVCs by @mauriciopoppe in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/292
+* Update PV to beta yaml file  by @Kartik494 in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/326
+
+Doc updates:
+
+* Add LKE Option to Bring up Local Disks by @rsyracuse in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/230
+* Add 0 dependency EKS example by @arianvp in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/252
+* Fix gce bootstrap script guide by @theidexisted in https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/pull/290
+
+**Full Changelog**: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/compare/v2.4.0...v2.5.0
+
 # [v2.4.0](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/tag/v2.4.0)
 
 Image updates:
