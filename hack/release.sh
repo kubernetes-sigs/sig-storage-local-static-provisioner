@@ -40,7 +40,7 @@ Usage: hack/release.sh
 
 Environments:
 
-    REGISTRY                    container registry without repo name (default: quay.io/external_storage)
+    REGISTRY                    container registry without repo name
     VERSION                     if set, use given version as image tag
     PULL_BASE_REF               if set, detect version from this git ref instead of "git describe"
     DOCKER_CONFIG               optional docker config location
@@ -80,7 +80,7 @@ while getopts "h?" opt; do
     esac
 done
 
-REGISTRY=${REGISTRY:-quay.io/external_storage}
+REGISTRY=${REGISTRY:-}
 VERSION=${VERSION:-}
 PULL_BASE_REF=${PULL_BASE_REF:-}
 CONFIRM=${CONFIRM:-}
@@ -109,6 +109,11 @@ go version
 
 IMAGE="$REGISTRY/local-volume-provisioner"
 NODECLEANUPCONTROLLERIMAGE="$REGISTRY/local-volume-node-cleanup"
+
+if [ -z "$REGISTRY" ];
+  echo "error: REGISTRY must be set"
+  exit 1
+fi
 
 # In prow job, DOCKER_CONFIG is mounted read-only, but docker manifest command
 # expects it is writable.
