@@ -110,7 +110,7 @@ go version
 IMAGE="$REGISTRY/local-volume-provisioner"
 NODECLEANUPCONTROLLERIMAGE="$REGISTRY/local-volume-node-cleanup"
 
-if [ -z "$REGISTRY" ];
+if [ -z "$REGISTRY" ]; then
   echo "error: REGISTRY must be set"
   exit 1
 fi
@@ -223,19 +223,19 @@ else
     echo "info: build and push is skipped"
 fi
 
-echo "info: create multi-arch manifest for $IMAGE:$VERSION"
 function docker_create_multi_arch() {
     # tag_version is the version used in the docker manifest that ties
     # all of the images that were tagged with $VERSION
     local tag_version=${1}
-    local manifest_image=$IMAGE:$tag_version
+    local image=${2}
+    local manifest_image=$image:$tag_version
 
     # get the list of all the images created
     local linux_images=$(echo "${LINUX_ARCH}" | tr ' ' '\n' | while read -r arch; do \
-        echo $IMAGE:${VERSION}_linux_${arch}; \
+        echo $image:${VERSION}_linux_${arch}; \
     done);
     local windows_images=$(echo "${WINDOWS_DISTROS}" | tr ' ' '\n' | while read -r distro; do \
-        echo $IMAGE:${VERSION}_windows_${distro}; \
+        echo $image:${VERSION}_windows_${distro}; \
     done);
     local all_images="${linux_images} ${windows_images}"
 
@@ -245,14 +245,14 @@ function docker_create_multi_arch() {
     # annotate the linux images with the right arch
     # from https://github.com/kubernetes/release/blob/8dbca63a6875e59e2234954ad3876d9490bbeede/images/build/debian-base/Makefile#L67-L70
     echo "${LINUX_ARCH}" | tr ' ' '\n' | while read -r arch; do
-        local linux_image=$IMAGE:${VERSION}_linux_${arch}
+        local linux_image=$image:${VERSION}_linux_${arch}
         docker manifest annotate --arch $arch $manifest_image $linux_image
     done
 
     # annotate the windows images with the base image os-version
     # from https://github.com/kubernetes-csi/csi-release-tools/blob/5b9a1e06794ddb137ff7e2d565416cc6934ec380/build.make#L181-L189
     echo "${WINDOWS_DISTROS}" | tr ' ' '\n' | while read -r distro; do
-        local windows_image=$IMAGE:${VERSION}_windows_${distro}
+        local windows_image=$image:${VERSION}_windows_${distro}
         # the image matches the value in the Makefile
         local os_version=$(docker manifest inspect mcr.microsoft.com/windows/servercore:${distro} | grep "os.version" | head -n 1 | awk '{print $2}' | sed -e 's/"//g')
         docker manifest annotate --os-version ${os_version} $manifest_image $windows_image
@@ -261,7 +261,11 @@ function docker_create_multi_arch() {
     docker manifest push --purge $manifest_image
 }
 
-docker_create_multi_arch $VERSION
+echo "info: create multi-arch manifest for $IMAGE:$VERSION"
+docker_create_multi_arch $VERSION $IMAGE
+
+echo "info: create multi-arch manifest for $NODECLEANUPCONTROLLERIMAGE:$VERSION"
+docker_create_multi_arch $VERSION $NODECLEANUPCONTROLLERIMAGE
 
 if ! is_stable_version "$VERSION" || [ -n "$SKIP_PUSH_LATEST" ]; then
     echo "info: VERSION '$VERSION' is not stable version or SKIP_PUSH_LATEST is set, skip pushing $VERSION as the latest image"
@@ -283,4 +287,7 @@ if [ "$VERSION" != "$latest_stable_version" ]; then
 fi
 
 echo "info: VERSION '$VERSION' is latest stable version, tagging $IMAGE as latest"
-docker_create_multi_arch latest
+docker_create_multi_arch latest $IMAGE
+
+echo "info: VERSION '$VERSION' is latest stable version, tagging $NODECLEANUPCONTROLLERIMAGE as latest"
+docker_create_multi_arch latest $NODECLEANUPCONTROLLERIMAGE
