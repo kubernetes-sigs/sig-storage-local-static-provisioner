@@ -40,7 +40,8 @@ all: build-container-linux-amd64
 cross: init-buildx \
 	$(addprefix build-and-push-container-linux-,$(LINUX_ARCH)) \
 	$(addprefix build-and-push-node-cleanup-controller-linux-,$(LINUX_ARCH)) \
-	$(addprefix build-and-push-container-windows-,$(WINDOWS_DISTROS))
+	$(addprefix build-and-push-container-windows-,$(WINDOWS_DISTROS)) \
+	$(addprefix build-and-push-node-cleanup-controller-windows-,$(WINDOWS_DISTROS))
 .PHONY: cross
 
 verify:
@@ -68,7 +69,7 @@ build-container-linux-%:
 build-node-cleanup-controller-linux-%:
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-node-cleanup ./cmd/node-cleanup
 	$(DOCKER) buildx build --file=./cmd/node-cleanup/Dockerfile --platform=linux/$* \
-		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION) --output=type=$(OUTPUT_TYPE) \
+		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION)_linux_$* --output=type=$(OUTPUT_TYPE) \
 		--build-arg OS=linux \
 		--build-arg ARCH=$* .
 
@@ -83,7 +84,7 @@ build-and-push-container-linux-%: init-buildx
 build-and-push-node-cleanup-controller-linux-%: init-buildx
 	CGO_ENABLED=0 GOOS=linux GOARCH=$* go build -a -ldflags '-extldflags "-static"' -mod vendor -o _output/linux/$*/local-volume-node-cleanup ./cmd/node-cleanup
 	$(DOCKER) buildx build --file=./cmd/node-cleanup/Dockerfile --platform=linux/$* \
-		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION) \
+		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION)_linux_$* \
 		--build-arg OS=linux \
 		--build-arg ARCH=$* \
 		--push .
@@ -92,6 +93,13 @@ build-and-push-container-windows-%: init-buildx
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-provisioner.exe ./cmd/local-volume-provisioner
 	$(DOCKER) buildx build --file=./deployment/docker/Dockerfile.Windows --platform=windows/amd64 \
 		-t $(STAGINGIMAGE):$(STAGINGVERSION)_windows_$* \
+		--build-arg OSVERSION=$* \
+		--push .
+
+build-and-push-node-cleanup-controller-windows-%: init-buildx
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -ldflags='-extldflags="-static" -X="main.version=${STAGINGVERSION}"' -mod vendor -o _output/windows/amd64/local-volume-node-cleanup.exe ./cmd/node-cleanup
+	$(DOCKER) buildx build --file=./cmd/node-cleanup/Dockerfile.Windows --platform=windows/amd64 \
+		-t $(STAGINGIMAGENODECLEANUPCONTROLLER):$(STAGINGVERSION)_windows_$* \
 		--build-arg OSVERSION=$* \
 		--push .
 
