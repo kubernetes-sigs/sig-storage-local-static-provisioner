@@ -18,8 +18,12 @@ package main
 
 import (
 	"context"
+	"log"
+	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -27,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/klog/v2"
+	metrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/controller"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/deleter"
 )
@@ -40,6 +45,8 @@ var (
 	workerThreads            = flag.Uint("worker-threads", 10, "Number of controller worker threads.")
 	pvcDeletionDelay         = flag.Duration("pvc-deletion-delay", 60*time.Second, "Duration, in seconds, to wait after Node deletion for PVC cleanup.")
 	stalePVDiscoveryInterval = flag.Duration("stale-pv-discovery-interval", 10*time.Second, "Duration, in seconds, the PV Deleter should wait between tries to clean up stale PVs.")
+	listenAddress            = flag.String("listen-address", ":8080", "The TCP network address where the prometheus metrics endpoint will listen (example: `:8080`).")
+	metricsPath              = flag.String("metrics-path", "/metrics", "The HTTP path where prometheus metrics will be exposed.")
 )
 
 func main() {
@@ -76,6 +83,22 @@ func main() {
 	deleter := deleter.NewDeleter(clientset, pvInformer.Lister(), nodeInformer.Lister(), *storageClassNames)
 
 	factory.Start(ctx.Done())
+
+	// Prepare http endpoint for metrics
+	if *listenAddress != "" {
+		prometheus.MustRegister([]prometheus.Collector{
+			metrics.APIServerRequestsTotal,
+			metrics.PersistentVolumeDeleteFailedTotal,
+			metrics.PersistentVolumeClaimDeleteTotal,
+			metrics.PersistentVolumeClaimDeleteFailedTotal,
+		}...)
+		http.Handle(*metricsPath, promhttp.Handler())
+
+		go func() {
+			klog.Infof("Starting metrics server at %s\n", *listenAddress)
+			log.Fatal(http.ListenAndServe(*listenAddress, nil))
+		}()
+	}
 
 	// Start Deleter
 	go deleter.Run(ctx, *stalePVDiscoveryInterval)

@@ -38,6 +38,8 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
+	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 )
 
 // CleanupController handles the deletion of PVCs that reference deleted Nodes.
@@ -235,10 +237,12 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 
 	err = c.deletePVC(ctx, pvc)
 	if err != nil {
+		cleanupmetrics.PersistentVolumeClaimDeleteFailedTotal.Inc()
 		klog.Errorf("failed to delete pvc %q in namespace &q: %w", pvClaimRef.Name, pvClaimRef.Namespace, err)
 		return err
 	}
 
+	cleanupmetrics.PersistentVolumeClaimDeleteTotal.Inc()
 	klog.Infof("Deleted PVC %q that pointed to Node %q", pvClaimRef.Name, nodeName)
 	return nil
 }
@@ -296,6 +300,7 @@ func (c *CleanupController) deletePVC(ctx context.Context, pvc *v1.PersistentVol
 	options := metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &pvc.UID},
 	}
+	cleanupmetrics.APIServerRequestsTotal.WithLabelValues(metrics.APIServerRequestDelete).Inc()
 	err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(ctx, pvc.Name, options)
 	if err != nil && errors.IsNotFound(err) {
 		// The PVC could already be deleted by some other process

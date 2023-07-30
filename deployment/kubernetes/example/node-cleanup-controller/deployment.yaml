@@ -20,3 +20,6 @@ spec:
           - "--storageclass-names=nvme-ssd-block"
           - "--pvc-deletion-delay=60s"
           - "--stale-pv-discovery-interval=10s"
+        ports:
+          - name: metrics
+            containerPort: 8080
