@@ -38,7 +38,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 )
 
@@ -300,7 +299,6 @@ func (c *CleanupController) deletePVC(ctx context.Context, pvc *v1.PersistentVol
 	options := metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &pvc.UID},
 	}
-	cleanupmetrics.APIServerRequestsTotal.WithLabelValues(metrics.APIServerRequestDelete).Inc()
 	err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Delete(ctx, pvc.Name, options)
 	if err != nil && errors.IsNotFound(err) {
 		// The PVC could already be deleted by some other process

@@ -30,7 +30,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 )
 
@@ -102,10 +101,13 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 		if isReleasedWithDeleteReclaim || isAvailable {
 			klog.Infof("Attempting to delete PV that has NodeAffinity to deleted Node, pv: %s", pv.Name)
 			if err = d.deletePV(ctx, pv.Name); err != nil {
-				cleanupmetrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(phase), string(reclaimPolicy)).Inc()
+				cleanupmetrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(phase)).Inc()
 				klog.Errorf("Error deleting PV: %s", pv.Name)
 				continue
 			}
+			// TODO: Cache successful deletion to avoid multiple delete calls
+			// when there is a short sync period
+			cleanupmetrics.PersistentVolumeDeleteTotal.WithLabelValues(string(phase)).Inc()
 		}
 	}
 }
@@ -133,7 +135,6 @@ func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) (bool,
 }
 
 func (d *Deleter) deletePV(ctx context.Context, pvName string) error {
-	cleanupmetrics.APIServerRequestsTotal.WithLabelValues(metrics.APIServerRequestDelete).Inc()
 	err := d.client.CoreV1().PersistentVolumes().Delete(ctx, pvName, metav1.DeleteOptions{})
 	if err != nil && errors.IsNotFound(err) {
 		klog.Warningf("PV %q no longer exists", pvName)

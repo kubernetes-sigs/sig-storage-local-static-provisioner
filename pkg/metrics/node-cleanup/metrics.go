@@ -26,23 +26,25 @@ const (
 )
 
 var (
-	// APIServerRequestsTotal is used to collect accumulated count of apiserver requests.
-	APIServerRequestsTotal = prometheus.NewCounterVec(
+	// PersistentVolumeDeleteTotal is used to collect accumulated count of persistent volume delete attempts.
+	// This metric will report as higher than the true amount of persistent volumes deleted if
+	// the node-cleanup deleter has a short sync period.
+	PersistentVolumeDeleteTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Subsystem: LocalVolumeNodeCleanupSubsystem,
-			Name:      "apiserver_requests_total",
-			Help:      "Total number of apiserver requests. Broken down by method.",
+			Name:      "persistentvolume_delete_total",
+			Help:      "Total number of successful persistent volume delete *attempts*. Broken down by persistent volume phase.",
 		},
-		[]string{"method"},
+		[]string{"phase"},
 	)
 	// PersistentVolumeDeleteFailedTotal is used to collect accumulated count of persistent volume delete failed attempts.
 	PersistentVolumeDeleteFailedTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Subsystem: LocalVolumeNodeCleanupSubsystem,
 			Name:      "persistentvolume_delete_failed_total",
-			Help:      "Total number of persistent volume delete failed attempts. Broken down by persistent volume status and reclaim policy.",
+			Help:      "Total number of persistent volume delete failed attempts. Broken down by persistent volume phase.",
 		},
-		[]string{"status", "reclaim"},
+		[]string{"phase"},
 	)
 	// PersistentVolumeClaimDeleteTotal is used to collect accumulated count of persistent volume claims deleted.
 	PersistentVolumeClaimDeleteTotal = prometheus.NewCounter(

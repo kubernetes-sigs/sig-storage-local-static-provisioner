@@ -30,6 +30,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"k8s.io/component-base/metrics/legacyregistry"
+	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for client metric registration
+
 	"k8s.io/klog/v2"
 	metrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/controller"
@@ -86,13 +89,19 @@ func main() {
 
 	// Prepare http endpoint for metrics
 	if *listenAddress != "" {
-		prometheus.MustRegister([]prometheus.Collector{
-			metrics.APIServerRequestsTotal,
+		reg := prometheus.NewRegistry()
+		reg.MustRegister([]prometheus.Collector{
+			metrics.PersistentVolumeDeleteTotal,
 			metrics.PersistentVolumeDeleteFailedTotal,
 			metrics.PersistentVolumeClaimDeleteTotal,
 			metrics.PersistentVolumeClaimDeleteFailedTotal,
 		}...)
-		http.Handle(*metricsPath, promhttp.Handler())
+		gatherers := prometheus.Gatherers{
+			reg,
+			legacyregistry.DefaultGatherer,
+		}
+
+		http.Handle(*metricsPath, promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{}))
 
 		go func() {
 			klog.Infof("Starting metrics server at %s\n", *listenAddress)
