@@ -26,6 +26,8 @@ Please see the example [deployment](../deployment/kubernetes/example/node-cleanu
 * `--kube-api-endpoint`: Master URL to build a client config from. Either this or kubeconfig needs to be set if the provisioner is being run out of cluster.
 * `--resync`: Duration, in minutes, of the resync interval of the controller. Defaults to 10 minutes.
 * `--worker-threads`: Number of controller worker threads. Defaults to 10.
+* `--listen-address`: The TCP network address where the prometheus metrics endpoint will listen. Defaults to `:8080`.
+* `--metrics-path`: The HTTP path where prometheus metrics will be exposed. Defaults to "/metrics".
 
 ## Design
 

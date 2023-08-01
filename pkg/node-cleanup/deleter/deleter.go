@@ -30,6 +30,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 )
 
 // Deleter handles cleanup of local PVs with an affinity to a deleted Node.
@@ -91,15 +92,22 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 			continue
 		}
 
+		phase := pv.Status.Phase
+		reclaimPolicy := pv.Spec.PersistentVolumeReclaimPolicy
 		// PV is a stale object since it references a deleted Node.
 		// Therefore it can safely be deleted in the two following cases.
-		isReleasedWithDeleteReclaim := pv.Status.Phase == v1.VolumeReleased && pv.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete
-		isAvailable := pv.Status.Phase == v1.VolumeAvailable
+		isReleasedWithDeleteReclaim := phase == v1.VolumeReleased && reclaimPolicy == v1.PersistentVolumeReclaimDelete
+		isAvailable := phase == v1.VolumeAvailable
 		if isReleasedWithDeleteReclaim || isAvailable {
-			klog.Infof("Deleting PV that has NodeAffinity to deleted Node, pv: %s", pv.Name)
+			klog.Infof("Attempting to delete PV that has NodeAffinity to deleted Node, pv: %s", pv.Name)
 			if err = d.deletePV(ctx, pv.Name); err != nil {
+				cleanupmetrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(phase)).Inc()
 				klog.Errorf("Error deleting PV: %s", pv.Name)
+				continue
 			}
+			// TODO: Cache successful deletion to avoid multiple delete calls
+			// when there is a short sync period
+			cleanupmetrics.PersistentVolumeDeleteTotal.WithLabelValues(string(phase)).Inc()
 		}
 	}
 }
