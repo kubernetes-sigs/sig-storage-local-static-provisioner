@@ -6,17 +6,18 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
 
 ## Table of Contents
 
-- [Install Helm](#install-helm)
-- [Custom your deployment with values file](#custom-your-deployment-with-values-file)
-- [Install local-volume-provisioner](#install-local-volume-provisioner)
-- [helm version < v3.0.0](#helm-version-lt-v3.0.0)
-    * [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl)
-    * [Install with `helm install` directly](#install-with-helm-install-directly)
-- [helm version >= v3.0.0](#helm-version-gt-v3.0.0)
-    * [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl1)
-    * [Install with `helm install` directly](#install-with-helm-install-directly-1)
-- [Configurations](#configurations)
-- [Examples](#examples)
+- [Install local-volume-provisioner with helm](#install-local-volume-provisioner-with-helm)
+  - [Table of Contents](#table-of-contents)
+  - [Install Helm](#install-helm)
+  - [Custom your deployment with values file](#custom-your-deployment-with-values-file)
+  - [Install local-volume-provisioner](#install-local-volume-provisioner)
+    - [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl)
+    - [helm version \< v3.0.0](#helm-version--v300)
+    - [Install with `helm install` directly](#install-with-helm-install-directly)
+    - [helm version  \>= v3.0.0](#helm-version---v300)
+    - [Install with `helm install` directly](#install-with-helm-install-directly-1)
+  - [Configurations](#configurations)
+  - [Examples](#examples)
 
 ## Install Helm
 
@@ -186,47 +187,50 @@ information.
 The following table lists the configurable parameters of the local volume
 provisioner chart and their default values.
 
-| Parameter                               | Description                                                                                           | Type     | Default                                                    |
-| ---                                     | ---                                                                                                   | ---      | ---                                                        |
-| nameOverride                            | Override default chartname                                                                            | str      | `""`                                                       |
-| fullnameOverride                        | Override default releasename                                                                          | str      | `""`                                                       |
-| rbac.create                             | if `true`, create and use RBAC resources                                                              | bool     | `true`                                                     |
-| serviceAccount.create                   | if `true`, create serviceaccount in .Release.Namespace                                                | bool     | `true`                                                     |
-| serviceAccount.name                     | if set serviceaccount if the given name will be created                                               | str      | `""`                                                       |
-| useJobForCleaning                       | If set to true, provisioner will use jobs-based block cleaning.                                       | bool     | `false`                                                    |
-| useNodeNameOnly                         | If set to true, provisioner name will only use Node.Name and not Node.UID.                            | bool     | `false`                                                    |
-| minResyncPeriod                         | Resync period in reflectors will be random between `minResyncPeriod` and `2*minResyncPeriod`.         | str      | `5m0s`                                                     |
-| setPVOwnerRef                           | If set to true, PVs are set to be dependents of the owner Node.                                       | bool     | `false`                                                    |
-| mountDevVolume                          | If set to false, the node's `/dev` path will not be mounted into containers.                          | bool     | `true`                                                     |
-| labelsForPV                             | Map of label key-value pairs to apply to the PVs created by the provisioner.                          | map      | `-`                                                        |
-| enableWindows                           | If `true`, Windows DaemonSet will be created by the provisioner.                                      | bool     | `false`                                                    |
-| classes.[n].name                        | StorageClass name.                                                                                    | str      | `-`                                                        |
-| classes.[n].hostDir                     | Path on the host where local volumes of this storage class are mounted under.                         | str      | `-`                                                        |
-| classes.[n].mountDir                    | Optionally specify mount path of local volumes. By default, we use same path as hostDir in container. | str      | `-`                                                        |
-| classes.[n].blockCleanerCommand         | List of command and arguments of block cleaner command.                                               | list     | `-`                                                        |
-| classes.[n].volumeMode                  | Optionally specify volume mode of created PersistentVolume object. By default, we use Filesystem.     | str      | `-`                                                        |
-| classes.[n].fsType                      | Filesystem type to mount. Only applies when source is block while volume mode is Filesystem.          | str      | `-`                                                        |
-| classes.[n].namePattern                 | File name pattern to discover. By default, discover all file names.                                   | str      | `*`                                                        |
-| classes.[n].storageClass                | Create storage class for this class and configure it optionally.                                      | bool/map | `false`                                                    |
-| classes.[n].storageClass.reclaimPolicy  | Specify reclaimPolicy of storage class, available: Delete/Retain.                                     | str      | `Delete`                                                   |
-| classes.[n].storageClass.isDefaultClass | Set storage class as default                                                                          | bool     | `false`                                                    |
-| podAnnotations                          | Annotations for each Pod in the DaemonSet.                                                            | map      | `-`                                                        |
-| podLabels                               | Labels for each Pod in the DaemonSet.                                                                 | map      | `-`                                                        |
-| image                                   | Provisioner image.                                                                                    | str      | `registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0` |
-| imagePullPolicy                         | Provisioner DaemonSet image pull policy.                                                              | str      | `-`                                                        |
-| priorityClassName                       | Provisioner DaemonSet Pod Priority Class name.                                                        | str      | ``                                                         |
-| kubeConfigEnv                           | Specify the location of kubernetes config file.                                                       | str      | `-`                                                        |
-| nodeLabels                              | List of node labels to be copied to the PVs created by the provisioner.                               | list     | `-`                                                        |
-| nodeSelector                            | NodeSelector constraint on nodes eligible to run the provisioner.                                     | map      | `-`                                                        |
-| tolerations                             | List of tolerations to be applied to the Provisioner DaemonSet.                                       | list     | `-`                                                        |
-| resources                               | Map of resource request and limits to be applied to the Provisioner Daemonset.                        | map      | `-`                                                        |
-| affinity                                | List of affinity to be applied to the provisioner Daemonset.                                          | list     | `-`
-| privileged                              | If set to false, containers created by the Provisioner Daemonset will run without extra privileges.   | bool     | `true`                                                     |
-| serviceMonitor.enabled                  | If set to true, Prometheus servicemonitor will be applied                                             | bool     | `false`                                                    |
-| serviceMonitor.interval                 | Interval at which Prometheus scrapes the provisioner                                                  | str      | `10s`                                                      |
-| serviceMonitor.namespace                | The namespace Prometheus servicemonitor will be installed                                             | str      | `.Release.Namespace`                                       |
-| serviceMonitor.additionalLabels         | Additional labels for the servicemonitor                                                              | map      | `-`                                                        |
-| serviceMonitor.relabelings              | Additional metrics relabel_config                                                                     | lists    | `-`                                                        |
+| Parameter                               | Description                                                                                                                    | Type     | Default                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------- |
+| nameOverride                            | Override default chartname                                                                                                     | str      | `""`                                                          |
+| fullnameOverride                        | Override default releasename                                                                                                   | str      | `""`                                                          |
+| rbac.create                             | if `true`, create and use RBAC resources                                                                                       | bool     | `true`                                                        |
+| serviceAccount.create                   | if `true`, create serviceaccount in .Release.Namespace                                                                         | bool     | `true`                                                        |
+| serviceAccount.name                     | if set serviceaccount if the given name will be created                                                                        | str      | `""`                                                          |
+| useJobForCleaning                       | If set to true, provisioner will use jobs-based block cleaning.                                                                | bool     | `false`                                                       |
+| useNodeNameOnly                         | If set to true, provisioner name will only use Node.Name and not Node.UID.                                                     | bool     | `false`                                                       |
+| minResyncPeriod                         | Resync period in reflectors will be random between `minResyncPeriod` and `2*minResyncPeriod`.                                  | str      | `5m0s`                                                        |
+| setPVOwnerRef                           | If set to true, PVs are set to be dependents of the owner Node.                                                                | bool     | `false`                                                       |
+| additionalVolumes                       | Additional volumes to create, for the default container and init containers to consume.                                        | list     | `-`                                                           |
+| mountDevVolume                          | If set to false, the node's `/dev` path will not be mounted into containers.                                                   | bool     | `true`                                                        |
+| additionalVolumeMounts                  | Additional volumes to mount to the default container, the volumes should either be host paths or defined by additionalVolumes. | list     | `-`                                                           |
+| labelsForPV                             | Map of label key-value pairs to apply to the PVs created by the provisioner.                                                   | map      | `-`                                                           |
+| enableWindows                           | If `true`, Windows DaemonSet will be created by the provisioner.                                                               | bool     | `false`                                                       |
+| classes.[n].name                        | StorageClass name.                                                                                                             | str      | `-`                                                           |
+| classes.[n].hostDir                     | Path on the host where local volumes of this storage class are mounted under.                                                  | str      | `-`                                                           |
+| classes.[n].mountDir                    | Optionally specify mount path of local volumes. By default, we use same path as hostDir in container.                          | str      | `-`                                                           |
+| classes.[n].blockCleanerCommand         | List of command and arguments of block cleaner command.                                                                        | list     | `-`                                                           |
+| classes.[n].volumeMode                  | Optionally specify volume mode of created PersistentVolume object. By default, we use Filesystem.                              | str      | `-`                                                           |
+| classes.[n].fsType                      | Filesystem type to mount. Only applies when source is block while volume mode is Filesystem.                                   | str      | `-`                                                           |
+| classes.[n].namePattern                 | File name pattern to discover. By default, discover all file names.                                                            | str      | `*`                                                           |
+| classes.[n].storageClass                | Create storage class for this class and configure it optionally.                                                               | bool/map | `false`                                                       |
+| classes.[n].storageClass.reclaimPolicy  | Specify reclaimPolicy of storage class, available: Delete/Retain.                                                              | str      | `Delete`                                                      |
+| classes.[n].storageClass.isDefaultClass | Set storage class as default                                                                                                   | bool     | `false`                                                       |
+| podAnnotations                          | Annotations for each Pod in the DaemonSet.                                                                                     | map      | `-`                                                           |
+| podLabels                               | Labels for each Pod in the DaemonSet.                                                                                          | map      | `-`                                                           |
+| image                                   | Provisioner image.                                                                                                             | str      | `registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0` |
+| imagePullPolicy                         | Provisioner DaemonSet image pull policy.                                                                                       | str      | `-`                                                           |
+| priorityClassName                       | Provisioner DaemonSet Pod Priority Class name.                                                                                 | str      | ``                                                            |
+| kubeConfigEnv                           | Specify the location of kubernetes config file.                                                                                | str      | `-`                                                           |
+| nodeLabels                              | List of node labels to be copied to the PVs created by the provisioner.                                                        | list     | `-`                                                           |
+| nodeSelector                            | NodeSelector constraint on nodes eligible to run the provisioner.                                                              | map      | `-`                                                           |
+| tolerations                             | List of tolerations to be applied to the Provisioner DaemonSet.                                                                | list     | `-`                                                           |
+| resources                               | Map of resource request and limits to be applied to the Provisioner Daemonset.                                                 | map      | `-`                                                           |
+| affinity                                | List of affinity to be applied to the provisioner Daemonset.                                                                   | list     | `-`                                                           |
+| privileged                              | If set to false, containers created by the Provisioner Daemonset will run without extra privileges.                            | bool     | `true`                                                        |
+| initContainers                          | Init containers.                                                                                                               | list     | `-`                                                           |
+| serviceMonitor.enabled                  | If set to true, Prometheus servicemonitor will be applied                                                                      | bool     | `false`                                                       |
+| serviceMonitor.interval                 | Interval at which Prometheus scrapes the provisioner                                                                           | str      | `10s`                                                         |
+| serviceMonitor.namespace                | The namespace Prometheus servicemonitor will be installed                                                                      | str      | `.Release.Namespace`                                          |
+| serviceMonitor.additionalLabels         | Additional labels for the servicemonitor                                                                                       | map      | `-`                                                           |
+| serviceMonitor.relabelings              | Additional metrics relabel_config                                                                                              | lists    | `-`                                                           |
 
 Note: `classes` is a list of objects, you can specify one or more classes.
 
