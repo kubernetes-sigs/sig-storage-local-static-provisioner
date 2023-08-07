@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -18,7 +18,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -40,7 +40,7 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -67,7 +67,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -87,7 +87,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -102,7 +102,7 @@ spec:
         app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: fbfc9e88fedc172393c69523b113ad18a015df9a3331a28ebd22fbddf52b4c8e
+        checksum/config: 997271ac2c9e49ae617e255f4d6e709709aa662e1049fef537e81f1b4d6b36a9
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:

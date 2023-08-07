@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -18,7 +18,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -34,7 +34,7 @@ kind: StorageClass
 metadata:
   name: nvme-ssd
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -48,7 +48,7 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -75,7 +75,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -95,7 +95,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-1.0.0
+    helm.sh/chart: local-static-provisioner-2.0.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -110,7 +110,7 @@ spec:
         app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: 0d9a1966f57c24a094b5590be3c14bd3bfeb962f21ba0fe921542a4ae4dba5b0
+        checksum/config: b110cd9aea997eefa707c673fe5efa712280f77f1e5af3ff591359246cba3d9e
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:
