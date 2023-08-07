@@ -3,7 +3,7 @@ name: local-static-provisioner
 description: Helm chart for the SIG Storage Local Volume Static Provisioner.
 type: application
 version: 1.0.0
-appVersion: 2.5.0
+appVersion: 2.6.0
 keywords:
   - storage
   - local

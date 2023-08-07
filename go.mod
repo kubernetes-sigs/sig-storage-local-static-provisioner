@@ -8,6 +8,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.1
 	github.com/onsi/gomega v1.27.4
 	github.com/prometheus/client_golang v1.14.0
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/sys v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.27.3
@@ -80,7 +81,6 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spf13/cobra v1.6.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.7 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7 // indirect
@@ -148,6 +148,7 @@ replace (
 	k8s.io/controller-manager => k8s.io/controller-manager v0.27.3
 	k8s.io/cri-api => k8s.io/cri-api v0.27.3
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.27.3
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.27.3
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.27.3
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.27.3
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.27.3
