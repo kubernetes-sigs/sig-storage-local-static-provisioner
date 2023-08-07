@@ -85,15 +85,6 @@ spec:
             - name: provisioner-config
               mountPath: /etc/provisioner/config
               readOnly: true
-            {{- if .Values.mountDevVolume }}
-            - name: provisioner-dev
-              mountPath: /dev
-            {{- end }}
-            {{- range $classConfig := .Values.classes }}
-            - name: {{ $classConfig.name }}
-              mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
-              mountPropagation: HostToContainer
-            {{- end }}
             - name: csi-proxy-volume-v1
               mountPath: \\.\pipe\csi-proxy-volume-v1
             - name: csi-proxy-filesystem-v1
@@ -104,6 +95,18 @@ spec:
               mountPath: \\.\pipe\csi-proxy-volume-v1beta2
             - name: csi-proxy-filesystem-v1beta2
               mountPath: \\.\pipe\csi-proxy-filesystem-v1beta2
+          {{- if .Values.mountDevVolume }}
+            - name: provisioner-dev
+              mountPath: /dev
+          {{- end }}
+          {{- range .Values.classes }}
+            - name: {{ .name }}
+              mountPath: {{ default .hostDir .mountDir }}
+              mountPropagation: HostToContainer
+          {{- end }}
+          {{- with .Values.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       volumes:
         - name: csi-proxy-volume-v1
           hostPath:
@@ -126,7 +129,7 @@ spec:
         - name: provisioner-config
           configMap:
             name: {{ template "provisioner.fullname" . }}-config
-        {{- if .Values.mountDevVolume }}
+      {{- if .Values.mountDevVolume }}
         - name: provisioner-dev
           hostPath:
             path: "C:\\dev"
@@ -134,15 +137,13 @@ spec:
             # created there as needed with permission set to 0755,
             # having the same group and ownership with Kubelet.
             type: DirectoryOrCreate
-        {{- end }}
-        {{- range $classConfig := .Values.classes }}
-        - name: {{ $classConfig.name }}
+      {{- end }}
+      {{- range .Values.classes }}
+        - name: {{ .name }}
           hostPath:
-            path: {{ $classConfig.hostDir }}
-        {{- end }}
-        {{- range $name, $path := .Values.additionalHostPathVolumes }}
-        - name: {{ quote $name }}
-          hostPath:
-            path: {{ quote $path }}
-        {{- end }}
+            path: {{ .hostDir }}
+      {{- end }}
+      {{- with .Values.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}

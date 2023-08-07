@@ -83,31 +83,32 @@ spec:
             - name: provisioner-config
               mountPath: /etc/provisioner/config
               readOnly: true
-            {{- if .Values.mountDevVolume }}
+          {{- if .Values.mountDevVolume }}
             - name: provisioner-dev
               mountPath: /dev
-            {{- end }}
-            {{- range $classConfig := .Values.classes }}
-            - name: {{ $classConfig.name }}
-              mountPath: {{ $classConfig.mountDir | default $classConfig.hostDir }}
+          {{- end }}
+          {{- range .Values.classes }}
+            - name: {{ .name }}
+              mountPath: {{ default .hostDir .mountDir }}
               mountPropagation: HostToContainer
-            {{- end }}
+          {{- end }}
+          {{- with .Values.additionalVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       volumes:
         - name: provisioner-config
           configMap:
             name: {{ template "provisioner.fullname" . }}-config
-        {{- if .Values.mountDevVolume }}
+      {{- if .Values.mountDevVolume }}
         - name: provisioner-dev
           hostPath:
             path: /dev
-        {{- end }}
-        {{- range $classConfig := .Values.classes }}
-        - name: {{ $classConfig.name }}
+      {{- end }}
+      {{- range .Values.classes }}
+        - name: {{ .name }}
           hostPath:
-            path: {{ $classConfig.hostDir }}
-        {{- end }}
-        {{- range $name, $path := .Values.additionalHostPathVolumes }}
-        - name: {{ quote $name }}
-          hostPath:
-            path: {{ quote $path }}
-        {{- end }}
+            path: {{ .hostDir }}
+      {{- end }}
+      {{- with .Values.additionalVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

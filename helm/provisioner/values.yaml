@@ -28,15 +28,17 @@ useNodeNameOnly: false
 # 2*minResyncPeriod. Default: 5m0s.
 #minResyncPeriod: 5m0s
 
+# Additional volumes to create, for the default container and init containers
+# to consume
+additionalVolumes: []
+
 # Mount the host's `/dev/` by default so that block device symlinks can be
 # resolved by the containers
 mountDevVolume: true
 
-# A mapping of additional HostPath volume names to host paths to create, for
-# your init container to consume
-additionalHostPathVolumes: {}
-#  provisioner-proc: /proc
-#  provisioner-mnt: /mnt
+# Additional volumes to mount to the default container, the volumes should
+# either be host paths or defined by additionalVolumes
+additionalVolumeMounts: []
 
 # Map of label key-value pairs to apply to the PVs created by the
 # provisioner. Uncomment to add labels to the list.
@@ -124,7 +126,8 @@ affinity: {}
 #
 # If configured, resources will set the requests/limits field to the Daemonset PodSpec.
 # Ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-resources: {}
+resources:
+  {}
   # limits:
   #   memory: "512Mi"
   #   cpu: "1000m"
@@ -134,6 +137,7 @@ resources: {}
 #
 # If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
 privileged: true
+
 # Any init containers can be configured here.
 # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 initContainers: []

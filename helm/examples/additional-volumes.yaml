@@ -1,0 +1,24 @@
+additionalVolumes:
+  - name: init-config
+    configMap:
+      name: init-config
+  - name: signal
+    emptyDir: {}
+
+additionalVolumeMounts:
+  - name: signal
+    mountPath: /etc/signal
+    readOnly: true
+
+initContainers:
+  - name: test
+    image: alpine:3
+    command: ["/bin/sh"]
+    args:
+      - -c
+      - /etc/init/run.sh
+    volumeMounts:
+      - name: init-config
+        mountPath: /etc/init
+      - name: signal
+        mountPath: /etc/signal
