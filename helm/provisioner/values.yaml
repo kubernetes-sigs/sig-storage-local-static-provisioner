@@ -84,6 +84,7 @@ classes:
       # storageClass:
       # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
       # isDefaultClass: true # set as default class
+    useCleanupController: false
 
 # Defines annotations for each Pod in the DaemonSet.
 podAnnotations: {}
@@ -162,3 +163,43 @@ serviceMonitor:
   #   targetLabel: nodename
   #   replacement: $1
   #   action: replace
+
+cleanupController:
+  enabled: false
+  image: registry.k8s.io/sig-storage/local-volume-node-cleanup:v2.6.0
+  args:
+    - "--pvc-deletion-delay=60s"
+    - "--stale-pv-discovery-interval=10s"
+  # Defines annotations for each Pod in the Cleanup Controller Deployment.
+  podAnnotations: {}
+  # Defines labels for each Pod iin the Cleanup Controller Deployment.
+  podLabels: {}
+  # Node tolerations for Cleanup Controller Deployment scheduling to nodes with taints.
+  # Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: []
+  # If configured, affinity will add a affinity filed to the Cleanup Controller Deployment PodSpec.
+  # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+  # If configured, resources will set the requests/limits field to the Cleanup Controller Deployment PodSpec.
+  resources: {}
+  # Additional volumes to create, for the default container and init containers
+  # to consume
+  additionalVolumes: []
+  # Additional volumes to mount to the default container, the volumes should
+  # either be host paths or defined by additionalVolumes
+  additionalVolumeMounts: []
+  # NodeSelector constraint for Cleanup Controller Deployment scheduling to nodes.
+  # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  nodeSelector: {}
+  # Any init containers can be configured here.
+  # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  initContainers: []
+  # Defines a name of the Pod Priority Class to use with the Cleanup Controller Deployment
+  # Note that if you want to make it critical, specify "system-cluster-critical"
+  # or "system-node-critical" and deploy in kube-system namespace.
+  # Ref: https://k8s.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/#marking-pod-as-critical
+  # priorityClassName: system-node-critical
+  # Defines Image download policy, see kubernetes documentation for available values.
+  # imagePullPolicy: Always
+  # If set to false, containers created by the Cleanup Controller Deployment will run without extra privileges.
+  privileged: false

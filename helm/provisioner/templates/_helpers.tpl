@@ -40,3 +40,16 @@ Create the name of the service account to use
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Define list of storage classes that can be managed by Cleanup Controller
+*/}}
+{{- define "cleanupController.storageClassList" -}}
+{{- $classList := list -}}
+{{- range .Values.classes }}
+{{- if .useCleanupController -}}
+{{- $classList = append $classList .name -}}
+{{- end -}}
+{{- end -}}
+{{ join "," $classList}}
+{{- end -}}
