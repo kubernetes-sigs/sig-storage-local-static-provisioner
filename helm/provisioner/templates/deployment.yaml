@@ -54,7 +54,7 @@ spec:
         - name: cleanup-controller
           image: {{ .Values.cleanupController.image }}
           args:
-            - "--storageclass-names={{ template "cleanupController.storageClassList" . }}"
+            - "--storageclass-names={{ template "provisioner.cleanupControllerStorageClassList" . }}"
           {{- with .Values.cleanupController.args }}
             {{- toYaml . | nindent 12 }}
           {{- end }}

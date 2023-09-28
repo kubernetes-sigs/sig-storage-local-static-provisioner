@@ -44,7 +44,7 @@ Create the name of the service account to use
 {{/*
 Define list of storage classes that can be managed by Cleanup Controller
 */}}
-{{- define "cleanupController.storageClassList" -}}
+{{- define "provisioner.cleanupControllerStorageClassList" -}}
 {{- $classList := list -}}
 {{- range .Values.classes }}
 {{- if .useCleanupController -}}
