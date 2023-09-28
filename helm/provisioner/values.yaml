@@ -84,6 +84,7 @@ classes:
       # storageClass:
       # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
       # isDefaultClass: true # set as default class
+      # provisioner: kubernetes.io/no-provisioner
     useCleanupController: false
 
 # Defines annotations for each Pod in the DaemonSet.
