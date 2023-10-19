@@ -67,6 +67,8 @@ classes:
     fsType: ext4
     # File name pattern to discover. By default, discover all file names.
     namePattern: "*"
+    # Restrict topology of provisioned volumes to specific labels
+    allowedTopologies:
     blockCleanerCommand:
       #  Do a quick reset of the block device during its cleanup.
       #  - "/scripts/quick_reset.sh"
