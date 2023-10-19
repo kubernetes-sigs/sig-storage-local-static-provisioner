@@ -23,5 +23,12 @@ reclaimPolicy: {{ $val.storageClass.reclaimPolicy | default "Delete" }}
 {{- else }}
 reclaimPolicy: Delete
 {{- end }}
+{{- if $val.allowedTopologies }}
+{{- if kindIs "string" $val.allowedTopologies }}
+allowedTopologies: {{ tpl $val.allowedTopologies $ }}
+{{- else }}
+allowedTopologies: {{ $val.allowedTopologies | toYaml | nindent 0 }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
