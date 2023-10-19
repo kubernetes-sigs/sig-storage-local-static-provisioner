@@ -9,7 +9,7 @@ require (
 	github.com/onsi/gomega v1.27.4
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/sys v0.6.0
+	golang.org/x/sys v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
@@ -99,12 +99,12 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/api v0.60.0 // indirect
