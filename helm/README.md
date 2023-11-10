@@ -231,6 +231,7 @@ provisioner chart and their default values.
 | serviceMonitor.namespace                | The namespace Prometheus servicemonitor will be installed                                                                      | str      | `.Release.Namespace`                                          |
 | serviceMonitor.additionalLabels         | Additional labels for the servicemonitor                                                                                       | map      | `-`                                                           |
 | serviceMonitor.relabelings              | Additional metrics relabel_config                                                                                              | lists    | `-`                                                           |
+| hostPID                                 | Add `hostPID: true` to the container spec for linux daemonset.                                                                 | bool     | `false`                                                       |
 
 Note: `classes` is a list of objects, you can specify one or more classes.
 

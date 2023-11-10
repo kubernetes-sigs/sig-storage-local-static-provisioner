@@ -138,6 +138,9 @@ resources:
 # If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
 privileged: true
 
+# If set to true, "hostPID: true" will be added to the container spec in the linux daemonset to allow access to host PID's
+hostPID: false
+
 # Any init containers can be configured here.
 # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 initContainers: []
