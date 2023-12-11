@@ -260,6 +260,10 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 	}
 
 	for _, pv := range pvs {
+		if !common.IsLocalPVWithStorageClass(pv, c.storageClassNames) {
+			continue
+		}
+
 		nodeName, ok := common.NodeAttachedToLocalPV(pv)
 		if !ok {
 			klog.Errorf("error getting node attached to pv: %s", pv)
@@ -285,7 +289,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 // The PV must be a local PV, have a StorageClass present in the list of storageClassNames, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
 func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName string) (bool, error) {
-	if !common.IsLocalPVWithStorageClass(pv, c.storageClassNames) || pv.Spec.ClaimRef == nil {
+	if pv.Spec.ClaimRef == nil {
 		return false, nil
 	}
 
