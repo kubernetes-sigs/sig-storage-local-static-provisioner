@@ -84,7 +84,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 
 		referencesDeletedNode, err := d.referencesNonExistentNode(pv)
 		if err != nil {
-			klog.Errorf("error determining if pv %q references deleted node: %w", pv.Name, err)
+			klog.Errorf("error determining if pv %q references deleted node: %q", pv.Name, err)
 			continue
 		}
 		if !referencesDeletedNode {
