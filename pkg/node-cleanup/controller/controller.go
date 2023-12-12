@@ -175,7 +175,7 @@ func (c *CleanupController) processNextWorkItem(ctx context.Context) bool {
 		// An error occurred so re-add the item to the queue to work on later (has backoff to avoid
 		// hot-looping).
 		c.pvQueue.AddRateLimited(key)
-		klog.Errorf("error syncing %q: %w, requeuing", pvName, err)
+		klog.Errorf("error syncing %q: %v, requeuing", pvName, err)
 		return true
 	}
 
@@ -237,7 +237,7 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 	err = c.deletePVC(ctx, pvc)
 	if err != nil {
 		cleanupmetrics.PersistentVolumeClaimDeleteFailedTotal.Inc()
-		klog.Errorf("failed to delete pvc %q in namespace &q: %w", pvClaimRef.Name, pvClaimRef.Namespace, err)
+		klog.Errorf("failed to delete pvc %q in namespace %q: %v", pvClaimRef.Name, pvClaimRef.Namespace, err)
 		return err
 	}
 
@@ -255,7 +255,7 @@ func (c *CleanupController) nodeDeleted(obj interface{}) {
 func (c *CleanupController) startCleanupTimersIfNeeded() {
 	pvs, err := c.pvLister.List(labels.Everything())
 	if err != nil {
-		klog.Errorf("error listing pvs: %w", err)
+		klog.Errorf("error listing pvs: %v", err)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 
 		shouldEnqueue, err := c.shouldEnqueueEntry(pv, nodeName)
 		if err != nil {
-			klog.Errorf("error determining whether to enqueue entry with pv %q: %w", pv.Name, err)
+			klog.Errorf("error determining whether to enqueue entry with pv %q: %v", pv.Name, err)
 			continue
 		}
 

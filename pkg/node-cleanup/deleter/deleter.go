@@ -102,7 +102,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 			klog.Infof("Attempting to delete PV that has NodeAffinity to deleted Node, pv: %s", pv.Name)
 			if err = d.deletePV(ctx, pv.Name); err != nil {
 				cleanupmetrics.PersistentVolumeDeleteFailedTotal.WithLabelValues(string(phase)).Inc()
-				klog.Errorf("Error deleting PV: %s", pv.Name)
+				klog.Errorf("Error deleting PV %q: %v", pv.Name, err)
 				continue
 			}
 			// TODO: Cache successful deletion to avoid multiple delete calls
