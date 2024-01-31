@@ -50,6 +50,7 @@ var (
 	stalePVDiscoveryInterval = flag.Duration("stale-pv-discovery-interval", 10*time.Second, "Duration, in seconds, the PV Deleter should wait between tries to clean up stale PVs.")
 	listenAddress            = flag.String("listen-address", ":8080", "The TCP network address where the prometheus metrics endpoint will listen (example: `:8080`).")
 	metricsPath              = flag.String("metrics-path", "/metrics", "The HTTP path where prometheus metrics will be exposed.")
+	recreatePvc              = flag.Bool("recreate-pvc", true, "Recreate the PVC after deleting it.")
 )
 
 func main() {
@@ -82,7 +83,8 @@ func main() {
 		nodeInformer,
 		*storageClassNames,
 		*pvcDeletionDelay,
-		*stalePVDiscoveryInterval)
+		*stalePVDiscoveryInterval,
+		*recreatePvc)
 	deleter := deleter.NewDeleter(clientset, pvInformer.Lister(), nodeInformer.Lister(), *storageClassNames)
 
 	factory.Start(ctx.Done())
