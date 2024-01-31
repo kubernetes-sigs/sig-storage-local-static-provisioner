@@ -73,11 +73,14 @@ type CleanupController struct {
 
 	// stalePVDiscoveryInterval is how often to scan for and delete PVs with affinity to a deleted Node.
 	stalePVDiscoveryInterval time.Duration
+
+	// When recreatePvc is true, PVCs are recreated after deleting them
+	recreatePvc bool
 }
 
 // NewCleanupController creates a CleanupController that handles the
 // deletion of stale PVCs.
-func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
+func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration, recreatePvc bool) *CleanupController {
 	broadcaster := record.NewBroadcaster()
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: fmt.Sprintf("cleanup-controller")})
 
@@ -100,6 +103,7 @@ func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.
 		broadcaster:              broadcaster,
 		pvcDeletionDelay:         pvcDeletionDelay,
 		stalePVDiscoveryInterval: stalePVDiscoveryInterval,
+		recreatePvc:              recreatePvc,
 	}
 
 	// Set up event handler for when Nodes are deleted
@@ -241,6 +245,15 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return err
 	}
 
+	if c.recreatePvc {
+		err = c.recreatePVC(ctx, pvc)
+		if err != nil {
+			cleanupmetrics.PersistentVolumeClaimRecreateFailedTotal.Inc()
+			klog.Errorf("failed to recreated pvc %q in namespace %q: %v", pvClaimRef.Name, pvClaimRef.Namespace, err)
+			return err
+		}
+	}
+
 	cleanupmetrics.PersistentVolumeClaimDeleteTotal.Inc()
 	klog.Infof("Deleted PVC %q that pointed to Node %q", pvClaimRef.Name, nodeName)
 	return nil
@@ -277,7 +290,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 		}
 
 		if shouldEnqueue {
-			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String())
+			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s, node: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String(), nodeName)
 			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.pvcDeletionDelay.String()))
 
 			c.pvQueue.AddAfter(pv.Name, c.pvcDeletionDelay)
@@ -307,6 +320,29 @@ func (c *CleanupController) deletePVC(ctx context.Context, pvc *v1.PersistentVol
 	if err != nil && errors.IsNotFound(err) {
 		// The PVC could already be deleted by some other process
 		klog.Infof("PVC %q in namespace %q no longer exists", pvc.Name, pvc.Namespace)
+		return nil
+	}
+	return err
+}
+
+// recreatePVC recreates the PVC with the given name and namespace
+// and returns nil if the operation was successful or if the PVC already exists
+func (c *CleanupController) recreatePVC(ctx context.Context, pvc *v1.PersistentVolumeClaim) error {
+	new_pvc := &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pvc.Name,
+			Namespace: pvc.Namespace,
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes:      pvc.Spec.AccessModes,
+			Resources:        pvc.Spec.Resources,
+			StorageClassName: pvc.Spec.StorageClassName,
+			VolumeMode:       pvc.Spec.VolumeMode,
+		},
+	}
+	new_pvc, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(ctx, new_pvc, metav1.CreateOptions{})
+	if err != nil && errors.IsAlreadyExists(err) {
+		klog.Infof("PVC %q in namespace %q already exists", pvc.Name, pvc.Namespace)
 		return nil
 	}
 	return err
