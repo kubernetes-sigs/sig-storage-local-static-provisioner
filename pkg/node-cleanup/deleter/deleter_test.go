@@ -145,7 +145,7 @@ func TestDeleter(t *testing.T) {
 			pvInformer := informers.Core().V1().PersistentVolumes()
 			nodeInformer := informers.Core().V1().Nodes()
 
-			deleter := NewDeleter(client, pvInformer.Lister(), nodeInformer.Lister(), test.storageClassNames)
+			deleter := NewDeleter(client, pvInformer.Lister(), nodeInformer.Lister(), test.storageClassNames, false, nil)
 
 			// Populate the informers with initial objects so the controller can
 			// Get() and List() it.

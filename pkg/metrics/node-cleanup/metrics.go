@@ -62,4 +62,20 @@ var (
 			Help:      "Total number of persistent volume claim delete failed attempts.",
 		},
 	)
+	// PersistentVolumeClaimRecreateFailedTotal is used to collect accumulated count of persistent volume claim recreation failed attempts.
+	PersistentVolumeClaimRecreateFailedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Subsystem: LocalVolumeNodeCleanupSubsystem,
+			Name:      "persistentvolumeclaim_recreate_failed_total",
+			Help:      "Total number of persistent volume claim recreation failed attempts.",
+		},
+	)
+	// PersistentVolumeClaimRecreateSuccessTotal is used to collect accumulated count of persistent volume claim recreation successes.
+	PersistentVolumeClaimRecreateSuccessTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Subsystem: LocalVolumeNodeCleanupSubsystem,
+			Name:      "persistentvolumeclaim_recreate_success_total",
+			Help:      "Total number of persistent volume claim recreation successes.",
+		},
+	)
 )

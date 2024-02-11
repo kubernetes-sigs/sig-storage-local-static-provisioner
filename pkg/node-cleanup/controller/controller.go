@@ -273,7 +273,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 		}
 
 		if shouldEnqueue {
-			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String())
+			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s, node: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String(), nodeName)
 			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.pvcDeletionDelay.String()))
 
 			c.pvQueue.AddAfter(pv.Name, c.pvcDeletionDelay)
