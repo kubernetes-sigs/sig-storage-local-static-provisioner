@@ -189,7 +189,7 @@ to setup provisioning.
 #### Option 6: AKS
 See [Local Persistent Volume support on Azure](https://github.com/Azure/kubernetes-volume-drivers/tree/master/local) for more information.
 
-### Option 7: LKE
+#### Option 7: LKE
 
 LKE clusters can be created with custom Node Pools using the [Linode API](https://www.linode.com/docs/products/tools/linode-api/). For more information, see the [LKE Endpoints Collection](https://www.linode.com/docs/api/linode-kubernetes-engine-lke).
 
