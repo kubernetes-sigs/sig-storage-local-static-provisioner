@@ -44,7 +44,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
-	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/utils/mount"
 )
 
@@ -495,44 +494,25 @@ func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolum
 	return "", fmt.Errorf("Block device check for %q failed: %s", fullPath, errblk)
 }
 
-// NodeExists checks to see if a Node exists in the Indexer of a NodeLister.
-// It tries to get the node and if it fails, it uses the well known label
-// `kubernetes.io/hostname` to find the Node.
-func NodeExists(nodeLister corelisters.NodeLister, nodeName string) (bool, error) {
-	_, err := nodeLister.Get(nodeName)
-	if errors.IsNotFound(err) {
+// AnyNodeExists checks to see if a Node exists in the Indexer of a NodeLister.
+// If this fails, it uses the well known label `kubernetes.io/hostname` to find the Node.
+// It aborts early if an unexpected error occurs and it's uncertain if a node would exist or not.
+func AnyNodeExists(nodeLister corelisters.NodeLister, nodeNames []string) bool {
+	for _, nodeName := range nodeNames {
+		_, err := nodeLister.Get(nodeName)
+		if err == nil || !errors.IsNotFound(err) {
+			return true
+		}
 		req, err := labels.NewRequirement(NodeLabelKey, selection.Equals, []string{nodeName})
 		if err != nil {
-			return false, err
+			return true
 		}
 		nodes, err := nodeLister.List(labels.NewSelector().Add(*req))
-		if err != nil {
-			return false, err
+		if err != nil || len(nodes) > 0 {
+			return true
 		}
-		return len(nodes) > 0, nil
 	}
-	return err == nil, err
-}
-
-// NodeAttachedToLocalPV gets the name of the Node that a local PV has a NodeAffinity to.
-// It assumes that there should be only one matching Node for a local PV and that
-// the local PV follows the form:
-//
-//	nodeAffinity:
-//	  required:
-//	    nodeSelectorTerms:
-//	    - matchExpressions:
-//	      - key: kubernetes.io/hostname
-//	        operator: In
-//	        values:
-//	        - <node1>
-func NodeAttachedToLocalPV(pv *v1.PersistentVolume) (string, bool) {
-	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
-	// We assume that there should only be one matching node.
-	if nodeNames == nil || len(nodeNames) != 1 {
-		return "", false
-	}
-	return nodeNames[0], true
+	return false
 }
 
 // IsLocalPVWithStorageClass checks that a PV is a local PV that belongs to any of the passed in StorageClasses.
