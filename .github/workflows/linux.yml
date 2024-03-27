@@ -24,10 +24,11 @@ jobs:
 
     - name: Test
       run: go test -covermode=count -coverprofile=profile.cov ./pkg/...
-        
+
+    - name: Install goveralls
+      run: go install github.com/mattn/goveralls@latest
+
     - name: Send coverage
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        GO111MODULE=off go get github.com/mattn/goveralls
-        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
+      run: goveralls -coverprofile=profile.cov -service=github
