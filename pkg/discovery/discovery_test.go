@@ -753,16 +753,16 @@ func TestUseAlphaAPI(t *testing.T) {
 	if d.UseAlphaAPI {
 		t.Fatal("UseAlphaAPI should be false")
 	}
-	if len(d.nodeAffinityAnn) != 0 || d.nodeAffinity == nil {
-		t.Fatal("the value nodeAffinityAnn shouldn't be set while nodeAffinity should")
+	if d.nodeSelector == nil {
+		t.Fatal("the value nodeSelector should be set")
 	}
 
 	d = testSetup(t, test, true, false)
 	if !d.UseAlphaAPI {
 		t.Fatal("UseAlphaAPI should be true")
 	}
-	if d.nodeAffinity != nil || len(d.nodeAffinityAnn) == 0 {
-		t.Fatal("the value nodeAffinityAnn should be set while nodeAffinity should not")
+	if d.nodeSelector == nil {
+		t.Fatal("the value nodeSelector should be set")
 	}
 }
 
