@@ -16,7 +16,7 @@
 
 
 # Usage:
-# $ blkdiscard.sh
+# $ blkdiscard.sh <blkoptions extra options>
 
 # Import common functions.
 . $(dirname "$0")/common.sh
@@ -31,4 +31,4 @@ fi
 validateBlockDevice
 
 echo "Calling blkdiscard"
-/sbin/blkdiscard -v $LOCAL_PV_BLKDEVICE
+/sbin/blkdiscard $1 -v $LOCAL_PV_BLKDEVICE
