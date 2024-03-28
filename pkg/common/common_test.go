@@ -236,6 +236,46 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			map[string]string{"storageClassMap": `local-storage:
+   hostDir: /mnt/disks
+   mountDir: /mnt/disks
+   selector:
+     - matchExpressions:
+         - key: "kubernetes.io/hostname"
+           operator: "In"
+           values:
+             - otherNode1
+`,
+			},
+			ProvisionerConfiguration{
+				StorageClassConfig: map[string]MountConfig{
+					"local-storage": {
+						HostDir:             "/mnt/disks",
+						MountDir:            "/mnt/disks",
+						BlockCleanerCommand: []string{"/scripts/quick_reset.sh"},
+						VolumeMode:          "Filesystem",
+						NamePattern:         "*",
+						Selector: []v1.NodeSelectorTerm{
+							{
+								MatchExpressions: []v1.NodeSelectorRequirement{
+									{
+										Key:      "kubernetes.io/hostname",
+										Operator: v1.NodeSelectorOpIn,
+										Values:   []string{"otherNode1"},
+									},
+								},
+							},
+						},
+					},
+				},
+				UseAlphaAPI: true,
+				MinResyncPeriod: metav1.Duration{
+					Duration: time.Hour + time.Minute*30,
+				},
+			},
+			nil,
+		},
 	}
 	for _, v := range testcases {
 		for name, value := range v.data {

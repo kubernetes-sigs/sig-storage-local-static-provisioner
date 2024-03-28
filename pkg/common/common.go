@@ -140,6 +140,9 @@ type MountConfig struct {
 	// NamePattern name pattern check
 	// only discover file name matching pattern("*" by default)
 	NamePattern string `json:"namePattern" yaml:"namePattern"`
+	// Additional selector terms to set for node affinity in addition to the provisioner node name.
+	// Useful for shared disks as affinity can not be changed after provisioning the PV.
+	Selector []v1.NodeSelectorTerm `json:"selector" yaml:"selector"`
 }
 
 // RuntimeConfig stores all the objects that the provisioner needs to run

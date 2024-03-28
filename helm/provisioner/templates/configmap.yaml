@@ -26,7 +26,7 @@ data:
 {{- end }}
 {{- if .Values.useJobForCleaning }}
   useJobForCleaning: "yes"
-{{- end}}
+{{- end }}
 {{- if .Values.tolerations }}
   jobTolerations: | {{ toYaml .Values.tolerations | nindent 4 }}
 {{- end }}
@@ -35,7 +35,7 @@ data:
 {{- end }}
 {{- if .Values.minResyncPeriod }}
   minResyncPeriod: {{ .Values.minResyncPeriod | quote }}
-{{- end}}
+{{- end }}
   storageClassMap: |
     {{- range $classConfig := .Values.classes }}
     {{ $classConfig.name }}:
@@ -45,7 +45,7 @@ data:
       blockCleanerCommand:
       {{- range $val := $classConfig.blockCleanerCommand }}
         - {{ $val | quote }}
-      {{- end}}
+      {{- end }}
       {{- end }}
       {{- if $classConfig.volumeMode }}
       volumeMode: {{ $classConfig.volumeMode }}
@@ -55,5 +55,9 @@ data:
       {{- end }}
       {{- if $classConfig.namePattern }}
       namePattern: {{ $classConfig.namePattern | quote }}
+      {{- end }}
+      {{- if $classConfig.selector }}
+      selector:
+      {{- toYaml $classConfig.selector | nindent 8 }}
       {{- end }}
     {{- end }}
