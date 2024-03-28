@@ -23,6 +23,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -46,11 +47,10 @@ type Discoverer struct {
 	Labels map[string]string
 	// ProcTable is a reference to running processes so that we can prevent PV from being created while
 	// it is being cleaned
-	CleanupTracker  *deleter.CleanupStatusTracker
-	nodeAffinityAnn string
-	nodeAffinity    *v1.VolumeNodeAffinity
-	classLister     storagev1listers.StorageClassLister
-	ownerReference  *metav1.OwnerReference
+	CleanupTracker *deleter.CleanupStatusTracker
+	nodeSelector   *v1.NodeSelector
+	classLister    storagev1listers.StorageClassLister
+	ownerReference *metav1.OwnerReference
 
 	Readyz *readyzCheck
 }
@@ -106,30 +106,9 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		return nil, fmt.Errorf("Failed to generate owner reference: %v", err)
 	}
 
-	if config.UseAlphaAPI {
-		nodeAffinity, err := generateNodeAffinity(config.Node)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to generate node affinity: %v", err)
-		}
-		tmpAnnotations := map[string]string{}
-		err = StorageNodeAffinityToAlphaAnnotation(tmpAnnotations, nodeAffinity)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to convert node affinity to alpha annotation: %v", err)
-		}
-		return &Discoverer{
-			RuntimeConfig:   config,
-			Labels:          labelMap,
-			CleanupTracker:  cleanupTracker,
-			classLister:     sharedInformer.Lister(),
-			nodeAffinityAnn: tmpAnnotations[common.AlphaStorageNodeAffinityAnnotation],
-			ownerReference:  ownerRef,
-			Readyz:          &readyzCheck{},
-		}, nil
-	}
-
-	volumeNodeAffinity, err := generateVolumeNodeAffinity(config.Node)
+	nodeSelector, err := generateNodeSelector(config.Node)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to generate volume node affinity: %v", err)
+		return nil, fmt.Errorf("Failed to generate node selector: %v", err)
 	}
 
 	return &Discoverer{
@@ -137,7 +116,7 @@ func NewDiscoverer(config *common.RuntimeConfig, cleanupTracker *deleter.Cleanup
 		Labels:         labelMap,
 		CleanupTracker: cleanupTracker,
 		classLister:    sharedInformer.Lister(),
-		nodeAffinity:   volumeNodeAffinity,
+		nodeSelector:   nodeSelector,
 		ownerReference: ownerRef,
 		Readyz:         &readyzCheck{},
 	}, nil
@@ -160,7 +139,7 @@ func generateOwnerReference(node *v1.Node) (*metav1.OwnerReference, error) {
 	}, nil
 }
 
-func generateNodeAffinity(node *v1.Node) (*v1.NodeAffinity, error) {
+func generateNodeSelector(node *v1.Node) (*v1.NodeSelector, error) {
 	if node.Labels == nil {
 		return nil, fmt.Errorf("Node does not have labels")
 	}
@@ -169,42 +148,14 @@ func generateNodeAffinity(node *v1.Node) (*v1.NodeAffinity, error) {
 		return nil, fmt.Errorf("Node does not have expected label %s", common.NodeLabelKey)
 	}
 
-	return &v1.NodeAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
-			NodeSelectorTerms: []v1.NodeSelectorTerm{
-				{
-					MatchExpressions: []v1.NodeSelectorRequirement{
-						{
-							Key:      common.NodeLabelKey,
-							Operator: v1.NodeSelectorOpIn,
-							Values:   []string{nodeValue},
-						},
-					},
-				},
-			},
-		},
-	}, nil
-}
-
-func generateVolumeNodeAffinity(node *v1.Node) (*v1.VolumeNodeAffinity, error) {
-	if node.Labels == nil {
-		return nil, fmt.Errorf("Node does not have labels")
-	}
-	nodeValue, found := node.Labels[common.NodeLabelKey]
-	if !found {
-		return nil, fmt.Errorf("Node does not have expected label %s", common.NodeLabelKey)
-	}
-
-	return &v1.VolumeNodeAffinity{
-		Required: &v1.NodeSelector{
-			NodeSelectorTerms: []v1.NodeSelectorTerm{
-				{
-					MatchExpressions: []v1.NodeSelectorRequirement{
-						{
-							Key:      common.NodeLabelKey,
-							Operator: v1.NodeSelectorOpIn,
-							Values:   []string{nodeValue},
-						},
+	return &v1.NodeSelector{
+		NodeSelectorTerms: []v1.NodeSelectorTerm{
+			{
+				MatchExpressions: []v1.NodeSelectorRequirement{
+					{
+						Key:      common.NodeLabelKey,
+						Operator: v1.NodeSelectorOpIn,
+						Values:   []string{nodeValue},
 					},
 				},
 			},
@@ -437,11 +388,25 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 		OwnerReference:  d.ownerReference,
 	}
 
+	volumeNodeSelector := &v1.NodeSelector{
+		NodeSelectorTerms: slices.Concat(d.nodeSelector.NodeSelectorTerms, config.Selector),
+	}
+
 	if d.UseAlphaAPI {
+		nodeAffinity := &v1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: volumeNodeSelector,
+		}
+		tmpAnnotations := map[string]string{}
+		err := StorageNodeAffinityToAlphaAnnotation(tmpAnnotations, nodeAffinity)
+		if err != nil {
+			return fmt.Errorf("error converting volume affinity to alpha annotation: %v", err)
+		}
 		localPVConfig.UseAlphaAPI = true
-		localPVConfig.AffinityAnn = d.nodeAffinityAnn
+		localPVConfig.AffinityAnn = tmpAnnotations[common.AlphaStorageNodeAffinityAnnotation]
 	} else {
-		localPVConfig.NodeAffinity = d.nodeAffinity
+		localPVConfig.NodeAffinity = &v1.VolumeNodeAffinity{
+			Required: volumeNodeSelector,
+		}
 	}
 
 	if config.FsType != "" {
