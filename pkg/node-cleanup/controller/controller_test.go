@@ -330,7 +330,7 @@ func pvWithPVCAndNode(pvc *v1.PersistentVolumeClaim, node *v1.Node) *v1.Persiste
 						{
 							Key:      common.NodeLabelKey,
 							Operator: v1.NodeSelectorOpIn,
-							Values:   []string{node.Name},
+							Values:   []string{node.Labels[common.NodeLabelKey]},
 						},
 					},
 				},
@@ -351,7 +351,7 @@ func pvWithNode(node *v1.Node) *v1.PersistentVolume {
 						{
 							Key:      common.NodeLabelKey,
 							Operator: v1.NodeSelectorOpIn,
-							Values:   []string{node.Name},
+							Values:   []string{node.Labels[common.NodeLabelKey]},
 						},
 					},
 				},
@@ -386,7 +386,7 @@ func pvcWithUID(uid string) *v1.PersistentVolumeClaim {
 func node() *v1.Node {
 	return &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: defaultNodeName,
+			Labels: map[string]string{common.NodeLabelKey: defaultNodeName},
 		},
 	}
 }

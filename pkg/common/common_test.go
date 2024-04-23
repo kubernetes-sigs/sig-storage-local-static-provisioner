@@ -480,7 +480,9 @@ func TestGetVolumeMode(t *testing.T) {
 func TestNodeExists(t *testing.T) {
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node",
+			Labels: map[string]string{
+				NodeLabelKey: "test-node",
+			},
 		},
 	}
 
@@ -510,7 +512,7 @@ func TestNodeExists(t *testing.T) {
 			nodeInformer.Informer().GetStore().Add(test.nodeAdded)
 		}
 
-		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Name)
+		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Labels[NodeLabelKey])
 		if err != nil {
 			t.Errorf("Got unexpected error: %s", err.Error())
 		}
