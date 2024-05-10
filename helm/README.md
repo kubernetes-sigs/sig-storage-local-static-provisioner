@@ -108,7 +108,7 @@ helm upgrade --reset-value -f <path-to-your-values-file> <release-name> --namesp
 
 `--reset-values` will reset custom values to the values from the new chart version. `-f` apply the custom values file on top.
 
-Please refer [helm docs](https://helm.sh/docs/using_helm/#using-helm) for more
+Please refer [helm docs](https://helm.sh/docs/intro/using_helm/) for more
 information.
 
 ## Configurations
