@@ -22,7 +22,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
 Please follow [official
 instructions](https://helm.sh/docs/intro/install/) to install `helm`.
 
-## Custom your deployment with values file
+## Customize your deployment with values file
 
 Our chart provides a variety of options to configure deployment, see [provisioner/values.yaml](./provisioner/values.yaml).
 
