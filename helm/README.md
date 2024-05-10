@@ -12,10 +12,8 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
   - [Custom your deployment with values file](#custom-your-deployment-with-values-file)
   - [Install local-volume-provisioner](#install-local-volume-provisioner)
     - [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl)
-    - [helm version \< v3.0.0](#helm-version--v300)
+    - [Install using helm repo](#install-using-helm-repo)
     - [Install with `helm install` directly](#install-with-helm-install-directly)
-    - [helm version  \>= v3.0.0](#helm-version---v300)
-    - [Install with `helm install` directly](#install-with-helm-install-directly-1)
   - [Configurations](#configurations)
   - [Examples](#examples)
 
@@ -23,8 +21,6 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
 
 Please follow [official
 instructions](https://helm.sh/docs/intro/install/) to install `helm`.
-
-Required helm version: >= 2.7.2+
 
 ## Custom your deployment with values file
 
@@ -42,66 +38,7 @@ as needed (usually not necessary), and then deployed using kubectl.
 
 Here is basic workflow:
 
-### helm version < v3.0.0
-
-Install via helm template:
-
-```console
-git clone --depth=1 https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner.git
-helm template ./helm/provisioner -f <path-to-your-values-file> --name <release-name> --namespace <namespace> > local-volume-provisioner.generated.yaml
-edit local-volume-provisioner.generated.yaml if necessary
-kubectl create -f local-volume-provisioner.generated.yaml
-```
-
-Delete:
-
-```console
-kubectl delete -f local-volume-provisioner.generated.yaml
-```
-
-Upgrade:
-
-**Update your custom values to match the new chart parameter**
-
-```console
-# Teardown the old provisioner
-kubectl delete -f local-volume-provisioner.generated.yaml
-
-# Update your custom values to match the new chart parameter
-
-# Apply the new generated.yaml
-kubectl create -f local-volume-provisioner.generated.yaml
-```
-
-### Install with `helm install` directly
-
-Helm provides an easy interface to install applications and sources into
-Kubernetes cluster. You can install local-volume-provisioner with `helm
-install` command directly. Here is basic workflow:
-
-Install:
-
-```console
-helm install ./helm/provisioner -f <path-to-your-values-file> --namespace <namespace> --name <release-name>
-```
-
-Note: set your preferred namespace and release name, e.g. `helm install ./helm/provisioner -f helm/examples/gke.yaml --namespace kube-system --name local-volume-provisioner`
-
-Delete:
-
-```console
-helm delete --purge <release-name>
-```
-
-Upgrade: **This action will `recreate` the running pod**
-
-**Update your custom values to match the new chart parameter**
-
-```console
-helm upgrade ./helm/provisioner -f <path-to-your-values-file> <release-name>
-```
-
-### helm version  >= v3.0.0
+### Install using helm repo
 
 Install by adding the repo as a Helm repo:
 
