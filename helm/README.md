@@ -40,13 +40,6 @@ Helm templating is used to generate the provisioner's DaemonSet, ConfigMap and
 other necessary objects' specs.  The generated specs can be further customized
 as needed (usually not necessary), and then deployed using kubectl.
 
-**helm template** uses 3 sources of information:
-
-1. Provisioner's chart templates
-2. Provisioner's default values.yaml which contains variables used for rendering a template.
-3. (Optional) User's customized values.yaml as a part of helm template command. User's provided
-   values will override default values of Provisioner's values.yaml.
-
 Here is basic workflow:
 
 ### helm version < v3.0.0
