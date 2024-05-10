@@ -22,8 +22,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
 ## Install Helm
 
 Please follow [official
-instructions](https://helm.sh/docs/using_helm/#installing-helm) to install
-`helm` client and server in your Kubernetes cluster.
+instructions](https://helm.sh/docs/intro/install/) to install `helm`.
 
 Required helm version: >= 2.7.2+
 
