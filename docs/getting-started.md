@@ -7,8 +7,6 @@ on older versions, please see version links under
 ## Table of Contents
 
 - [Step 1: Bringing up a cluster with local disks](#step-1-bringing-up-a-cluster-with-local-disks)
-  * [Enabling the alpha feature gates](#enabling-the-alpha-feature-gates)
-    + [1.10-1.12](#110-112)
   * [Option 1: GCE](#option-1-gce)
   * [Option 2: GKE](#option-2-gke)
   * [Option 3: Baremetal environments](#option-3-baremetal-environments)
@@ -23,19 +21,6 @@ on older versions, please see version links under
 - [Step 4: Create local persistent volume claim](#step-4-create-local-persistent-volume-claim)
 
 ### Step 1: Bringing up a cluster with local disks
-
-#### Enabling the alpha feature gates
-
-##### 1.10-1.12
-
-If raw local block feature is needed,
-```
-$ export KUBE_FEATURE_GATES="BlockVolume=true"
-```
-
-Note: Kubernetes versions prior to 1.10 require [several additional
-feature-gates](https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.0.0/local-volume#enabling-the-alpha-feature-gates)
-be enabled on all Kubernetes components, because the persistent local volumes and other features were in alpha.
 
 #### Option 1: GCE
 
