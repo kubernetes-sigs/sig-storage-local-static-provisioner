@@ -28,6 +28,7 @@ spec:
 {{ .Values.podAnnotations | toYaml | trim | indent 8 }}
 {{- end }}
     spec:
+      hostPID: {{.Values.hostPID}}
       serviceAccountName: {{ template "provisioner.serviceAccountName" . }}
 {{- if .Values.priorityClassName }}
       priorityClassName: {{.Values.priorityClassName}}
