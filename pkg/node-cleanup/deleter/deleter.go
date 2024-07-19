@@ -18,7 +18,6 @@ package deleter
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -28,6 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
+	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
@@ -82,12 +82,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 			continue
 		}
 
-		referencesDeletedNode, err := d.referencesNonExistentNode(pv)
-		if err != nil {
-			klog.Errorf("error determining if pv %q references deleted node: %v", pv.Name, err)
-			continue
-		}
-		if !referencesDeletedNode {
+		if !d.referencesNonExistentNode(pv) {
 			// PV's node is up so PV is not stale
 			continue
 		}
@@ -124,14 +119,13 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 //	        operator: In
 //	        values:
 //	        - <node1>
-func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) (bool, error) {
-	nodeName, ok := common.NodeAttachedToLocalPV(localPV)
-	if !ok {
-		return false, fmt.Errorf("Error retrieving node")
+func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) bool {
+	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(localPV)
+	if nodeNames == nil {
+		return false
 	}
 
-	exists, err := common.NodeExists(d.nodeLister, nodeName)
-	return !exists && err == nil, err
+	return !common.AnyNodeExists(d.nodeLister, nodeNames)
 }
 
 func (d *Deleter) deletePV(ctx context.Context, pvName string) error {
