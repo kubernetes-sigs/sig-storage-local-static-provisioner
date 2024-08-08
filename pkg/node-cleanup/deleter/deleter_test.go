@@ -211,7 +211,7 @@ func localPV(node *v1.Node, phase v1.PersistentVolumePhase, reclaimPolicy v1.Per
 								{
 									Key:      common.NodeLabelKey,
 									Operator: v1.NodeSelectorOpIn,
-									Values:   []string{node.Labels[common.NodeLabelKey]},
+									Values:   []string{node.Name},
 								},
 							},
 						},
@@ -230,7 +230,7 @@ func localPV(node *v1.Node, phase v1.PersistentVolumePhase, reclaimPolicy v1.Per
 func node() *v1.Node {
 	return &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{common.NodeLabelKey: testNodeName},
+			Name: testNodeName,
 		},
 	}
 }

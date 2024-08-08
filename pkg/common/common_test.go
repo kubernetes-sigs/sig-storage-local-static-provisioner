@@ -478,10 +478,16 @@ func TestGetVolumeMode(t *testing.T) {
 }
 
 func TestNodeExists(t *testing.T) {
-	node := &v1.Node{
+	nodeName := "test-node"
+	nodeWithName := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+		},
+	}
+	nodeWithLabel := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				NodeLabelKey: "test-node",
+				NodeLabelKey: nodeName,
 			},
 		},
 	}
@@ -493,12 +499,17 @@ func TestNodeExists(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			nodeAdded:      node,
-			nodeQueried:    node,
+			nodeAdded:      nodeWithName,
+			nodeQueried:    nodeWithName,
 			expectedResult: true,
 		},
 		{
-			nodeQueried:    node,
+			nodeAdded:      nodeWithLabel,
+			nodeQueried:    nodeWithName,
+			expectedResult: true,
+		},
+		{
+			nodeQueried:    nodeWithName,
 			expectedResult: false,
 		},
 	}
@@ -512,7 +523,7 @@ func TestNodeExists(t *testing.T) {
 			nodeInformer.Informer().GetStore().Add(test.nodeAdded)
 		}
 
-		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Labels[NodeLabelKey])
+		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Name)
 		if err != nil {
 			t.Errorf("Got unexpected error: %s", err.Error())
 		}
