@@ -36,6 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -488,10 +490,20 @@ func GetVolumeMode(volUtil util.VolumeUtil, fullPath string) (v1.PersistentVolum
 }
 
 // NodeExists checks to see if a Node exists in the Indexer of a NodeLister.
+// It tries to get the node and if it fails, it uses the well known label
+// `kubernetes.io/hostname` to find the Node.
 func NodeExists(nodeLister corelisters.NodeLister, nodeName string) (bool, error) {
 	_, err := nodeLister.Get(nodeName)
 	if errors.IsNotFound(err) {
-		return false, nil
+		req, err := labels.NewRequirement(NodeLabelKey, selection.Equals, []string{nodeName})
+		if err != nil {
+			return false, err
+		}
+		nodes, err := nodeLister.List(labels.NewSelector().Add(*req))
+		if err != nil {
+			return false, err
+		}
+		return len(nodes) > 0, nil
 	}
 	return err == nil, err
 }

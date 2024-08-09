@@ -478,9 +478,17 @@ func TestGetVolumeMode(t *testing.T) {
 }
 
 func TestNodeExists(t *testing.T) {
-	node := &v1.Node{
+	nodeName := "test-node"
+	nodeWithName := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node",
+			Name: nodeName,
+		},
+	}
+	nodeWithLabel := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				NodeLabelKey: nodeName,
+			},
 		},
 	}
 
@@ -491,12 +499,17 @@ func TestNodeExists(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			nodeAdded:      node,
-			nodeQueried:    node,
+			nodeAdded:      nodeWithName,
+			nodeQueried:    nodeWithName,
 			expectedResult: true,
 		},
 		{
-			nodeQueried:    node,
+			nodeAdded:      nodeWithLabel,
+			nodeQueried:    nodeWithName,
+			expectedResult: true,
+		},
+		{
+			nodeQueried:    nodeWithName,
 			expectedResult: false,
 		},
 	}
