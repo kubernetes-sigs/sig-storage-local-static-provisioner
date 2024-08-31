@@ -253,7 +253,7 @@ func (c *jobController) RemoveJob(pvName string) (CleanupState, *time.Time, erro
 }
 
 // NewCleanupJob creates manifest for a cleaning job.
-func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMode, imageName string, nodeName string, namespace string, mountPath string, config common.MountConfig) (*batch_v1.Job, error) {
+func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMode, imageName string, tolerations []apiv1.Toleration, nodeName string, namespace string, mountPath string, config common.MountConfig) (*batch_v1.Job, error) {
 	priv := true
 	// Container definition
 	jobContainer := apiv1.Container{
@@ -325,6 +325,7 @@ func NewCleanupJob(pv *apiv1.PersistentVolume, volMode apiv1.PersistentVolumeMod
 		Containers:   []apiv1.Container{jobContainer},
 		Volumes:      volumes,
 		NodeSelector: map[string]string{common.NodeNameLabel: nodeName},
+		Tolerations:  tolerations,
 	}
 	podTemplate.ObjectMeta = meta_v1.ObjectMeta{
 		Name:        generateCleaningJobName(pv.Name),
