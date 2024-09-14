@@ -14,7 +14,7 @@
 
 # For security, we use kubernetes community maintained debian base image.
 # https://github.com/kubernetes/release/tree/master/images/build/debian-base
-FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.1
+FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.4
 ARG OS=linux
 ARG ARCH=amd64
 ARG binary=./_output/${OS}/${ARCH}/local-volume-provisioner
