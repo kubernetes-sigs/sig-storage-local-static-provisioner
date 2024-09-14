@@ -27,6 +27,9 @@ data:
 {{- if .Values.useJobForCleaning }}
   useJobForCleaning: "yes"
 {{- end}}
+{{- if .Values.tolerations }}
+  jobTolerations: | {{ toYaml .Values.tolerations | nindent 4 }}
+{{- end }}
 {{- if .Values.useNodeNameOnly }}
   useNodeNameOnly: "true"
 {{- end }}

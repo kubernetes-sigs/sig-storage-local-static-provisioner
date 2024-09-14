@@ -23,6 +23,9 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
 data:
+  jobTolerations: | 
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/master
   storageClassMap: |
     local-storage:
       hostDir: /mnt/disks
@@ -114,7 +117,7 @@ spec:
         app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: f81e575a8ce66fff1873e5bae2df0f963609f540da196b9a86c3146a94d284b8
+        checksum/config: bdea962be4bc6072011b44367cc56d21c61868009d4cb63b6415c1c27695ce96
     spec:
       serviceAccountName: local-static-provisioner
       nodeSelector:

@@ -108,6 +108,8 @@ type UserConfig struct {
 	Namespace string
 	// JobContainerImage of container to use for jobs (optional)
 	JobContainerImage string
+	// JobTolerations defines the tolerations to apply to jobs (optional)
+	JobTolerations []v1.Toleration
 	// MinResyncPeriod is minimum resync period. Resync period in reflectors
 	// will be random between MinResyncPeriod and 2*MinResyncPeriod.
 	MinResyncPeriod metav1.Duration
@@ -205,6 +207,9 @@ type ProvisionerConfiguration struct {
 	// default is false.
 	// +optional
 	UseJobForCleaning bool `json:"useJobForCleaning" yaml:"useJobForCleaning"`
+	// JobTolerations defines the tolerations to apply to jobs
+	// +optional
+	JobTolerations []v1.Toleration `json:"jobTolerations" yaml:"jobTolerations"`
 	// MinResyncPeriod is minimum resync period. Resync period in reflectors
 	// will be random between MinResyncPeriod and 2*MinResyncPeriod.
 	MinResyncPeriod metav1.Duration `json:"minResyncPeriod" yaml:"minResyncPeriod"`
@@ -397,6 +402,7 @@ func UserConfigFromProvisionerConfig(node *v1.Node, namespace, jobImage string, 
 		UseNodeNameOnly:   config.UseNodeNameOnly,
 		Namespace:         namespace,
 		JobContainerImage: jobImage,
+		JobTolerations:    config.JobTolerations,
 		LabelsForPV:       config.LabelsForPV,
 		SetPVOwnerRef:     config.SetPVOwnerRef,
 	}
