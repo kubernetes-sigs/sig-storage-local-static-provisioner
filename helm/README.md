@@ -9,7 +9,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
 - [Install local-volume-provisioner with helm](#install-local-volume-provisioner-with-helm)
   - [Table of Contents](#table-of-contents)
   - [Install Helm](#install-helm)
-  - [Custom your deployment with values file](#custom-your-deployment-with-values-file)
+  - [Customize your deployment with values file](#customize-your-deployment-with-values-file)
   - [Install local-volume-provisioner](#install-local-volume-provisioner)
     - [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl)
     - [Install using helm repo](#install-using-helm-repo)
@@ -146,6 +146,7 @@ provisioner chart and their default values.
 | podLabels                               | Labels for each Pod in the DaemonSet.                                                                                          | map      | `-`                                                           |
 | image                                   | Provisioner image.                                                                                                             | str      | `registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0` |
 | imagePullPolicy                         | Provisioner DaemonSet image pull policy.                                                                                       | str      | `-`                                                           |
+| imagePullSecrets                        | Provisioner image pull secrets.                                                                                                | list     | `-`                                                           |
 | priorityClassName                       | Provisioner DaemonSet Pod Priority Class name.                                                                                 | str      | ``                                                            |
 | kubeConfigEnv                           | Specify the location of kubernetes config file.                                                                                | str      | `-`                                                           |
 | nodeLabels                              | List of node labels to be copied to the PVs created by the provisioner.                                                        | list     | `-`                                                           |
