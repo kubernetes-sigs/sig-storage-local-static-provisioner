@@ -100,6 +100,9 @@ image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.6.0
 # Defines Image download policy, see kubernetes documentation for available values.
 # imagePullPolicy: Always
 
+# Defines Image pull secrets for the provisioner image.
+imagePullSecrets: []
+
 # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
 # Note that if you want to make it critical, specify "system-cluster-critical"
 # or "system-node-critical" and deploy in kube-system namespace.
