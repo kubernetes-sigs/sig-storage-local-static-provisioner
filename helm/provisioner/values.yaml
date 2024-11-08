@@ -1,4 +1,4 @@
-# Overrice the default chartname or releasename
+# Override the default chartname or releasename
 nameOverride: ""
 fullnameOverride: ""
 
