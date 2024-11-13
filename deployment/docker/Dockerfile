@@ -29,4 +29,5 @@ RUN apt-get update \
     bash
 
 ADD deployment/docker/scripts /scripts
+ENV PATH="$PATH:/sbin"
 ENTRYPOINT ["/local-provisioner"]
