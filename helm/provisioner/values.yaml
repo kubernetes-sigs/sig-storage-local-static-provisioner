@@ -82,12 +82,16 @@ classes:
       - "2"
       # or blkdiscard utility by uncommenting the line below.
       #  - "/scripts/blkdiscard.sh"
-      # Uncomment to create storage class object with default configuration.
-      # storageClass: true
-      # Uncomment to create storage class object and configure it.
-      # storageClass:
+    # Uncomment to create storage class object with default configuration.
+    # storageClass: true
+    # Uncomment to create storage class object and configure it.
+    # storageClass:
       # reclaimPolicy: Delete # Available reclaim policies: Delete/Retain, defaults: Delete.
       # isDefaultClass: true # set as default class
+      # If you are using cluster autoscaler to scale the workload using volume provisioned by this storage class,
+      # set the provisioner of the storage class to another value other than the default.
+      # Ref: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/issues/288
+      # provisioner: kubernetes.io/no-provisioner
 
 # Defines annotations for each Pod in the DaemonSet.
 podAnnotations: {}

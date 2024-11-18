@@ -16,7 +16,11 @@ metadata:
     app.kubernetes.io/name: {{ template "provisioner.name" $ }}
     app.kubernetes.io/managed-by: {{ $.Release.Service }}
     app.kubernetes.io/instance: {{ $.Release.Name }}
-provisioner: kubernetes.io/no-provisioner
+{{- if kindIs "map" $val.storageClass }}
+provisioner: {{ $val.storageClass.provisioner | default "kubernetes.io/no-provisioner" }}
+{{- else }}
+provisioner: "kubernetes.io/no-provisioner"
+{{- end }}
 volumeBindingMode: WaitForFirstConsumer
 {{- if kindIs "map" $val.storageClass }}
 reclaimPolicy: {{ $val.storageClass.reclaimPolicy | default "Delete" }}
