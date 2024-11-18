@@ -172,6 +172,7 @@ Here are a list of examples for various environments:
 * [examples/baremetal-cleanbyjobs.yaml](examples/baremetal-cleanbyjobs.yaml)
 * [examples/baremetal-resyncperiod.yaml](examples/baremetal-resyncperiod.yaml)
 * [examples/baremetal-tolerations.yaml](examples/baremetal-tolerations.yaml)
+* [examples/baremetal-provisioner.yaml](examples/baremetal-provisioner.yaml)
 * [examples/baremetal-with-resource-limits.yaml](examples/baremetal-with-resource-limits.yaml)
 * [examples/baremetal-without-rbac.yaml](examples/baremetal-without-rbac.yaml)
 * [examples/baremetal.yaml](examples/baremetal.yaml)
