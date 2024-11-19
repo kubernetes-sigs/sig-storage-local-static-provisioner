@@ -70,12 +70,14 @@ type testConfig struct {
 }
 
 type testVol struct {
-	pvPhase       v1.PersistentVolumePhase
-	VolumeMode    string
-	reclaimPolicy v1.PersistentVolumeReclaimPolicy
+	pvPhase           v1.PersistentVolumePhase
+	VolumeMode        string
+	reclaimPolicy     v1.PersistentVolumeReclaimPolicy
+	deletionTimestamp *meta_v1.Time
 }
 
 func TestDeleteVolumes_Basic(t *testing.T) {
+	deletionTimestamp := meta_v1.Now()
 	vols := map[string]*testVol{
 		"pv1": {
 			pvPhase: v1.VolumePending,
@@ -95,6 +97,10 @@ func TestDeleteVolumes_Basic(t *testing.T) {
 		"pv6": {
 			pvPhase:       v1.VolumeReleased,
 			reclaimPolicy: v1.PersistentVolumeReclaimRetain,
+		},
+		"pv7": {
+			pvPhase:           v1.VolumeReleased,
+			deletionTimestamp: &deletionTimestamp,
 		},
 	}
 	expectedDeletedPVs := map[string]string{"pv4": ""}
@@ -580,6 +586,7 @@ func testSetup(t *testing.T, config *testConfig, cleanupCmd []string, useJobForC
 		}
 		pv := common.CreateLocalPVSpec(&lpvConfig)
 		pv.Status.Phase = vol.pvPhase
+		pv.DeletionTimestamp = vol.deletionTimestamp
 
 		_, err := config.apiUtil.CreatePV(pv)
 		if err != nil {

@@ -72,6 +72,11 @@ func (d *Deleter) DeletePVs() {
 		if pv.Status.Phase != v1.VolumeReleased {
 			continue
 		}
+		// Do not clean PV's that were already deleted,
+		// they may disappear at any time.
+		if !pv.DeletionTimestamp.IsZero() {
+			continue
+		}
 		name := pv.Name
 		switch pv.Spec.PersistentVolumeReclaimPolicy {
 		case v1.PersistentVolumeReclaimRetain:
