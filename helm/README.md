@@ -142,6 +142,7 @@ provisioner chart and their default values.
 | classes.[n].storageClass                | Create storage class for this class and configure it optionally.                                                               | bool/map | `false`                                                       |
 | classes.[n].storageClass.reclaimPolicy  | Specify reclaimPolicy of storage class, available: Delete/Retain.                                                              | str      | `Delete`                                                      |
 | classes.[n].storageClass.isDefaultClass | Set storage class as default                                                                                                   | bool     | `false`                                                       |
+| classes.[n].storageClass.provisioner    | Specify provisioner of storage class.                                                                                          | str      | `kubernetes.io/no-provisioner`                                |
 | podAnnotations                          | Annotations for each Pod in the DaemonSet.                                                                                     | map      | `-`                                                           |
 | podLabels                               | Labels for each Pod in the DaemonSet.                                                                                          | map      | `-`                                                           |
 | image                                   | Provisioner image.                                                                                                             | str      | `registry.k8s.io/sig-storage/local-volume-provisioner:v2.5.0` |
@@ -171,6 +172,7 @@ Here are a list of examples for various environments:
 * [examples/baremetal-cleanbyjobs.yaml](examples/baremetal-cleanbyjobs.yaml)
 * [examples/baremetal-resyncperiod.yaml](examples/baremetal-resyncperiod.yaml)
 * [examples/baremetal-tolerations.yaml](examples/baremetal-tolerations.yaml)
+* [examples/baremetal-provisioner.yaml](examples/baremetal-provisioner.yaml)
 * [examples/baremetal-with-resource-limits.yaml](examples/baremetal-with-resource-limits.yaml)
 * [examples/baremetal-without-rbac.yaml](examples/baremetal-without-rbac.yaml)
 * [examples/baremetal.yaml](examples/baremetal.yaml)
