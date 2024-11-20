@@ -31,4 +31,4 @@ fi
 validateBlockDevice
 
 echo "Calling blkdiscard"
-/sbin/blkdiscard -v $LOCAL_PV_BLKDEVICE
+blkdiscard -v $LOCAL_PV_BLKDEVICE
