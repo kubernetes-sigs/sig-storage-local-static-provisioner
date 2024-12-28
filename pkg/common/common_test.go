@@ -236,6 +236,46 @@ func TestLoadProvisionerConfigs(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			map[string]string{"storageClassMap": `local-storage:
+   hostDir: /mnt/disks
+   mountDir: /mnt/disks
+   selector:
+     - matchExpressions:
+         - key: "kubernetes.io/hostname"
+           operator: "In"
+           values:
+             - otherNode1
+`,
+			},
+			ProvisionerConfiguration{
+				StorageClassConfig: map[string]MountConfig{
+					"local-storage": {
+						HostDir:             "/mnt/disks",
+						MountDir:            "/mnt/disks",
+						BlockCleanerCommand: []string{"/scripts/quick_reset.sh"},
+						VolumeMode:          "Filesystem",
+						NamePattern:         "*",
+						Selector: []v1.NodeSelectorTerm{
+							{
+								MatchExpressions: []v1.NodeSelectorRequirement{
+									{
+										Key:      "kubernetes.io/hostname",
+										Operator: v1.NodeSelectorOpIn,
+										Values:   []string{"otherNode1"},
+									},
+								},
+							},
+						},
+					},
+				},
+				UseAlphaAPI: true,
+				MinResyncPeriod: metav1.Duration{
+					Duration: time.Hour + time.Minute*30,
+				},
+			},
+			nil,
+		},
 	}
 	for _, v := range testcases {
 		for name, value := range v.data {
@@ -477,7 +517,7 @@ func TestGetVolumeMode(t *testing.T) {
 	}
 }
 
-func TestNodeExists(t *testing.T) {
+func TestAnyNodeExists(t *testing.T) {
 	nodeName := "test-node"
 	nodeWithName := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -495,21 +535,39 @@ func TestNodeExists(t *testing.T) {
 	tests := []struct {
 		nodeAdded *v1.Node
 		// Required.
-		nodeQueried    *v1.Node
+		nodeQueried    []string
 		expectedResult bool
 	}{
 		{
 			nodeAdded:      nodeWithName,
-			nodeQueried:    nodeWithName,
+			nodeQueried:    []string{nodeName},
 			expectedResult: true,
 		},
 		{
 			nodeAdded:      nodeWithLabel,
-			nodeQueried:    nodeWithName,
+			nodeQueried:    []string{nodeName},
 			expectedResult: true,
 		},
 		{
-			nodeQueried:    nodeWithName,
+			nodeQueried:    []string{nodeName},
+			expectedResult: false,
+		},
+		{
+			nodeAdded:      nodeWithName,
+			nodeQueried:    []string{"other-node", nodeName},
+			expectedResult: true,
+		},
+		{
+			nodeAdded:      nodeWithLabel,
+			nodeQueried:    []string{"other-node", nodeName},
+			expectedResult: true,
+		},
+		{
+			nodeQueried:    []string{},
+			expectedResult: false,
+		},
+		{
+			nodeQueried:    nil,
 			expectedResult: false,
 		},
 	}
@@ -523,58 +581,9 @@ func TestNodeExists(t *testing.T) {
 			nodeInformer.Informer().GetStore().Add(test.nodeAdded)
 		}
 
-		exists, err := NodeExists(nodeInformer.Lister(), test.nodeQueried.Name)
-		if err != nil {
-			t.Errorf("Got unexpected error: %s", err.Error())
-		}
+		exists := AnyNodeExists(nodeInformer.Lister(), test.nodeQueried)
 		if exists != test.expectedResult {
 			t.Errorf("expected result: %t, actual: %t", test.expectedResult, exists)
-		}
-	}
-}
-
-func TestNodeAttachedToLocalPV(t *testing.T) {
-	nodeName := "testNodeName"
-
-	tests := []struct {
-		name             string
-		pv               *v1.PersistentVolume
-		expectedNodeName string
-		expectedStatus   bool
-	}{
-		{
-			name:             "NodeAffinity will all necessary fields",
-			pv:               withNodeAffinity(pv(), []string{nodeName}, NodeLabelKey),
-			expectedNodeName: nodeName,
-			expectedStatus:   true,
-		},
-		{
-			name:             "empty nodeNames array",
-			pv:               withNodeAffinity(pv(), []string{}, NodeLabelKey),
-			expectedNodeName: "",
-			expectedStatus:   false,
-		},
-		{
-			name:             "multiple nodeNames",
-			pv:               withNodeAffinity(pv(), []string{nodeName, "newNode"}, NodeLabelKey),
-			expectedNodeName: "",
-			expectedStatus:   false,
-		},
-		{
-			name:             "wrong node label key",
-			pv:               withNodeAffinity(pv(), []string{nodeName}, "wrongLabel"),
-			expectedNodeName: "",
-			expectedStatus:   false,
-		},
-	}
-
-	for _, test := range tests {
-		nodeName, ok := NodeAttachedToLocalPV(test.pv)
-		if ok != test.expectedStatus {
-			t.Errorf("test: %s, status: %t, expectedStaus: %t", test.name, ok, test.expectedStatus)
-		}
-		if nodeName != test.expectedNodeName {
-			t.Errorf("test: %s, nodeName: %s, expectedNodeName: %s", test.name, nodeName, test.expectedNodeName)
 		}
 	}
 }

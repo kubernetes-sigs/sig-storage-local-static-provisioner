@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
@@ -196,18 +197,15 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return err
 	}
 
-	nodeName, ok := common.NodeAttachedToLocalPV(pv)
-	if !ok {
+	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
+	if nodeNames == nil {
 		// For whatever reason the PV isn't formatted properly so we will
 		// never be able to get its corresponding Node, so ignore.
 		klog.Errorf("error getting node attached to pv: %s", pv)
 		return nil
 	}
 
-	nodeExists, err := common.NodeExists(c.nodeLister, nodeName)
-	if err != nil {
-		return err
-	}
+	nodeExists := common.AnyNodeExists(c.nodeLister, nodeNames)
 	// Check that the node the PV/PVC reference is still deleted
 	if nodeExists {
 		return nil
@@ -242,7 +240,7 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 	}
 
 	cleanupmetrics.PersistentVolumeClaimDeleteTotal.Inc()
-	klog.Infof("Deleted PVC %q that pointed to Node %q", pvClaimRef.Name, nodeName)
+	klog.Infof("Deleted PVC %q that pointed to non-existent Nodes %q", pvClaimRef.Name, nodeNames)
 	return nil
 }
 
@@ -264,18 +262,13 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 			continue
 		}
 
-		nodeName, ok := common.NodeAttachedToLocalPV(pv)
-		if !ok {
+		nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
+		if nodeNames == nil {
 			klog.Errorf("error getting node attached to pv: %s", pv)
 			continue
 		}
 
-		shouldEnqueue, err := c.shouldEnqueueEntry(pv, nodeName)
-		if err != nil {
-			klog.Errorf("error determining whether to enqueue entry with pv %q: %v", pv.Name, err)
-			continue
-		}
-
+		shouldEnqueue := c.shouldEnqueueEntry(pv, nodeNames)
 		if shouldEnqueue {
 			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String())
 			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.pvcDeletionDelay.String()))
@@ -288,13 +281,12 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 // shouldEnqueuePV checks if a PV should be enqueued to the entryQueue.
 // The PV must be a local PV, have a StorageClass present in the list of storageClassNames, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
-func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeName string) (bool, error) {
+func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeNames []string) bool {
 	if pv.Spec.ClaimRef == nil {
-		return false, nil
+		return false
 	}
 
-	exists, err := common.NodeExists(c.nodeLister, nodeName)
-	return !exists && err == nil, err
+	return !common.AnyNodeExists(c.nodeLister, nodeNames)
 }
 
 // deletePVC deletes the PVC with the given name and namespace
