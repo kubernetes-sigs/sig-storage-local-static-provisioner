@@ -19,11 +19,7 @@ provisioning.
   * [Best Practices](#best-practices)
 - [Version Compatibility](#version-compatibility)
 - [K8s Feature Status](#k8s-feature-status)
-  * [1.14: GA](#114-ga)
-  * [1.12: Beta](#112-beta)
-  * [1.10: Beta](#110-beta)
-  * [1.9: Alpha](#19-alpha)
-  * [1.7: Alpha](#17-alpha)
+  * GA from 1.14
   * [Future features](#future-features)
 - [E2E Tests](#e2e-tests)
   * [Running](#running)
@@ -95,52 +91,20 @@ See [Best Practices](docs/best-practices.md).
 
 Recommended provisioner versions with Kubernetes versions
 
-| Provisioner version | K8s version   | Reason                    |
-| ------------------- | ------------- | ------------------------- |
-| [2.6.0][6]          | 1.12+         |                           |
-| [2.5.0][5]          | 1.12+         |                           |
-| [2.4.0][4]          | 1.12+         | fs on block support       |
-| [2.2.0][3]          | 1.10          | Beta API default, block   |
-| [2.0.0][2]          | 1.8, 1.9      | Mount propagation         |
-| [1.0.1][1]          | 1.7           |                           |
+| Provisioner version | K8s version   |
+| ------------------- | ------------- |
+| [2.7.0][7]          | 1.21+         |
+| [2.6.0][6]          | 1.12+         |
+| [2.5.0][5]          | 1.12+         |
 
-[1]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v1.0.1/local-volume
-[2]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.0.0/local-volume
-[3]: https://github.com/kubernetes-incubator/external-storage/tree/local-volume-provisioner-v2.2.0/local-volume
-[4]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.4.0
 [5]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.5.0
 [6]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.6.0
+[7]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.7.0
 
 
 ## K8s Feature Status
 
 Also see [known issues](KNOWN_ISSUES.md) and [CHANGELOG](CHANGELOG.md).
-
-### 1.14: GA
-
-* No new features added
-
-### 1.12: Beta
-
-* Added support for automatically formatting a filesystem on the given block device in `localVolumeSource.path`
-
-### 1.10: Beta
-
-* New PV.NodeAffinity field added.
-* **Important:** Alpha PV NodeAffinity annotation is deprecated. Users must manually update
-  their PVs to use the new NodeAffinity field or run a [one-time update job](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/master/cmd/utils/update-pv-to-beta).
-* Alpha: Raw block support added.
-
-### 1.9: Alpha
-
-* New StorageClass `volumeBindingMode` parameter that will delay PVC binding
-  until a pod is scheduled.
-
-### 1.7: Alpha
-
-* New `local` PersistentVolume source that allows specifying a directory or mount
-  point with node affinity.
-* Pod using the PVC that is bound to this PV will always get scheduled to that node.
 
 ### Future features
 

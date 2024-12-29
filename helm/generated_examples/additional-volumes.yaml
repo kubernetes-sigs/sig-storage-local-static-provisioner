@@ -122,7 +122,7 @@ spec:
             name: signal
       containers:
         - name: provisioner
-          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.6.0
+          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0
           securityContext:
             privileged: true
           env:
@@ -135,7 +135,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.6.0
+            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0
           ports:
           - name: metrics
             containerPort: 8080

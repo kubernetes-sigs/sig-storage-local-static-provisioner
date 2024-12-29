@@ -36,7 +36,7 @@ spec:
     spec:
       serviceAccountName: local-storage-admin
       containers:
-        - image: "registry.k8s.io/sig-storage/local-volume-provisioner:v2.4.0"
+        - image: "registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0"
           imagePullPolicy: "Always"
           name: provisioner 
           securityContext:
