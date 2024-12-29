@@ -99,7 +99,7 @@ podAnnotations: {}
 podLabels: {}
 
 # Defines Provisioner's image name including container registry.
-image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.6.0
+image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0
 
 # Defines Image download policy, see kubernetes documentation for available values.
 # imagePullPolicy: Always
