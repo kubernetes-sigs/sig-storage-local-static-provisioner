@@ -155,6 +155,7 @@ spec:
       annotations:
         checksum/config: b83faf15a16c9079bcd422cd130bbeef24dd946545b9e66f70eb6cfe7fd2036f
     spec:
+      hostPID: false
       serviceAccountName: local-static-provisioner
       nodeSelector:
         kubernetes.io/os: linux
