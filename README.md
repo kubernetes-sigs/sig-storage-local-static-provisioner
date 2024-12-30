@@ -120,8 +120,8 @@ Also see [known issues](KNOWN_ISSUES.md) and [CHANGELOG](CHANGELOG.md).
 Run `./hack/e2e.sh -h` to view help.
 
 ### View CI Results
-
-Check testgrid [sig-storage-local-static-provisioner](https://testgrid.k8s.io/sig-storage-local-static-provisioner) dashboard.
+ - testgrid [sig-storage-local-static-provisioner](https://testgrid.k8s.io/sig-storage-local-static-provisioner) dashboard.
+ - Driver image build pipeline: [post-sig-storage-local-static-provisioner-push-images](https://testgrid.k8s.io/sig-storage-image-build#post-sig-storage-local-static-provisioner-push-images)
 
 ## Community, discussion, contribution, and support
 
