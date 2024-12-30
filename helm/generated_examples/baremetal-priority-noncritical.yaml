@@ -116,6 +116,7 @@ spec:
       annotations:
         checksum/config: f81e575a8ce66fff1873e5bae2df0f963609f540da196b9a86c3146a94d284b8
     spec:
+      hostPID: false
       serviceAccountName: local-static-provisioner
       priorityClassName: priority-important
       nodeSelector:
