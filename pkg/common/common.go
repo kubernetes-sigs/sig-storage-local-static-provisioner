@@ -132,6 +132,9 @@ type MountConfig struct {
 	// The volume mode of created PersistentVolume object,
 	// default to Filesystem if not specified.
 	VolumeMode string `json:"volumeMode" yaml:"volumeMode"`
+	// The access mode of created PersistentVolume object
+	// default to ReadWriteOnce if not specified.
+	AccessMode string `json:"accessMode" yaml:"accessMode"`
 	// Filesystem type to mount.
 	// It applies only when the source path is a block device,
 	// and desire volume mode is Filesystem.
@@ -180,6 +183,7 @@ type LocalPVConfig struct {
 	AffinityAnn     string
 	NodeAffinity    *v1.VolumeNodeAffinity
 	VolumeMode      v1.PersistentVolumeMode
+	AccessMode      v1.PersistentVolumeAccessMode
 	MountOptions    []string
 	FsType          *string
 	Labels          map[string]string
@@ -248,12 +252,16 @@ func CreateLocalPVSpec(config *LocalPVConfig) *v1.PersistentVolume {
 				},
 			},
 			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
+				config.AccessMode,
 			},
 			StorageClassName: config.StorageClass,
 			VolumeMode:       &config.VolumeMode,
 			MountOptions:     config.MountOptions,
 		},
+	}
+
+	if config.AccessMode == "" {
+		pv.Spec.AccessModes = []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}
 	}
 
 	if config.UseAlphaAPI {

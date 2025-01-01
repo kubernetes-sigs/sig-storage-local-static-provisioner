@@ -62,6 +62,8 @@ classes:
     # The volume mode of created PersistentVolume object. Default to Filesystem
     # if not specified.
     volumeMode: Filesystem
+    # Access mode of the volume. default to ReadWriteOnce if not specified.
+    accessMode: ReadWriteOnce
     # Filesystem type to mount.
     # It applies only when the source path is a block device,
     # and desire volume mode is Filesystem.
