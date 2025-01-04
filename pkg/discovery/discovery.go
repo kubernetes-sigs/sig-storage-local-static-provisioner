@@ -305,6 +305,10 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		}
 
 		var capacityByte int64
+		desiredAccessMode := v1.ReadWriteOnce
+		if config.AccessMode != "" {
+			desiredAccessMode = v1.PersistentVolumeAccessMode(config.AccessMode)
+		}
 		desireVolumeMode := v1.PersistentVolumeMode(config.VolumeMode)
 		switch volMode {
 		case v1.PersistentVolumeBlock:
@@ -345,7 +349,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			continue
 		}
 
-		err = d.createPV(file, class, reclaimPolicy, mountOptions, config, capacityByte, desireVolumeMode, startTime)
+		err = d.createPV(file, class, reclaimPolicy, mountOptions, config, capacityByte, desireVolumeMode, desiredAccessMode, startTime)
 		if err != nil {
 			discoErrors = append(discoErrors, err)
 		}
@@ -367,7 +371,7 @@ func generatePVName(file, node, class string) string {
 	return fmt.Sprintf("local-pv-%x", h.Sum32())
 }
 
-func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVolumeReclaimPolicy, mountOptions []string, config common.MountConfig, capacityByte int64, volMode v1.PersistentVolumeMode, startTime time.Time) error {
+func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVolumeReclaimPolicy, mountOptions []string, config common.MountConfig, capacityByte int64, volMode v1.PersistentVolumeMode, accessMode v1.PersistentVolumeAccessMode, startTime time.Time) error {
 	pvName := generatePVName(file, d.Node.Name, class)
 	outsidePath := filepath.Join(config.HostDir, file)
 
@@ -382,6 +386,7 @@ func (d *Discoverer) createPV(file, class string, reclaimPolicy v1.PersistentVol
 		ReclaimPolicy:   reclaimPolicy,
 		ProvisionerName: d.Name,
 		VolumeMode:      volMode,
+		AccessMode:      accessMode,
 		Labels:          d.Labels,
 		MountOptions:    mountOptions,
 		SetPVOwnerRef:   d.SetPVOwnerRef,

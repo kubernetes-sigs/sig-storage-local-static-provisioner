@@ -15,6 +15,7 @@ data:
          - "/scripts/shred.sh"
          - "2"
        volumeMode: Filesystem
+       accessMode: ReadWriteOnce
        fsType: ext4
        namePattern: "*"
 ---
