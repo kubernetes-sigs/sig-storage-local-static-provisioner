@@ -36,10 +36,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
 // CleanupController handles the deletion of PVCs that reference deleted Nodes.
@@ -197,7 +197,7 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return err
 	}
 
-	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
+	nodeNames := util.GetLocalPersistentVolumeNodeNames(pv)
 	if nodeNames == nil {
 		// For whatever reason the PV isn't formatted properly so we will
 		// never be able to get its corresponding Node, so ignore.
@@ -262,7 +262,7 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 			continue
 		}
 
-		nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(pv)
+		nodeNames := util.GetLocalPersistentVolumeNodeNames(pv)
 		if nodeNames == nil {
 			klog.Errorf("error getting node attached to pv: %s", pv)
 			continue

@@ -18,6 +18,9 @@ package util
 
 import (
 	"os"
+
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // VolumeUtil is an interface for local filesystem operations
@@ -73,4 +76,42 @@ func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+// GetLocalPersistentVolumeNodeNames returns the node affinity node name(s) for
+// local PersistentVolumes. nil is returned if the PV does not have any
+// specific node affinity node selector terms and match expressions.
+// PersistentVolume with node affinity has select and match expressions
+// in the form of:
+//
+//	nodeAffinity:
+//	  required:
+//	    nodeSelectorTerms:
+//	    - matchExpressions:
+//	      - key: kubernetes.io/hostname
+//	        operator: In
+//	        values:
+//	        - <node1>
+//	        - <node2>
+func GetLocalPersistentVolumeNodeNames(pv *v1.PersistentVolume) []string {
+	if pv == nil || pv.Spec.NodeAffinity == nil || pv.Spec.NodeAffinity.Required == nil {
+		return nil
+	}
+
+	var result sets.Set[string]
+	for _, term := range pv.Spec.NodeAffinity.Required.NodeSelectorTerms {
+		var nodes sets.Set[string]
+		for _, matchExpr := range term.MatchExpressions {
+			if matchExpr.Key == v1.LabelHostname && matchExpr.Operator == v1.NodeSelectorOpIn {
+				if nodes == nil {
+					nodes = sets.New(matchExpr.Values...)
+				} else {
+					nodes = nodes.Intersection(sets.New(matchExpr.Values...))
+				}
+			}
+		}
+		result = result.Union(nodes)
+	}
+
+	return sets.List(result)
 }

@@ -27,10 +27,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
-	volumeUtil "k8s.io/kubernetes/pkg/volume/util"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
 // Deleter handles cleanup of local PVs with an affinity to a deleted Node.
@@ -120,7 +120,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 //	        values:
 //	        - <node1>
 func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) bool {
-	nodeNames := volumeUtil.GetLocalPersistentVolumeNodeNames(localPV)
+	nodeNames := util.GetLocalPersistentVolumeNodeNames(localPV)
 	if nodeNames == nil {
 		return false
 	}
