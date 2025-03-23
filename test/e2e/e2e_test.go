@@ -154,7 +154,7 @@ func init() {
 	fmt.Printf("PROVISIONER_IMAGE_PULL_POLICY: %s\n", imagePullPolicyFromEnv)
 }
 
-var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
+var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 	f := framework.NewDefaultFramework("persistent-local-volumes-test")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 	var (
@@ -190,7 +190,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 
 	// Provisioner positive tests
 	for _, testConfig := range testConfigs {
-		ctxString := fmt.Sprintf("Local volume provisioner [Serial][UseJobForCleaning: %v][VolumeType: %v]", testConfig.UseJobForCleaning, testConfig.VolumeType)
+		ctxString := fmt.Sprintf("Local volume provisioner [WithSerial][UseJobForCleaning: %v][VolumeType: %v]", testConfig.UseJobForCleaning, testConfig.VolumeType)
 		Context(ctxString, func() {
 			BeforeEach(func(ctx SpecContext) {
 				setupStorageClass(config, &immediateMode)
@@ -247,7 +247,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 	}
 
 	// Provisioner negative tests
-	Context("Local volume provisioner [Serial]", func() {
+	Context("Local volume provisioner [WithSerial]", func() {
 		BeforeEach(func(ctx SpecContext) {
 			setupStorageClass(config, &immediateMode)
 			setupLocalVolumeProvisioner(ctx, config, nil)
@@ -282,7 +282,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 	})
 
 	// Provisioner stress tests
-	Context("Stress with local volume provisioner [Serial]", func() {
+	Context("Stress with local volume provisioner [WithSerial]", func() {
 		var testVols [][]*localVolume
 
 		const (
