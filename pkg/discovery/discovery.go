@@ -277,8 +277,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 		outsidePath := filepath.Join(config.HostDir, file)
 		existingPVNames := d.Cache.LookupPVsByPath(outsidePath)
 		if len(existingPVNames) > 0 {
-			errStr := fmt.Sprintf("Volume path already in use: PV %q wants path %q which was already found in %q.", pvName, outsidePath, strings.Join(existingPVNames, ","))
-			klog.Errorf(errStr)
+			klog.Errorf("Volume path already in use: PV %q wants path %q which was already found in %q.", pvName, outsidePath, strings.Join(existingPVNames, ","))
 			continue
 		}
 
