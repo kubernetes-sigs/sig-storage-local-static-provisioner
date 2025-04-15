@@ -119,7 +119,7 @@ spec:
         kubernetes.io/os: linux
       containers:
         - name: provisioner
-          image: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
+          image: gcr.io/k8s-staging-sig-storage/local-volume-provisioner:canary
           imagePullPolicy: Always
           securityContext:
             privileged: true
@@ -133,7 +133,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: gcr.io/mauriciopoppe-gke-dev/local-volume-provisioner:canary
+            value: gcr.io/k8s-staging-sig-storage/local-volume-provisioner:canary
           ports:
           - name: metrics
             containerPort: 8080
