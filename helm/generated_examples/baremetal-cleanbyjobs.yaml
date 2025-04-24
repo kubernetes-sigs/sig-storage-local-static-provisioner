@@ -6,7 +6,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -18,7 +18,7 @@ metadata:
   name: local-static-provisioner-config
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -38,7 +38,7 @@ kind: StorageClass
 metadata:
   name: local-storage
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -52,7 +52,7 @@ kind: ClusterRole
 metadata:
   name: local-static-provisioner-node-clusterrole
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -79,7 +79,7 @@ kind: ClusterRoleBinding
 metadata:
   name: local-static-provisioner-node-binding
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -99,7 +99,7 @@ metadata:
   name: local-static-provisioner-jobs-role
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -118,7 +118,7 @@ metadata:
   name: local-static-provisioner-jobs-rolebinding
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -138,7 +138,7 @@ metadata:
   name: local-static-provisioner
   namespace: default
   labels:
-    helm.sh/chart: local-static-provisioner-2.0.0
+    helm.sh/chart: local-static-provisioner-2.8.0
     app.kubernetes.io/name: local-static-provisioner
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/instance: local-static-provisioner
@@ -153,7 +153,7 @@ spec:
         app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: b83faf15a16c9079bcd422cd130bbeef24dd946545b9e66f70eb6cfe7fd2036f
+        checksum/config: 2e2bfb6f168009cb964c0ab9134b58921c9366ae995fb4c826bebfe94ab12aee
     spec:
       hostPID: false
       serviceAccountName: local-static-provisioner
