@@ -108,6 +108,10 @@ spec:
     matchLabels:
       app.kubernetes.io/name: local-static-provisioner
       app.kubernetes.io/instance: local-static-provisioner
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
   template:
     metadata:
       labels:
