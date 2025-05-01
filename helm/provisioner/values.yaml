@@ -158,6 +158,12 @@ hostPID: false
 # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 initContainers: []
 
+# Update strategy for the DaemonSet.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
 #
 # Configure Prometheus monitoring
 #
