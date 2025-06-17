@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -33,14 +32,11 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/collectors"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/watcher"
 
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
-
-const maxGetNodesRetries = 3
 
 var (
 	optListenAddress string
@@ -86,7 +82,7 @@ func main() {
 	}
 
 	client := common.SetupClient()
-	node := getNode(client, nodeName)
+	node := util.GetNode(client.CoreV1(), nodeName)
 
 	configUpdate := make(chan common.ProvisionerConfiguration)
 	defer close(configUpdate)
@@ -114,23 +110,4 @@ func main() {
 	}...)
 	http.Handle(optMetricsPath, promhttp.Handler())
 	log.Fatal(http.ListenAndServe(optListenAddress, nil))
-}
-
-func getNode(client *kubernetes.Clientset, name string) *v1.Node {
-	var retries int
-
-	for {
-		node, err := client.CoreV1().Nodes().Get(context.TODO(), name, metav1.GetOptions{})
-		if err == nil {
-			return node
-		}
-
-		retries++
-		klog.Infof("Could not get node information (remaining retries: %d): %v", maxGetNodesRetries-retries, err)
-
-		if retries >= maxGetNodesRetries {
-			klog.Fatalf("Could not get node information: %v", err)
-		}
-		time.Sleep(time.Second)
-	}
 }
