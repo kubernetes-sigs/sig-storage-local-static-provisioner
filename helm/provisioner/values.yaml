@@ -133,6 +133,17 @@ nodeSelectorWindows: {}
 # Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 tolerations: []
 #
+# If configured, removeNodeNotReadyTaint will add provisionerNotReadyNodeTaintKey as the toleration key
+# to the DaemonSet PodSpec.
+#
+# removeNodeNotReadyTaint controls whether the provisioner should remove the provisionerNotReadyNodeTaintKey
+# once it becomes ready.
+removeNodeNotReadyTaint: false
+#
+# The key of the startup taint that provisioner will remove once it becomes ready.
+# Ref: https://karpenter.sh/docs/concepts/nodepools/#cilium-startup-taint
+provisionerNotReadyNodeTaintKey: "sig-storage-local-static-provisioner/agent-not-ready"
+#
 # If configured, affinity will add a affinity filed to the DeamonSet PodSpec.
 # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
 affinity: {}
