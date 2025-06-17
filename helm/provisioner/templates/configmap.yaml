@@ -24,6 +24,10 @@ data:
 {{- if .Values.setPVOwnerRef }}
   setPVOwnerRef: "true"
 {{- end }}
+{{- if .Values.removeNodeNotReadyTaint }}
+  removeNodeNotReadyTaint: {{ .Values.removeNodeNotReadyTaint | quote }}
+  provisionerNotReadyNodeTaintKey: {{ .Values.provisionerNotReadyNodeTaintKey | quote }}
+{{- end }}
 {{- if .Values.useJobForCleaning }}
   useJobForCleaning: "yes"
 {{- end }}
