@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/deleter"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/discovery"
+	nodetaint "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-taint"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/populator"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 
@@ -161,6 +162,9 @@ func StartLocalController(signal *signal, client *kubernetes.Clientset, ptable d
 		go jobController.Run(jobControllerStopChan)
 	}
 	klog.Info("Controller started\n")
+
+	nodeTaintRemover := nodetaint.NewRemover(runtimeConfig)
+
 	for {
 		select {
 		case stopped := <-signal.closing:
@@ -174,6 +178,9 @@ func StartLocalController(signal *signal, client *kubernetes.Clientset, ptable d
 		default:
 			deleter.DeletePVs()
 			discoverer.DiscoverLocalVolumes()
+			if !nodeTaintRemover.ShouldRemoveTaint() && discoverer.Readyz.Check(nil) == nil {
+				nodeTaintRemover.RemoveTaintWithBackoff()
+			}
 			time.Sleep(discoveryPeriod)
 		}
 	}
