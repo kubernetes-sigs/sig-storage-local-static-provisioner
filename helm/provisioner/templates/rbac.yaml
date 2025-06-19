@@ -23,7 +23,7 @@ rules:
   verbs: ["create", "update", "patch"]
 - apiGroups: [""]
   resources: ["nodes"]
-  verbs: ["get"]
+  verbs: ["get", "update"]
 {{- if .Values.rbac.extraRules }}
 {{ toYaml .Values.rbac.extraRules }}
 {{- end}}
