@@ -9,6 +9,8 @@ on:
 
 jobs:
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,7 +29,6 @@ jobs:
       - name: Set-up Helm
         uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
 
       - name: Run chart-releaser
