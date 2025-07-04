@@ -119,6 +119,11 @@ type UserConfig struct {
 	LabelsForPV map[string]string
 	// SetPVOwnerRef indicates if PVs should be dependents of the owner Node
 	SetPVOwnerRef bool
+	// RemoveNodeNotReadyTaint indicates if the provisioner should remove the taint with provisionerNotReadyNodeTaintKey
+	// once it becomes ready.
+	RemoveNodeNotReadyTaint bool
+	// ProvisionerNotReadyNodeTaintKey is the key of the startup taint that provisioner will remove once it becomes ready.
+	ProvisionerNotReadyNodeTaintKey string
 }
 
 // MountConfig stores a configuration for discoverying a specific storageclass
@@ -228,6 +233,13 @@ type ProvisionerConfiguration struct {
 	LabelsForPV map[string]string `json:"labelsForPV" yaml:"labelsForPV"`
 	// SetPVOwnerRef indicates if PVs should be dependents of the owner Node, default to false
 	SetPVOwnerRef bool `json:"setPVOwnerRef" yaml:"setPVOwnerRef"`
+	// RemoveNodeNotReadyTaint controls whether the provisioner should remove the taint with provisionerNotReadyNodeTaintKey
+	// once it becomes ready.
+	// +optional
+	RemoveNodeNotReadyTaint bool `json:"removeNodeNotReadyTaint" yaml:"removeNodeNotReadyTaint"`
+	// ProvisionerNotReadyNodeTaintKey is the key of the startup taint that provisioner will remove once it becomes ready.
+	// +optional
+	ProvisionerNotReadyNodeTaintKey string `json:"provisionerNotReadyNodeTaintKey" yaml:"provisionerNotReadyNodeTaintKey"`
 }
 
 // CreateLocalPVSpec returns a PV spec that can be used for PV creation
@@ -403,18 +415,20 @@ func insertSpaces(original string) string {
 // UserConfigFromProvisionerConfig creates a UserConfig from the provided ProvisionerConfiguration struct
 func UserConfigFromProvisionerConfig(node *v1.Node, namespace, jobImage string, config ProvisionerConfiguration) *UserConfig {
 	return &UserConfig{
-		Node:              node,
-		DiscoveryMap:      config.StorageClassConfig,
-		NodeLabelsForPV:   config.NodeLabelsForPV,
-		UseAlphaAPI:       config.UseAlphaAPI,
-		UseJobForCleaning: config.UseJobForCleaning,
-		MinResyncPeriod:   config.MinResyncPeriod,
-		UseNodeNameOnly:   config.UseNodeNameOnly,
-		Namespace:         namespace,
-		JobContainerImage: jobImage,
-		JobTolerations:    config.JobTolerations,
-		LabelsForPV:       config.LabelsForPV,
-		SetPVOwnerRef:     config.SetPVOwnerRef,
+		Node:                            node,
+		DiscoveryMap:                    config.StorageClassConfig,
+		NodeLabelsForPV:                 config.NodeLabelsForPV,
+		UseAlphaAPI:                     config.UseAlphaAPI,
+		UseJobForCleaning:               config.UseJobForCleaning,
+		MinResyncPeriod:                 config.MinResyncPeriod,
+		UseNodeNameOnly:                 config.UseNodeNameOnly,
+		Namespace:                       namespace,
+		JobContainerImage:               jobImage,
+		JobTolerations:                  config.JobTolerations,
+		LabelsForPV:                     config.LabelsForPV,
+		SetPVOwnerRef:                   config.SetPVOwnerRef,
+		RemoveNodeNotReadyTaint:         config.RemoveNodeNotReadyTaint,
+		ProvisionerNotReadyNodeTaintKey: config.ProvisionerNotReadyNodeTaintKey,
 	}
 }
 

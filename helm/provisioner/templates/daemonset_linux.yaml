@@ -44,9 +44,15 @@ spec:
 {{- if .Values.nodeSelector }}
         {{ toYaml .Values.nodeSelector | nindent 8 }}
 {{- end }}
-{{- if .Values.tolerations }}
+{{- if or (.Values.tolerations) (.Values.removeNodeNotReadyTaint) }}
       tolerations:
-        {{ toYaml .Values.tolerations | nindent 8 }}
+{{- if .Values.tolerations}}
+        {{- toYaml .Values.tolerations | nindent 8 }}
+{{- end }}
+{{- if .Values.removeNodeNotReadyTaint }}
+        - key: {{ .Values.provisionerNotReadyNodeTaintKey}}
+          operator: Exists
+{{- end }}
 {{- end }}
 {{- if .Values.affinity }}
       affinity:

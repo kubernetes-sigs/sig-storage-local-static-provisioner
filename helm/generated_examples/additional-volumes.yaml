@@ -59,7 +59,7 @@ rules:
   verbs: ["create", "update", "patch"]
 - apiGroups: [""]
   resources: ["nodes"]
-  verbs: ["get"]
+  verbs: ["get", "update"]
 ---
 # Source: local-static-provisioner/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
