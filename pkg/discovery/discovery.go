@@ -269,7 +269,32 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				discoErrors = append(discoErrors, err)
 				d.Recorder.Eventf(pv, v1.EventTypeWarning, common.EventVolumeFailedDelete, err.Error())
 			}
-			continue
+			// If PV exists and is Available or Bound, skip creating a new one
+			if pv.Status.Phase == v1.VolumeAvailable || pv.Status.Phase == v1.VolumeBound {
+				continue
+			}
+			// If PV is Released or Failed, check if we can replace it with a new one
+			if pv.Status.Phase == v1.VolumeReleased || pv.Status.Phase == v1.VolumeFailed {
+				// For Released PVs with Delete reclaim policy, we can delete the old PV and create a new one
+				// This allows faster volume availability without waiting for the cleanup process
+				if pv.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete && pv.DeletionTimestamp.IsZero() {
+					klog.Infof("Found Released/Failed PV %q with Delete policy, removing it to create a new Available PV", pvName)
+					err := d.APIUtil.DeletePV(pvName)
+					if err != nil {
+						klog.Errorf("Failed to delete Released PV %q: %v", pvName, err)
+						continue
+					}
+					// Remove from cache to allow creating a new PV
+					d.Cache.DeletePV(pvName)
+					// Continue to create a new PV below
+				} else {
+					// For Retain policy or PVs already being deleted, skip
+					continue
+				}
+			} else {
+				// For other states (e.g., Pending), skip
+				continue
+			}
 		}
 
 		// Check that the local filePath is not already in use in any other local volume
