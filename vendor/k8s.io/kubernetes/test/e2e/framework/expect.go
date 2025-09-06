@@ -293,22 +293,6 @@ func (f *FailureError) backtrace() {
 //	}
 var ErrFailure error = FailureError{}
 
-// ExpectNotEqual expects the specified two are not the same, otherwise an exception raises
-//
-// Deprecated: use gomega.Expect().ToNot(gomega.Equal())
-func ExpectNotEqual(actual interface{}, extra interface{}, explain ...interface{}) {
-	gomega.ExpectWithOffset(1, actual).NotTo(gomega.Equal(extra), explain...)
-}
-
-// ExpectError expects an error happens, otherwise an exception raises
-//
-// Deprecated: use gomega.Expect().To(gomega.HaveOccurred()) or (better!) check
-// specifically for the error that is expected with
-// gomega.Expect().To(gomega.MatchError(gomega.ContainSubstring()))
-func ExpectError(err error, explain ...interface{}) {
-	gomega.ExpectWithOffset(1, err).To(gomega.HaveOccurred(), explain...)
-}
-
 // ExpectNoError checks if "err" is set, and if so, fails assertion while logging the error.
 func ExpectNoError(err error, explain ...interface{}) {
 	ExpectNoErrorWithOffset(1, err, explain...)
@@ -350,9 +334,9 @@ func ExpectNoErrorWithOffset(offset int, err error, explain ...interface{}) {
 	// because it is not included in the failure message.
 	var failure FailureError
 	if errors.As(err, &failure) && failure.Backtrace() != "" {
-		Logf("Failed inside E2E framework:\n    %s", strings.ReplaceAll(failure.Backtrace(), "\n", "\n    "))
+		log(offset+1, fmt.Sprintf("Failed inside E2E framework:\n    %s", strings.ReplaceAll(failure.Backtrace(), "\n", "\n    ")))
 	} else if !errors.Is(err, ErrFailure) {
-		Logf("Unexpected error: %s\n%s", prefix, format.Object(err, 1))
+		log(offset+1, fmt.Sprintf("Unexpected error: %s\n%s", prefix, format.Object(err, 1)))
 	}
 	Fail(prefix+err.Error(), 1+offset)
 }
