@@ -121,7 +121,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	// test pods from running, and tests that ensure all pods are running and
 	// ready will fail).
 	podStartupTimeout := timeouts.SystemPodsStartup
-	if err := e2epod.WaitForPodsRunningReady(ctx, c, metav1.NamespaceSystem, int32(framework.TestContext.MinStartupPods), int32(framework.TestContext.AllowedNotReadyNodes), podStartupTimeout); err != nil {
+	if err := e2epod.WaitForPodsRunningReady(ctx, c, metav1.NamespaceSystem, int(framework.TestContext.MinStartupPods), podStartupTimeout); err != nil {
 		e2edebug.DumpAllNamespaceInfo(ctx, c, metav1.NamespaceSystem)
 		e2ekubectl.LogFailedContainers(ctx, c, metav1.NamespaceSystem, framework.Logf)
 		framework.Failf("Error waiting for all pods to be running and ready: %v", err)
