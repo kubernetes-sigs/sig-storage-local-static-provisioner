@@ -117,6 +117,6 @@ function hack::install_kubetest2() {
     tmpdir=$(mktemp -d)
     trap "rm -rf ${tmpdir}" EXIT
     pushd ${tmpdir} &>/dev/null
-    GOBIN=$OUTPUT_BIN GO111MODULE=on go get sigs.k8s.io/kubetest2/...
+    GOBIN=$OUTPUT_BIN GO111MODULE=on go install sigs.k8s.io/kubetest2/...@latest
     popd &>/dev/null
 }
