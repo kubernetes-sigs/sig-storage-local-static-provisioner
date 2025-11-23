@@ -1001,6 +1001,7 @@ func makeLocalPVCConfig(config *localTestConfig, volumeType localVolumeType) e2e
 	pvcConfig := e2epv.PersistentVolumeClaimConfig{
 		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: &config.scName,
+		ClaimSize:        "1900Mi",
 	}
 	if volumeType == BlockLocalVolumeType {
 		pvcVolumeMode := v1.PersistentVolumeBlock
