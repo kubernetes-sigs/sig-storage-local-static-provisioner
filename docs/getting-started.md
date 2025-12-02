@@ -14,7 +14,7 @@ on older versions, please see version links under
   * [Option 5: EKS (experimental)](#option-5-eks-experimental)
   * [Option 6: AKS](#option-6-aks)
   * [Option 7: LKE](#option-7-lke)
-- [Step 2: Creating a StorageClass (1.9+)](#step-2-creating-a-storageclass-19)
+- [Step 2: Creating a StorageClass](#step-2-creating-a-storageclass-19)
 - [Step 3: Creating local persistent volumes](#step-3-creating-local-persistent-volumes)
   * [Option 1: Using the local volume static provisioner](#option-1-using-the-local-volume-static-provisioner)
   * [Option 2: Manually create local persistent volume](#option-2-manually-create-local-persistent-volume)
@@ -76,12 +76,8 @@ $ kubectl logs local-pv-test
    requirements.
 2. Mount all the filesystems under one directory per StorageClass. The directories
    are specified in a configmap, see below.
-3. Configure the Kubernetes API Server, controller-manager, scheduler, and all kubelets
-   with `KUBE_FEATURE_GATES` as described [above](#enabling-the-alpha-feature-gates).
-4. If not using the default Kubernetes scheduler policy, the following
-   predicates must be enabled:
-   * Pre-1.9: `NoVolumeBindConflict`
-   * 1.9+: `VolumeBindingChecker`
+3. If not using the default Kubernetes scheduler policy, the predicate
+   `VolumeBindingChecker` must be enabled.
 
 #### Option 4: Local test cluster
 
@@ -178,7 +174,7 @@ See [Local Persistent Volume support on Azure](https://github.com/Azure/kubernet
 
 LKE clusters can be created with custom Node Pools using the [Linode API](https://www.linode.com/docs/products/tools/linode-api/). For more information, see the [LKE Endpoints Collection](https://www.linode.com/docs/api/linode-kubernetes-engine-lke).
 
-### Step 2: Creating a StorageClass (1.9+)
+### Step 2: Creating a StorageClass
 
 To delay volume binding until pod scheduling and to handle multiple local PVs in
 a single pod, a StorageClass must to be created with `volumeBindingMode` set to
