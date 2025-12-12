@@ -54,6 +54,9 @@ data:
       {{- if $classConfig.volumeMode }}
       volumeMode: {{ $classConfig.volumeMode }}
       {{- end }}
+      {{- if $classConfig.accessMode }}
+      accessMode: {{ $classConfig.accessMode }}
+      {{- end }}
       {{- if $classConfig.fsType }}
       fsType: {{ $classConfig.fsType }}
       {{- end }}
