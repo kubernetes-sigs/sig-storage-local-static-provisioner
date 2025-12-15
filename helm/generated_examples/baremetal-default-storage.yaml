@@ -28,6 +28,7 @@ data:
       hostDir: /mnt/disks
       mountDir: /mnt/disks
       volumeMode: Filesystem
+      accessMode: ReadWriteOnce
 ---
 # Source: local-static-provisioner/templates/storageclass.yaml
 apiVersion: storage.k8s.io/v1
@@ -117,7 +118,7 @@ spec:
         app.kubernetes.io/name: local-static-provisioner
         app.kubernetes.io/instance: local-static-provisioner
       annotations:
-        checksum/config: d452a9a12b391ed49e977668894e8f8632a397e6449c3d37e9f02a8530f7e3b1
+        checksum/config: 75f64773f675cb2006e34839eb4dbadeee564af5818468359e07c72b5ff44278
     spec:
       hostPID: false
       serviceAccountName: local-static-provisioner
@@ -125,7 +126,7 @@ spec:
         kubernetes.io/os: linux
       containers:
         - name: provisioner
-          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0
+          image: registry.k8s.io/sig-storage/local-volume-provisioner:v2.8.0
           securityContext:
             privileged: true
           env:
@@ -138,7 +139,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
-            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.7.0
+            value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.8.0
           ports:
           - name: metrics
             containerPort: 8080
