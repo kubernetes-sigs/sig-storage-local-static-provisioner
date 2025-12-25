@@ -341,25 +341,30 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 			// This allows using symlinks to avoid nested mount point issues
 			resolvedOutsidePath := outsidePath
 			fileInfo, err := os.Lstat(outsidePath)
-			if err == nil && fileInfo.Mode()&os.ModeSymlink != 0 {
+			if err != nil {
+				// If we can't stat the path, use the original path
+				// This maintains backward compatibility for platforms where Lstat may fail
+				klog.V(4).Infof("Unable to lstat path %q: %v, using original path", outsidePath, err)
+			} else if fileInfo.Mode()&os.ModeSymlink != 0 {
+				// Path is a symlink, resolve it
 				resolvedOutsidePath, err = filepath.EvalSymlinks(outsidePath)
 				if err != nil {
 					discoErrors = append(discoErrors, fmt.Errorf("failed to resolve symlink %q: %v", outsidePath, err))
 					continue
 				}
 				klog.V(4).Infof("Resolved symlink %q to %q for filesystem volume", outsidePath, resolvedOutsidePath)
+				// Store the resolved path to use as PV HostPath
+				outsidePath = resolvedOutsidePath
 			}
 
 			// Use the resolved path for capacity calculation
-			capacityByte, err = d.VolUtil.GetFsCapacityByte(resolvedOutsidePath, filePath)
+			capacityByte, err = d.VolUtil.GetFsCapacityByte(outsidePath, filePath)
 			if err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
 				continue
 			}
 
 			totalCapacityFSBytes += capacityByte
-			// Store the resolved path to use as PV HostPath
-			outsidePath = resolvedOutsidePath
 		default:
 			discoErrors = append(discoErrors, fmt.Errorf("path %q has unexpected volume type %q", filePath, volMode))
 			continue
