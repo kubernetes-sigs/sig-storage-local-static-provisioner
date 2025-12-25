@@ -42,6 +42,13 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+Expand the name for node-cleanup-controller.
+*/}}
+{{- define "nodeCleanupController.name" -}}
+{{- printf "%s-node-cleanup-controller" (include "provisioner.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
 Create a default fully qualified app name for node-cleanup-controller.
 */}}
 {{- define "nodeCleanupController.fullname" -}}

@@ -6,7 +6,7 @@ metadata:
   name: {{ include "nodeCleanupController.fullname" . }}-clusterrole
   labels:
     helm.sh/chart: {{ template "provisioner.chart" . }}
-    app.kubernetes.io/name: {{ include "nodeCleanupController.fullname" . }}
+    app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: node-cleanup-controller
@@ -30,7 +30,7 @@ metadata:
   name: {{ include "nodeCleanupController.fullname" . }}-clusterrolebinding
   labels:
     helm.sh/chart: {{ template "provisioner.chart" . }}
-    app.kubernetes.io/name: {{ include "nodeCleanupController.fullname" . }}
+    app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: node-cleanup-controller

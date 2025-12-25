@@ -7,7 +7,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     helm.sh/chart: {{ template "provisioner.chart" . }}
-    app.kubernetes.io/name: {{ include "nodeCleanupController.fullname" . }}
+    app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: node-cleanup-controller
@@ -15,12 +15,12 @@ spec:
   replicas: {{ .Values.nodeCleanupController.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "nodeCleanupController.fullname" . }}
+      app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "nodeCleanupController.fullname" . }}
+        app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: node-cleanup-controller
 {{- if .Values.nodeCleanupController.podLabels }}
