@@ -195,3 +195,62 @@ serviceMonitor:
   #   targetLabel: nodename
   #   replacement: $1
   #   action: replace
+
+#
+# Configure Node Cleanup Controller
+#
+nodeCleanupController:
+  # nodeCleanupController.enabled: If set to true, Node Cleanup Controller Deployment will be created
+  enabled: false
+  # nodeCleanupController.replicas: Number of replicas for the Node Cleanup Controller Deployment
+  replicas: 1
+  # nodeCleanupController.image: Node Cleanup Controller image
+  image: registry.k8s.io/sig-storage/local-volume-node-cleanup:v{{ .Chart.AppVersion }}
+  # nodeCleanupController.imagePullPolicy: Image pull policy for the Node Cleanup Controller
+  # imagePullPolicy: Always
+  # nodeCleanupController.imagePullSecrets: Image pull secrets for the Node Cleanup Controller
+  imagePullSecrets: []
+  # nodeCleanupController.storageClassNames: Comma separated list of names of StorageClasses to opt-in PVs and PVCs for cleanup
+  storageClassNames: []
+  # nodeCleanupController.pvcDeletionDelay: Duration to wait after Node deletion for PVC cleanup (e.g., "60s")
+  pvcDeletionDelay: "60s"
+  # nodeCleanupController.stalePVDiscoveryInterval: Duration the PV Deleter should wait between tries to clean up stale PVs (e.g., "10s")
+  stalePVDiscoveryInterval: "10s"
+  # nodeCleanupController.resync: Duration of the resync interval of the controller (e.g., "10m")
+  resync: "10m"
+  # nodeCleanupController.workerThreads: Number of controller worker threads
+  workerThreads: 10
+  # nodeCleanupController.listenAddress: The TCP network address where the prometheus metrics endpoint will listen
+  listenAddress: ":8080"
+  # nodeCleanupController.metricsPath: The HTTP path where prometheus metrics will be exposed
+  metricsPath: "/metrics"
+  # nodeCleanupController.resources: Resource requests and limits for the Node Cleanup Controller
+  resources: {}
+  #   limits:
+  #     memory: "512Mi"
+  #     cpu: "1000m"
+  #   requests:
+  #     memory: "32Mi"
+  #     cpu: "10m"
+  # nodeCleanupController.nodeSelector: NodeSelector constraint for Node Cleanup Controller scheduling
+  nodeSelector: {}
+  # nodeCleanupController.tolerations: Tolerations for Node Cleanup Controller scheduling
+  tolerations: []
+  # nodeCleanupController.affinity: Affinity for Node Cleanup Controller scheduling
+  affinity: {}
+  # nodeCleanupController.podAnnotations: Annotations for Node Cleanup Controller Pod
+  podAnnotations: {}
+  # nodeCleanupController.podLabels: Labels for Node Cleanup Controller Pod
+  podLabels: {}
+  # nodeCleanupController.priorityClassName: Priority Class name for Node Cleanup Controller Pod
+  priorityClassName: ""
+  # nodeCleanupController.serviceAccount: Configuration for Node Cleanup Controller ServiceAccount
+  serviceAccount:
+    # nodeCleanupController.serviceAccount.create: Whether to create a service account for Node Cleanup Controller
+    create: true
+    # nodeCleanupController.serviceAccount.name: The name of the service account to create or use
+    name: ""
+  # nodeCleanupController.rbac: Configuration for Node Cleanup Controller RBAC
+  rbac:
+    # nodeCleanupController.rbac.create: Whether to create RBAC resources for Node Cleanup Controller
+    create: true
