@@ -337,8 +337,12 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				continue
 			}
 
-			// If outsidePath is a symlink, resolve it to get the actual mount point
-			// This allows using symlinks to avoid nested mount point issues
+			// If outsidePath is a symlink, resolve it to get the actual mount point path
+			// This is done separately from IsLikelyMountPoint because:
+			// 1. IsLikelyMountPoint validates the path is usable (mount point or symlink to one)
+			// 2. Here we resolve the symlink to store the actual target path in the PV
+			// This allows using symlinks to avoid nested mount point issues while
+			// ensuring the PV references the actual mount point location
 			resolvedOutsidePath := outsidePath
 			fileInfo, err := os.Lstat(outsidePath)
 			if err != nil {
