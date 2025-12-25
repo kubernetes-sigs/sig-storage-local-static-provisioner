@@ -6,9 +6,13 @@ configuration requirements you must know:
 
 * The local-volume plugin expects paths to be stable, including across
   reboots and when disks are added or removed.
-* The static provisioner only discovers either mount points (for Filesystem mode volumes)
-  or symbolic links (for Block mode volumes). For directory-based local volumes, they
-  must be bind-mounted into the discovery directories.
+* The static provisioner discovers:
+  - **Filesystem mode volumes**: Mount points OR symbolic links pointing to mount points
+  - **Block mode volumes**: Symbolic links to block devices
+* For Filesystem mode volumes, using symlinks to mount points is recommended to avoid
+  nested mount point issues that can prevent Pods from terminating cleanly.
+* For directory-based local volumes, they can be either bind-mounted or symlinked into
+  the discovery directories.
 
 Glossary:
 
@@ -25,6 +29,7 @@ Glossary:
 - [Prepare and set up local volumes in discovery directory](#prepare-and-set-up-local-volumes-in-discovery-directory)
   * [Use a whole disk as a filesystem PV](#use-a-whole-disk-as-a-filesystem-pv)
   * [Sharing a disk filesystem by multiple filesystem PVs](#sharing-a-disk-filesystem-by-multiple-filesystem-pvs)
+  * [Using symlinks for filesystem PVs (Recommended)](#using-symlinks-for-filesystem-pvs-recommended)
   * [Link devices into directory to be discovered as block PVs](#link-devices-into-directory-to-be-discovered-as-block-pvs)
   * [Link devices into directory to be discovered as filesystem PVs](#link-devices-into-directory-to-be-discovered-as-filesystem-pvs)
   * [Separate disk into multiple partitions](#separate-disk-into-multiple-partitions)
@@ -128,6 +133,51 @@ NOTE:
   no capacity isolation. If you want to separate a disk into multiple PVs with
   capacity isolation. You can [separate disk into multiple
   partitions](#separate-disk-into-multiple-partitions) first.
+
+### Using symlinks for filesystem PVs (Recommended)
+
+**Recommended approach to avoid nested mount point issues.**
+
+Instead of using bind mounts in the discovery directory, you can create symlinks
+that point to mount points. This approach avoids issues with nested mount points
+that can prevent Pods from terminating cleanly.
+
+Here's an example workflow:
+
+1) Format and mount the disk to a location OUTSIDE the discovery directory
+
+```
+$ sudo mkfs.ext4 /dev/path/to/disk
+$ DISK_UUID=$(sudo blkid -s UUID -o value /dev/path/to/disk) 
+$ sudo mkdir /mnt/$DISK_UUID
+$ sudo mount -t ext4 /dev/path/to/disk /mnt/$DISK_UUID
+```
+
+2) Add persistent mount entry to /etc/fstab
+
+```
+$ echo UUID=`sudo blkid -s UUID -o value /dev/path/to/disk` /mnt/$DISK_UUID ext4 defaults 0 2 | sudo tee -a /etc/fstab
+```
+
+3) Create symlinks in the discovery directory pointing to the mount points
+
+```
+$ sudo ln -s /mnt/$DISK_UUID /mnt/disks/$DISK_UUID
+```
+
+The provisioner will detect the symlink, resolve it to the actual mount point,
+and create a PV that references the resolved mount point path. This approach:
+
+- Avoids nested mount point issues that can occur with bind mounts
+- Allows kubelet to properly unmount volumes when Pods terminate
+- Provides the same isolation and capacity as direct mount points
+
+NOTE:
+
+- The symlink target must be a valid mount point
+- The provisioner will automatically resolve the symlink and use the target path
+  as the PV's host path
+- This method is recommended over bind mounts for Filesystem mode volumes
 
 ### Link devices into directory to be discovered as block PVs
 
