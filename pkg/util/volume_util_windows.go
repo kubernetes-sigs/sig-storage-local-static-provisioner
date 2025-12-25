@@ -84,13 +84,18 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 	return false, fmt.Errorf("IsBlock is unsupported in this build")
 }
 
+// IsLikelyMountPoint checks if the hostPath is a symlink.
+// On Windows, local volumes are always represented as symlinks in the discovery directory,
+// unlike Linux which supports both direct mount points and symlinks to mount points.
+// The symlink should point to a valid volume path that can be accessed by the CSI Proxy.
 func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error) {
-	isLikelyMountPoint, err := u.csiProxy.IsSymlink(hostPath)
+	isSymlink, err := u.csiProxy.IsSymlink(hostPath)
 	if err != nil {
 		return false, err
 	}
-	if !isLikelyMountPoint {
+	if !isSymlink {
 		return false, fmt.Errorf("hostPath %q is not a symlink", hostPath)
 	}
-	return isLikelyMountPoint, nil
+	
+	return true, nil
 }

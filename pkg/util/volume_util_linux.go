@@ -66,14 +66,41 @@ func (u *volumeUtil) GetBlockCapacityByte(fullPath string) (int64, error) {
 	return size, err
 }
 
-// IsLikelyMountPoint is not implemented in linux because the discovery implementation
-// already checks if a path is a mount point by analyzing the /proc/mounts file
+// IsLikelyMountPoint checks if a path is a mount point or a symlink to a mount point.
+// For Filesystem mode volumes, we support both:
+// 1. Direct mount points (checked via /proc/mounts)
+// 2. Symlinks pointing to mount points (resolves symlink and checks target)
+// This allows users to use symlinks in the discovery directory to avoid nested mount issues.
 func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error) {
-	if _, isMntPnt := mountPointMap[mountPath]; isMntPnt == false {
-		// mountPointMap is built in discovery.go by using k8s.io/utils/mount
-		return false, fmt.Errorf("mountPath=%q wasn't found in the /proc/mounts file", mountPath)
+	// First check if mountPath itself is a mount point
+	if _, isMntPnt := mountPointMap[mountPath]; isMntPnt {
+		return true, nil
 	}
-	return true, nil
+
+	// Check if mountPath is a symlink
+	fileInfo, err := os.Lstat(mountPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to lstat %q: %v", mountPath, err)
+	}
+
+	// If it's a symlink, resolve it and check if the target is a mount point
+	if fileInfo.Mode()&os.ModeSymlink != 0 {
+		// Resolve the symlink
+		resolvedPath, err := filepath.EvalSymlinks(mountPath)
+		if err != nil {
+			return false, fmt.Errorf("failed to resolve symlink %q: %v", mountPath, err)
+		}
+
+		// Check if the resolved path is a mount point
+		if _, isMntPnt := mountPointMap[resolvedPath]; isMntPnt {
+			return true, nil
+		}
+
+		return false, fmt.Errorf("symlink %q points to %q which is not a mount point", mountPath, resolvedPath)
+	}
+
+	// Not a mount point and not a symlink
+	return false, fmt.Errorf("path %q is not a mount point or symlink to a mount point", mountPath)
 }
 
 // IsBlock checks if the given path is a block device
