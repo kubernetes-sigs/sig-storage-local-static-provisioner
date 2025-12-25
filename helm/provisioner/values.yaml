@@ -222,6 +222,8 @@ nodeCleanupController:
   workerThreads: 10
   # nodeCleanupController.listenAddress: The TCP network address where the prometheus metrics endpoint will listen
   listenAddress: ":8080"
+  # nodeCleanupController.metricsPort: The port for the metrics endpoint (should match the port in listenAddress)
+  metricsPort: 8080
   # nodeCleanupController.metricsPath: The HTTP path where prometheus metrics will be exposed
   metricsPath: "/metrics"
   # nodeCleanupController.resources: Resource requests and limits for the Node Cleanup Controller

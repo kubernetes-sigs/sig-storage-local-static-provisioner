@@ -73,5 +73,5 @@ spec:
           - "--metrics-path={{ .Values.nodeCleanupController.metricsPath }}"
         ports:
         - name: metrics
-          containerPort: 8080
+          containerPort: {{ .Values.nodeCleanupController.metricsPort }}
 {{- end }}
