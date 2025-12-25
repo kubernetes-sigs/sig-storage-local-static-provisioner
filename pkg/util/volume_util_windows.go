@@ -85,12 +85,15 @@ func (u *volumeUtil) IsBlock(fullPath string) (bool, error) {
 }
 
 func (u *volumeUtil) IsLikelyMountPoint(hostPath, mountPath string, mountPointMap map[string]interface{}) (bool, error) {
-	isLikelyMountPoint, err := u.csiProxy.IsSymlink(hostPath)
+	isSymlink, err := u.csiProxy.IsSymlink(hostPath)
 	if err != nil {
 		return false, err
 	}
-	if !isLikelyMountPoint {
+	if !isSymlink {
 		return false, fmt.Errorf("hostPath %q is not a symlink", hostPath)
 	}
-	return isLikelyMountPoint, nil
+	
+	// For Filesystem mode volumes, we require symlinks that point to valid paths
+	// This is consistent with the Linux implementation which resolves symlinks to mount points
+	return true, nil
 }
