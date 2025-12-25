@@ -205,6 +205,7 @@ nodeCleanupController:
   # nodeCleanupController.replicas: Number of replicas for the Node Cleanup Controller Deployment
   replicas: 1
   # nodeCleanupController.image: Node Cleanup Controller image
+  # Note: The node-cleanup-controller and provisioner are released together with the same version
   image: registry.k8s.io/sig-storage/local-volume-node-cleanup:v{{ .Chart.AppVersion }}
   # nodeCleanupController.imagePullPolicy: Image pull policy for the Node Cleanup Controller
   # imagePullPolicy: Always
