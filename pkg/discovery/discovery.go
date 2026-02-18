@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -327,15 +328,40 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 				continue
 			}
 
-			// check if the file in the discovery directory is a mount point:
+			// check if the file in the discovery directory is a mount point or symlink to a mount point:
 			// - Windows: it should be a symlink pointing to a path that exists
-			// - Linux: it should exist in the /proc/mounts file
+			// - Linux: it should exist in the /proc/mounts file or be a symlink to a mount point
 			isLikelyMountPoint, err := d.VolUtil.IsLikelyMountPoint(outsidePath, filePath, mountPointMap)
 			if !isLikelyMountPoint || err != nil {
-				discoErrors = append(discoErrors, fmt.Errorf("path %q is not a valid mount point: %v", filePath, err))
+				discoErrors = append(discoErrors, fmt.Errorf("path %q is not a valid mount point or symlink to mount point: %v", filePath, err))
 				continue
 			}
 
+			// If outsidePath is a symlink, resolve it to get the actual mount point path
+			// This is done separately from IsLikelyMountPoint because:
+			// 1. IsLikelyMountPoint validates the path is usable (mount point or symlink to one)
+			// 2. Here we resolve the symlink to store the actual target path in the PV
+			// This allows using symlinks to avoid nested mount point issues while
+			// ensuring the PV references the actual mount point location
+			resolvedOutsidePath := outsidePath
+			fileInfo, err := os.Lstat(outsidePath)
+			if err != nil {
+				// If we can't stat the path, use the original path
+				// This maintains backward compatibility for platforms where Lstat may fail
+				klog.V(4).Infof("Unable to lstat path %q: %v, using original path", outsidePath, err)
+			} else if fileInfo.Mode()&os.ModeSymlink != 0 {
+				// Path is a symlink, resolve it
+				resolvedOutsidePath, err = filepath.EvalSymlinks(outsidePath)
+				if err != nil {
+					discoErrors = append(discoErrors, fmt.Errorf("failed to resolve symlink %q: %v", outsidePath, err))
+					continue
+				}
+				klog.V(4).Infof("Resolved symlink %q to %q for filesystem volume", outsidePath, resolvedOutsidePath)
+				// Store the resolved path to use as PV HostPath
+				outsidePath = resolvedOutsidePath
+			}
+
+			// Use the resolved path for capacity calculation
 			capacityByte, err = d.VolUtil.GetFsCapacityByte(outsidePath, filePath)
 			if err != nil {
 				discoErrors = append(discoErrors, fmt.Errorf("path %q fs stats error: %v", filePath, err))
