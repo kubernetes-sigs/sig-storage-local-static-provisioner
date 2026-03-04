@@ -1,6 +1,6 @@
 module sigs.k8s.io/sig-storage-local-static-provisioner
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/golang/glog v1.2.1
