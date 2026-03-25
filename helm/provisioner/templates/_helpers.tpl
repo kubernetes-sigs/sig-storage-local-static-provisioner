@@ -40,3 +40,28 @@ Create the name of the service account to use
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Expand the name for node-cleanup-controller.
+*/}}
+{{- define "nodeCleanupController.name" -}}
+{{- printf "%s-node-cleanup-controller" (include "provisioner.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified app name for node-cleanup-controller.
+*/}}
+{{- define "nodeCleanupController.fullname" -}}
+{{- printf "%s-node-cleanup-controller" (include "provisioner.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create the name of the service account to use for node-cleanup-controller
+*/}}
+{{- define "nodeCleanupController.serviceAccountName" -}}
+{{- if .Values.nodeCleanupController.serviceAccount.create -}}
+    {{ default (include "nodeCleanupController.fullname" .) .Values.nodeCleanupController.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.nodeCleanupController.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
