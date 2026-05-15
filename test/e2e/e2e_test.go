@@ -52,7 +52,7 @@ const (
 	testFile = "test-file"
 	// testFileContent written into testFile
 	testFileContent = "test-file-content"
-	testSCPrefix    = "local-volume-test-storageclass"
+	testSCPrefix    = "lv-test-sc"
 
 	// provisioner default mount point folder
 	provisionerDefaultMountRoot = "/mnt/local-storage"
