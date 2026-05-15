@@ -30,14 +30,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	yaml "gopkg.in/yaml.v2"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -46,10 +42,8 @@ import (
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
-	e2eresource "k8s.io/kubernetes/test/e2e/framework/resource"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 	admissionapi "k8s.io/pod-security-admission/api"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 )
 
 const (
@@ -60,18 +54,8 @@ const (
 	testFileContent = "test-file-content"
 	testSCPrefix    = "local-volume-test-storageclass"
 
-	// testServiceAccount is the service account for bootstrapper
-	testServiceAccount = "local-storage-admin"
-	// volumeConfigName is the configmap passed to bootstrapper and provisioner
-	volumeConfigName = "local-volume-config"
-	// provisioner daemonSetName name
-	daemonSetName = "local-volume-provisioner"
 	// provisioner default mount point folder
 	provisionerDefaultMountRoot = "/mnt/local-storage"
-	// provisioner node/pv cluster role binding
-	nodeBindingName         = "local-storage:provisioner-node-binding"
-	nodeClusterRoleName     = "local-storage:provisioner-node-cluster-role"
-	systemRolePVProvisioner = "system:persistent-volume-provisioner"
 
 	// A sample request size
 	testRequestSize = "10Mi"
@@ -195,13 +179,12 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 			BeforeEach(func(ctx SpecContext) {
 				setupStorageClass(config, &immediateMode)
 				setupLocalVolumeProvisioner(ctx, config, testConfig)
-				createProvisionerDaemonset(ctx, config)
 			})
 
 			AfterEach(func(ctx SpecContext) {
+				deleteProvisionerDaemonset(ctx, config)
 				cleanupLocalVolumeProvisioner(ctx, config)
 				cleanupStorageClass(config)
-				deleteProvisionerDaemonset(ctx, config)
 			})
 
 			It("should create and recreate local persistent volume", func(ctx SpecContext) {
@@ -251,13 +234,12 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 		BeforeEach(func(ctx SpecContext) {
 			setupStorageClass(config, &immediateMode)
 			setupLocalVolumeProvisioner(ctx, config, nil)
-			createProvisionerDaemonset(ctx, config)
 		})
 
 		AfterEach(func(ctx SpecContext) {
+			deleteProvisionerDaemonset(ctx, config)
 			cleanupLocalVolumeProvisioner(ctx, config)
 			cleanupStorageClass(config)
-			deleteProvisionerDaemonset(ctx, config)
 		})
 
 		It("should not create local persistent volume for filesystem volume that was not bind mounted", func(ctx SpecContext) {
@@ -293,7 +275,6 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 
 		BeforeEach(func(ctx SpecContext) {
 			setupStorageClass(config, &waitMode)
-			setupLocalVolumeProvisioner(ctx, config, nil)
 
 			testVols = [][]*localVolume{}
 			for i, node := range config.nodes {
@@ -308,7 +289,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 			}
 
 			By("Starting the local volume provisioner")
-			createProvisionerDaemonset(ctx, config)
+			setupLocalVolumeProvisioner(ctx, config, nil)
 		})
 
 		AfterEach(func(ctx SpecContext) {
@@ -323,6 +304,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 			cleanupLocalVolumeProvisioner(ctx, config)
 			cleanupStorageClass(config)
 		})
+
 
 		It("should use be able to process many pods and reuse local volumes", func(ctx SpecContext) {
 			var (
@@ -443,23 +425,20 @@ func cleanupStorageClass(config *localTestConfig) {
 }
 
 func setupLocalVolumeProvisioner(ctx context.Context, config *localTestConfig, testConfig *testConfig) {
-	By("Bootstrapping local volume provisioner")
-	createServiceAccount(config)
-	createProvisionerClusterRoleBinding(config)
-	createVolumeConfigMap(config, testConfig)
-
+	By("Initializing local volume discovery base path on nodes")
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Initializing local volume discovery base path on node %v", node.Name))
 		mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", config.discoveryDir)
 		err := config.hostExec.IssueCommand(ctx, mkdirCmd, &node)
 		Expect(err).NotTo(HaveOccurred())
 	}
+	By("Installing local volume provisioner via Helm")
+	installProvisionerViaHelm(config, testConfig)
 }
 
 func cleanupLocalVolumeProvisioner(ctx context.Context, config *localTestConfig) {
-	By("Cleaning up cluster role binding")
-	deleteClusterRoleBinding(config)
-
+	By("Uninstalling local volume provisioner via Helm")
+	uninstallProvisionerViaHelm(config)
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Removing the test discovery directory on node %v", node.Name))
 		removeCmd := fmt.Sprintf("[ ! -e %v ] || rm -r %v", config.discoveryDir, config.discoveryDir)
@@ -468,122 +447,6 @@ func cleanupLocalVolumeProvisioner(ctx context.Context, config *localTestConfig)
 	}
 }
 
-func createServiceAccount(config *localTestConfig) {
-	serviceAccount := v1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"},
-		ObjectMeta: metav1.ObjectMeta{Name: testServiceAccount, Namespace: config.ns},
-	}
-	_, err := config.client.CoreV1().ServiceAccounts(config.ns).Create(context.TODO(), &serviceAccount, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-}
-
-// createProvisionerClusterRoleBinding creates two cluster role bindings for local volume provisioner's
-// service account: systemRoleNode and systemRolePVProvisioner. These are required for
-// provisioner to get node information and create persistent volumes.
-func createProvisionerClusterRoleBinding(config *localTestConfig) {
-	subjects := []rbacv1.Subject{
-		{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      testServiceAccount,
-			Namespace: config.ns,
-		},
-	}
-
-	// from https://github.com/kubernetes/kubernetes/blob/24a71990e02edbfd0a05f4abfdedcab991525874/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/policy.go#L439
-	// it has the same rules minus the PVC rules
-	nodeClusterRole := rbacv1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: nodeClusterRoleName,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"get", "list", "watch", "create", "delete"},
-			},
-			{
-				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"storageclasses"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"watch"},
-			},
-			{
-				APIGroups: []string{"", "events.k8s.io"},
-				Resources: []string{"events"},
-				Verbs:     []string{"create", "update", "patch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"nodes"},
-				Verbs:     []string{"get"},
-			},
-		},
-	}
-
-	nodeBinding := rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: rbacv1.SchemeGroupVersion.String(),
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: nodeBindingName,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     nodeClusterRoleName,
-		},
-		Subjects: subjects,
-	}
-
-	deleteClusterRoleBinding(config)
-	_, err := config.client.RbacV1().ClusterRoles().Create(context.TODO(), &nodeClusterRole, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	_, err = config.client.RbacV1().ClusterRoleBindings().Create(context.TODO(), &nodeBinding, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	// job role and rolebinding
-	jobRole := rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "local-storage-provisioner-jobs-role",
-			Namespace: config.ns,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"batch"},
-				Resources: []string{"jobs"},
-				Verbs:     []string{"*"},
-			},
-		},
-	}
-	jobRoleBinding := rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "local-storage-provisioner-jobs-rolebinding",
-			Namespace: config.ns,
-		},
-		Subjects: subjects,
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     jobRole.Name,
-		},
-	}
-	_, err = config.client.RbacV1().Roles(config.ns).Create(context.TODO(), &jobRole, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	_, err = config.client.RbacV1().RoleBindings(config.ns).Create(context.TODO(), &jobRoleBinding, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func deleteClusterRoleBinding(config *localTestConfig) {
-	// These role bindings are created in provisioner; we just ensure it's
-	// deleted and do not panic on error.
-	config.client.RbacV1().ClusterRoles().Delete(context.TODO(), nodeClusterRoleName, metav1.DeleteOptions{})
-	config.client.RbacV1().ClusterRoleBindings().Delete(context.TODO(), nodeBindingName, metav1.DeleteOptions{})
-}
 
 func createAndSetupLoopDevice(ctx context.Context, config *localTestConfig, file string, node *v1.Node, size int) {
 	By(fmt.Sprintf("Creating block device on node %q using file %q", node.Name, file))
@@ -668,43 +531,6 @@ func cleanupLocalVolumeProvisionerMountPoint(ctx context.Context, config *localT
 	}
 }
 
-func createVolumeConfigMap(config *localTestConfig, testConfig *testConfig) {
-	var provisionerConfig common.ProvisionerConfiguration
-
-	provisionerConfig.StorageClassConfig = map[string]common.MountConfig{
-		config.scName: {
-			HostDir:             config.discoveryDir,
-			MountDir:            provisionerDefaultMountRoot,
-			BlockCleanerCommand: []string{common.DefaultBlockCleanerCommand},
-			VolumeMode:          "Filesystem",
-		},
-	}
-
-	configMapData := make(map[string]string)
-	data, err := yaml.Marshal(&provisionerConfig.StorageClassConfig)
-	Expect(err).NotTo(HaveOccurred())
-	configMapData["storageClassMap"] = string(data)
-
-	if testConfig != nil && testConfig.UseJobForCleaning {
-		configMapData["useJobForCleaning"] = "yes"
-	}
-
-	configMap := v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      volumeConfigName,
-			Namespace: config.ns,
-		},
-		Data: configMapData,
-	}
-
-	_, err = config.client.CoreV1().ConfigMaps(config.ns).Create(context.TODO(), &configMap, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-}
-
 // findLocalPersistentVolume finds persistent volume with 'spec.local.path' equals 'volumePath'.
 func findLocalPersistentVolume(c clientset.Interface, volumePath string) (*v1.PersistentVolume, error) {
 	pvs, err := c.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{})
@@ -718,105 +544,6 @@ func findLocalPersistentVolume(c clientset.Interface, volumePath string) (*v1.Pe
 	}
 	// Doesn't exist, that's fine, it could be invoked by early cleanup
 	return nil, nil
-}
-
-func createProvisionerDaemonset(ctx context.Context, config *localTestConfig) {
-	provisionerPrivileged := true
-	mountProp := v1.MountPropagationHostToContainer
-
-	provisioner := &appsv1.DaemonSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "DaemonSet",
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: daemonSetName,
-		},
-		Spec: appsv1.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": daemonSetName},
-			},
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": daemonSetName},
-				},
-				Spec: v1.PodSpec{
-					ServiceAccountName: testServiceAccount,
-					Containers: []v1.Container{
-						{
-							Name:            "provisioner",
-							Image:           provisionerImageName,
-							ImagePullPolicy: provisionerImagePullPolicy,
-							Args: []string{
-								"-v=10",
-							},
-							SecurityContext: &v1.SecurityContext{
-								Privileged: &provisionerPrivileged,
-							},
-							Env: []v1.EnvVar{
-								{
-									Name: "MY_NODE_NAME",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "spec.nodeName",
-										},
-									},
-								},
-								{
-									Name: "MY_NAMESPACE",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-								{
-									Name:  "JOB_CONTAINER_IMAGE",
-									Value: provisionerImageName,
-								},
-							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      volumeConfigName,
-									MountPath: "/etc/provisioner/config/",
-								},
-								{
-									Name:             "local-disks",
-									MountPath:        provisionerDefaultMountRoot,
-									MountPropagation: &mountProp,
-								},
-							},
-						},
-					},
-					Volumes: []v1.Volume{
-						{
-							Name: volumeConfigName,
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
-										Name: volumeConfigName,
-									},
-								},
-							},
-						},
-						{
-							Name: "local-disks",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
-									Path: config.discoveryDir,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	_, err := config.client.AppsV1().DaemonSets(config.ns).Create(context.TODO(), provisioner, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	kind := schema.GroupKind{Group: appsv1.GroupName, Kind: "DaemonSet"}
-	e2eresource.WaitForControlledPodsRunning(ctx, config.client, config.ns, daemonSetName, kind)
 }
 
 // waitForLocalPersistentVolume waits a local persistent volume with 'volumePath' to be available.
@@ -930,16 +657,15 @@ func (c *localTestConfig) isNodeInList(name string) bool {
 }
 
 func deleteProvisionerDaemonset(ctx context.Context, config *localTestConfig) {
-	ds, err := config.client.AppsV1().DaemonSets(config.ns).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
-	if ds == nil {
+	dsName := helmDaemonSetName(config.ns)
+	ds, err := config.client.AppsV1().DaemonSets(config.ns).Get(context.TODO(), dsName, metav1.GetOptions{})
+	if err != nil {
 		return
 	}
 
 	// save pod logs for further debugging
 	if framework.TestContext.ReportDir != "" {
-		podList, err := config.client.CoreV1().Pods(config.ns).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", daemonSetName),
-		})
+		podList, err := config.client.CoreV1().Pods(config.ns).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			framework.Failf("could not get the pod list: %v", err)
 		}
@@ -959,7 +685,7 @@ func deleteProvisionerDaemonset(ctx context.Context, config *localTestConfig) {
 		savePodLogs(ctx, config.client, framework.TestContext.ReportDir, podsToSave)
 	}
 
-	err = config.client.AppsV1().DaemonSets(config.ns).Delete(context.TODO(), daemonSetName, metav1.DeleteOptions{})
+	err = config.client.AppsV1().DaemonSets(config.ns).Delete(context.TODO(), dsName, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
@@ -987,9 +713,10 @@ func findProvisionerDaemonsetPodName(config *localTestConfig) string {
 		framework.Failf("could not get the pod list: %v", err)
 		return ""
 	}
+	dsName := helmDaemonSetName(config.ns)
 	pods := podList.Items
 	for _, pod := range pods {
-		if strings.HasPrefix(pod.Name, daemonSetName) && pod.Spec.NodeName == config.node0.Name {
+		if strings.HasPrefix(pod.Name, dsName) && pod.Spec.NodeName == config.node0.Name {
 			return pod.Name
 		}
 	}
