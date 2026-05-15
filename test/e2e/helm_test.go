@@ -49,7 +49,7 @@ func newHelmActionConfig(namespace string) *action.Configuration {
 	configFlags := genericclioptions.NewConfigFlags(true)
 	configFlags.Namespace = &namespace
 	ac := new(action.Configuration)
-	err := ac.Init(configFlags, namespace, "memory", func(string, ...interface{}) {})
+	err := ac.Init(configFlags, namespace, "secrets", func(string, ...interface{}) {})
 	Expect(err).NotTo(HaveOccurred())
 	return ac
 }
