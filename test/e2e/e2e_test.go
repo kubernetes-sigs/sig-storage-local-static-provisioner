@@ -472,7 +472,7 @@ func setupLocalVolumeProvisionerMountPoint(ctx context.Context, config *localTes
 	volumePath := path.Join(config.discoveryDir, fmt.Sprintf("vol-%v", string(uuid.NewUUID())))
 	if volumeType == DirectoryLocalVolumeType {
 		By(fmt.Sprintf("Creating local directory at path %q", volumePath))
-		mkdirCmd := fmt.Sprintf("mkdir %v -m 777", volumePath)
+		mkdirCmd := fmt.Sprintf("mkdir -p %v -m 777", volumePath)
 		err := config.hostExec.IssueCommand(ctx, mkdirCmd, node)
 		Expect(err).NotTo(HaveOccurred())
 
