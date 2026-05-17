@@ -198,7 +198,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 
 				// Create a persistent volume claim for local volume: the above volume will be bound.
 				By("Creating a persistent volume claim")
-				claim, err := config.client.CoreV1().PersistentVolumeClaims(config.ns).Create(context.TODO(), newLocalClaim(config), metav1.CreateOptions{})
+				claim, err := config.client.CoreV1().PersistentVolumeClaims(config.ns).Create(context.TODO(), newLocalClaim(config, testConfig), metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				err = e2epv.WaitForPersistentVolumeClaimPhase(
 					ctx, v1.ClaimBound, config.client, claim.Namespace, claim.Name, framework.Poll, 1*time.Minute)
@@ -576,7 +576,7 @@ func waitForLocalPersistentVolume(c clientset.Interface, volumePath string) (*v1
 }
 
 // newLocalClaim creates a new persistent volume claim.
-func newLocalClaim(config *localTestConfig) *v1.PersistentVolumeClaim {
+func newLocalClaim(config *localTestConfig, testConfig *testConfig) *v1.PersistentVolumeClaim {
 	claim := v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "local-pvc-",
@@ -593,6 +593,11 @@ func newLocalClaim(config *localTestConfig) *v1.PersistentVolumeClaim {
 				},
 			},
 		},
+	}
+
+	if testConfig != nil && testConfig.VolumeType == BlockLocalVolumeType {
+		volumeMode := v1.PersistentVolumeBlock
+		claim.Spec.VolumeMode = &volumeMode
 	}
 
 	return &claim
