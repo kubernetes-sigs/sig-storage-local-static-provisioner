@@ -305,7 +305,6 @@ var _ = utils.SIGDescribe("PersistentVolumes-local", func() {
 			cleanupStorageClass(config)
 		})
 
-
 		It("should use be able to process many pods and reuse local volumes", func(ctx SpecContext) {
 			var (
 				podsLock sync.Mutex
@@ -446,7 +445,6 @@ func cleanupLocalVolumeProvisioner(ctx context.Context, config *localTestConfig)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
-
 
 func createAndSetupLoopDevice(ctx context.Context, config *localTestConfig, file string, node *v1.Node, size int) {
 	By(fmt.Sprintf("Creating block device on node %q using file %q", node.Name, file))
