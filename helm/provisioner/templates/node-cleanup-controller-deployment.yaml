@@ -1,0 +1,77 @@
+{{- if .Values.nodeCleanupController.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nodeCleanupController.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ template "provisioner.chart" . }}
+    app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: node-cleanup-controller
+spec:
+  replicas: {{ .Values.nodeCleanupController.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "nodeCleanupController.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: node-cleanup-controller
+{{- if .Values.nodeCleanupController.podLabels }}
+{{ .Values.nodeCleanupController.podLabels | toYaml | trim | indent 8 }}
+{{- end }}
+{{- if .Values.nodeCleanupController.podAnnotations }}
+      annotations:
+{{ .Values.nodeCleanupController.podAnnotations | toYaml | trim | indent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: {{ include "nodeCleanupController.serviceAccountName" . }}
+{{- if .Values.nodeCleanupController.priorityClassName }}
+      priorityClassName: {{ .Values.nodeCleanupController.priorityClassName }}
+{{- end }}
+{{- if .Values.nodeCleanupController.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.nodeCleanupController.imagePullSecrets | nindent 8 }}
+{{- end }}
+{{- if .Values.nodeCleanupController.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeCleanupController.nodeSelector | nindent 8 }}
+{{- end }}
+{{- if .Values.nodeCleanupController.tolerations }}
+      tolerations:
+        {{- toYaml .Values.nodeCleanupController.tolerations | nindent 8 }}
+{{- end }}
+{{- if .Values.nodeCleanupController.affinity }}
+      affinity:
+        {{- toYaml .Values.nodeCleanupController.affinity | nindent 8 }}
+{{- end }}
+      containers:
+      - name: node-cleanup-controller
+        image: {{ tpl .Values.nodeCleanupController.image . }}
+        {{- if .Values.nodeCleanupController.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.nodeCleanupController.imagePullPolicy }}
+        {{- end }}
+{{- if .Values.nodeCleanupController.resources }}
+        resources:
+          {{- toYaml .Values.nodeCleanupController.resources | nindent 10 }}
+{{- end }}
+        args:
+{{- if .Values.nodeCleanupController.storageClassNames }}
+          - "--storageclass-names={{ join "," .Values.nodeCleanupController.storageClassNames }}"
+{{- end }}
+          - "--pvc-deletion-delay={{ .Values.nodeCleanupController.pvcDeletionDelay }}"
+          - "--stale-pv-discovery-interval={{ .Values.nodeCleanupController.stalePVDiscoveryInterval }}"
+          - "--resync={{ .Values.nodeCleanupController.resync }}"
+          - "--worker-threads={{ .Values.nodeCleanupController.workerThreads }}"
+          - "--listen-address={{ .Values.nodeCleanupController.listenAddress }}"
+          - "--metrics-path={{ .Values.nodeCleanupController.metricsPath }}"
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.nodeCleanupController.metricsPort }}
+{{- end }}

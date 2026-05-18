@@ -1,0 +1,36 @@
+classes:
+- name: local-storage
+  hostDir: /mnt/disks
+  blockCleanerCommand:
+  # Do a quick reset of the block device during its cleanup.
+  # - "/scripts/quick_reset.sh"
+  # or use dd to zero out block dev in two iterations by uncommenting these lines.
+  # - "/scripts/dd_zero.sh"
+  # - "2"
+  # or run shred utility for 2 iterations.
+  - "/scripts/shred.sh"
+  - "2"
+  # or blkdiscard utility by uncommenting the line below.
+  # - "/scripts/blkdiscard.sh"
+  volumeMode: Block
+  storageClass: true
+
+# Enable the node cleanup controller to automatically clean up PVs and PVCs
+# when nodes are deleted.
+nodeCleanupController:
+  enabled: true
+  # Specify which storage classes to monitor for cleanup
+  storageClassNames:
+    - local-storage
+  # Wait 60 seconds after node deletion before cleaning up PVCs
+  pvcDeletionDelay: "60s"
+  # Check for stale PVs every 10 seconds
+  stalePVDiscoveryInterval: "10s"
+  # Resource limits for the controller
+  resources:
+    limits:
+      cpu: 100m
+      memory: 200Mi
+    requests:
+      cpu: 50m
+      memory: 100Mi
