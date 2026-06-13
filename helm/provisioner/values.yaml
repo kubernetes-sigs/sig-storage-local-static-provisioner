@@ -159,7 +159,20 @@ resources:
   #   memory: "32Mi"
   #   cpu: "10m"
 #
-# If set to false, containers created by the Provisioner Daemonset will run without extra privileges.
+# Security context for the provisioner container.
+# When set to a non-empty value, this takes precedence over the legacy
+# `privileged` field below.
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+#
+# Example:
+#   securityContext:
+#     privileged: true
+#     allowPrivilegeEscalation: true
+securityContext: {}
+
+# If set to false, containers created by the Provisioner Daemonset will run
+# without extra privileges. This is the legacy field; when securityContext
+# above is non-empty, this field is ignored.
 privileged: true
 
 # Host PID set in the linux daemonset container spec. When set to true allows a pod to have access to the host process ID namespace
