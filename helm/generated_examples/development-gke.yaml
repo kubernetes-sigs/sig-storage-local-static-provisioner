@@ -138,6 +138,13 @@ spec:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
             value: gcr.io/k8s-staging-sig-storage/local-volume-provisioner:canary
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 60
+            tcpSocket:
+              port: metrics
+            timeoutSeconds: 5
           ports:
           - name: metrics
             containerPort: 8080

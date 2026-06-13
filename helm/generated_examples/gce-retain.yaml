@@ -154,6 +154,13 @@ spec:
                 fieldPath: metadata.namespace
           - name: JOB_CONTAINER_IMAGE
             value: registry.k8s.io/sig-storage/local-volume-provisioner:v2.8.0
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 60
+            tcpSocket:
+              port: metrics
+            timeoutSeconds: 5
           ports:
           - name: metrics
             containerPort: 8080

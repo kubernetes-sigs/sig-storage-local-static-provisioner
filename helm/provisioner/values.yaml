@@ -165,6 +165,23 @@ privileged: true
 # Host PID set in the linux daemonset container spec. When set to true allows a pod to have access to the host process ID namespace
 hostPID: false
 
+# Liveness probe for the provisioner container.
+# Uses tcpSocket to verify the process is alive without coupling to readiness state.
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  tcpSocket:
+    port: metrics
+  initialDelaySeconds: 10
+  periodSeconds: 60
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe for the provisioner container.
+readinessProbe: {}
+
+# Startup probe for the provisioner container.
+startupProbe: {}
+
 # Any init containers can be configured here.
 # Ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 initContainers: []
