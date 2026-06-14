@@ -159,7 +159,9 @@ resources:
   #   memory: "32Mi"
   #   cpu: "10m"
 #
-# Security context for the provisioner container.
+# Security context for the Linux provisioner container.
+# This applies only to the Linux DaemonSet; the Windows DaemonSet does not
+# render a securityContext.
 # When set to a non-empty value, this takes precedence over the legacy
 # `privileged` field below.
 # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
