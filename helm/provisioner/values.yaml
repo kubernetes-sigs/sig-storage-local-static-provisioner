@@ -162,7 +162,7 @@ resources:
 # Security context for the Linux provisioner container.
 # This applies only to the Linux DaemonSet; the Windows DaemonSet does not
 # render a securityContext.
-# When set to a non-empty value, this takes precedence over the legacy
+# When set to a non-empty map/object value, this takes precedence over the legacy
 # `privileged` field below. However, if `securityContext` does not include
 # the `privileged` key, the legacy `privileged` value is automatically merged
 # to preserve backward compatibility.
@@ -175,8 +175,8 @@ resources:
 securityContext: {}
 
 # If set to false, the provisioner DaemonSet container will run without extra
-# privileges. This is the legacy field; when securityContext above is non-empty
-# and includes the `privileged` key, this field is ignored.
+# privileges. This is the legacy field; when securityContext above is a non-empty
+# map/object and includes the `privileged` key, this field is ignored.
 privileged: true
 
 # Host PID set in the linux daemonset container spec. When set to true allows a pod to have access to the host process ID namespace
