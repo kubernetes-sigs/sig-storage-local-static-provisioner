@@ -14,6 +14,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
     - [Generate yaml files with `helm template` and install with `kubectl`](#generate-yaml-files-with-helm-template-and-install-with-kubectl)
     - [Install using helm repo](#install-using-helm-repo)
     - [Install with `helm install` directly](#install-with-helm-install-directly)
+  - [Discovery Directory and Storage Classes](#discovery-directory-and-storage-classes)
   - [Configurations](#configurations)
   - [Examples](#examples)
 
@@ -110,6 +111,110 @@ helm upgrade --reset-value -f <path-to-your-values-file> <release-name> --namesp
 
 Please refer [helm docs](https://helm.sh/docs/intro/using_helm/) for more
 information.
+
+## Discovery Directory and Storage Classes
+
+The provisioner discovers local volumes by scanning **discovery directories** on
+each node. Each storage class maps to one discovery directory via the `hostDir`
+field in the `classes` list. The provisioner discovers:
+
+- **Mount points** for Filesystem mode volumes
+- **Symbolic links** to block devices (for Block mode volumes, or for
+  Filesystem mode when you want Kubernetes to format a raw device with `fsType`)
+
+For directory-based local volumes, they must be **bind-mounted** into the
+discovery directory.
+
+### Basic setup: one disk per PV
+
+Mount each disk into the discovery directory:
+
+```bash
+sudo mkfs.ext4 /dev/sdb
+DISK_UUID=$(sudo blkid -s UUID -o value /dev/sdb)
+sudo mkdir -p /mnt/disks/$DISK_UUID
+sudo mount -t ext4 /dev/sdb /mnt/disks/$DISK_UUID
+```
+
+Then configure the Helm values:
+
+```yaml
+classes:
+  - name: local-storage
+    hostDir: /mnt/disks
+    volumeMode: Filesystem
+    fsType: ext4
+    storageClass: true
+```
+
+### Sharing a disk filesystem by multiple PVs
+
+You can split a single disk into multiple PVs by creating subdirectories and
+bind-mounting them into the discovery directory. The provisioner discovers each
+bind mount as a separate PV.
+
+On the node:
+
+```bash
+# Format and mount the disk (NOT into the discovery directory)
+sudo mkfs.ext4 /dev/sdb
+DISK_UUID=$(sudo blkid -s UUID -o value /dev/sdb)
+sudo mkdir -p /mnt/$DISK_UUID
+sudo mount -t ext4 /dev/sdb /mnt/$DISK_UUID
+
+# Create subdirectories and bind-mount them into the discovery directory
+for i in $(seq 1 10); do
+  sudo mkdir -p /mnt/${DISK_UUID}/vol${i} /mnt/disks/${DISK_UUID}_vol${i}
+  sudo mount --bind /mnt/${DISK_UUID}/vol${i} /mnt/disks/${DISK_UUID}_vol${i}
+done
+```
+
+The Helm values are the same — `hostDir` points to the discovery directory:
+
+```yaml
+classes:
+  - name: local-storage
+    hostDir: /mnt/disks
+    volumeMode: Filesystem
+    fsType: ext4
+    storageClass: true
+```
+
+Each bind mount under `/mnt/disks` is discovered as a separate PV.
+
+### Block mode volumes
+
+For block devices, create symbolic links in the discovery directory using the
+stable device path:
+
+```bash
+sudo ln -s /dev/disk/by-id/<unique-disk-id> /mnt/disks/
+```
+
+```yaml
+classes:
+  - name: local-block
+    hostDir: /mnt/disks
+    volumeMode: Block
+    storageClass: true
+```
+
+### Key points
+
+- `hostDir` is the discovery directory path on the host node
+- **Discovery only scans the first level** of `hostDir` — it does not recurse
+  into subdirectories. All mount points, bind mounts, or symlinks must appear
+  directly under `hostDir`.
+- `mountDir` (optional) overrides the mount path inside the container; defaults
+  to the same value as `hostDir`
+- Each storage class must have its own unique discovery directory
+- Set `storageClass: true` (or configure it as a map) to have Helm create the
+  StorageClass object automatically; otherwise you must create it separately
+- **Mounts must be persistent across reboots.** Add entries to `/etc/fstab` for
+  all mounts and bind mounts. Without persistent mount entries, PV discovery
+  will be lost after a node restart.
+- See [operations.md](../docs/operations.md) for full details on preparing
+  local volumes
 
 ## Configurations
 
