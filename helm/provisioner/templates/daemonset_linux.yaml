@@ -69,7 +69,14 @@ spec:
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           {{- end }}
           securityContext:
+{{- if and .Values.securityContext (kindIs "map" .Values.securityContext) }}
+{{- if not (hasKey .Values.securityContext "privileged") }}
             privileged: {{ .Values.privileged }}
+{{- end }}
+            {{- toYaml .Values.securityContext | nindent 12 }}
+{{- else }}
+            privileged: {{ .Values.privileged }}
+{{- end }}
 {{- if .Values.resources }}
           resources:
             {{ toYaml .Values.resources | nindent 12 }}
