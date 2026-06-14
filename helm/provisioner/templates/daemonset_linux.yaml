@@ -70,6 +70,9 @@ spec:
           {{- end }}
           securityContext:
 {{- if .Values.securityContext }}
+{{- if not (hasKey .Values.securityContext "privileged") }}
+            privileged: {{ .Values.privileged }}
+{{- end }}
             {{- toYaml .Values.securityContext | nindent 12 }}
 {{- else }}
             privileged: {{ .Values.privileged }}

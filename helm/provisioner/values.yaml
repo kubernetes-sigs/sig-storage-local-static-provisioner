@@ -163,7 +163,9 @@ resources:
 # This applies only to the Linux DaemonSet; the Windows DaemonSet does not
 # render a securityContext.
 # When set to a non-empty value, this takes precedence over the legacy
-# `privileged` field below.
+# `privileged` field below. However, if `securityContext` does not include
+# the `privileged` key, the legacy `privileged` value is automatically merged
+# to preserve backward compatibility.
 # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 #
 # Example:
