@@ -69,7 +69,7 @@ spec:
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           {{- end }}
           securityContext:
-{{- if .Values.securityContext }}
+{{- if and .Values.securityContext (kindIs "map" .Values.securityContext) }}
 {{- if not (hasKey .Values.securityContext "privileged") }}
             privileged: {{ .Values.privileged }}
 {{- end }}
