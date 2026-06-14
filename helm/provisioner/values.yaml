@@ -174,9 +174,9 @@ resources:
 #     allowPrivilegeEscalation: true
 securityContext: {}
 
-# If set to false, containers created by the Provisioner Daemonset will run
-# without extra privileges. This is the legacy field; when securityContext
-# above is non-empty, this field is ignored.
+# If set to false, the provisioner DaemonSet container will run without extra
+# privileges. This is the legacy field; when securityContext above is non-empty
+# and includes the `privileged` key, this field is ignored.
 privileged: true
 
 # Host PID set in the linux daemonset container spec. When set to true allows a pod to have access to the host process ID namespace
