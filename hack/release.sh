@@ -141,8 +141,8 @@ if [ -z "$VERSION" ]; then
         echo "info: detecting version from PULL_BASE_REF '$PULL_BASE_REF'"
         if [[ "$PULL_BASE_REF" == "master" ]]; then
             VERSION=canary
-        elif [[ "$PULL_BASE_REF" =~ release-\d+ ]]; then
-            # release-2.0
+        elif [[ "$PULL_BASE_REF" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            # e.g. release-2.9 -> 2.9-canary
             VERSION=$(echo "$PULL_BASE_REF" | cut -f2 -d '-')-canary
         elif [[ "$PULL_BASE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             # stable release: v1.2.3
