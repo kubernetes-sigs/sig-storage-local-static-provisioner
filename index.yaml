@@ -2,6 +2,24 @@ apiVersion: v1
 entries:
   local-static-provisioner:
   - apiVersion: v2
+    appVersion: 2.9.0
+    created: "2026-07-25T08:44:16.560849322Z"
+    description: Helm chart for the SIG Storage Local Volume Static Provisioner
+    digest: ad29ed35d0f91d9e2ad4ffa0ec77301146c4c7a794af086222096363900d2bde
+    home: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/
+    icon: https://avatars.githubusercontent.com/u/36015203?s=200&v=4
+    keywords:
+    - storage
+    - local
+    - volume
+    name: local-static-provisioner
+    sources:
+    - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/
+    type: application
+    urls:
+    - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/download/local-static-provisioner-2.9.0/local-static-provisioner-2.9.0.tgz
+    version: 2.9.0
+  - apiVersion: v2
     appVersion: 2.8.0
     created: "2025-07-01T14:00:07.035846242Z"
     description: Helm chart for the SIG Storage Local Volume Static Provisioner
@@ -55,4 +73,4 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/download/local-static-provisioner-1.0.0/local-static-provisioner-1.0.0.tgz
     version: 1.0.0
-generated: "2025-07-01T14:00:07.035861009Z"
+generated: "2026-07-25T08:44:16.560861752Z"
