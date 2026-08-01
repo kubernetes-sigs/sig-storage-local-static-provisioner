@@ -17,19 +17,32 @@ jobs:
         with:
           go-version: 1.25.12
       
-      - name: Build an image from Dockerfile
+      - name: Build images from Dockerfile
         run: |
           export REGISTRY=test
           export DOCKER_CLI_EXPERIMENTAL=enabled
           export OUTPUT_TYPE=docker
           make build-container-linux-amd64
+          make build-node-cleanup-controller-linux-amd64
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner on local-volume-provisioner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         env:
           TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
         with:
           image-ref: 'test/local-volume-provisioner:latest_linux_amd64'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN'
+
+      - name: Run Trivy vulnerability scanner on local-volume-node-cleanup
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
+        with:
+          image-ref: 'test/local-volume-node-cleanup:latest_linux_amd64'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
