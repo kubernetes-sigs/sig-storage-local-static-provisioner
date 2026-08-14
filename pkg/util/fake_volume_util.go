@@ -139,7 +139,7 @@ func (u *FakeVolumeUtil) getDirEntryCapacity(fullPath string, entryType string) 
 	for _, f := range files {
 		if file == f.Name {
 			if f.VolumeType != entryType {
-				return 0, fmt.Errorf("Directory entry %q is not a %q", f, entryType)
+				return 0, fmt.Errorf("Directory entry %q is not a %q", f.Name, entryType)
 			}
 			return f.Capacity, nil
 		}
