@@ -178,10 +178,14 @@ func StartLocalController(signal *signal, client *kubernetes.Clientset, ptable d
 		default:
 			deleter.DeletePVs()
 			discoverer.DiscoverLocalVolumes()
-			if !nodeTaintRemover.ShouldRemoveTaint() && discoverer.Readyz.Check(nil) == nil {
+			if shouldRemoveNodeTaint(nodeTaintRemover, discoverer.Readyz.Check(nil)) {
 				nodeTaintRemover.RemoveTaintWithBackoff()
 			}
 			time.Sleep(discoveryPeriod)
 		}
 	}
+}
+
+func shouldRemoveNodeTaint(nodeTaintRemover *nodetaint.Remover, readyzErr error) bool {
+	return nodeTaintRemover.ShouldRemoveTaint() && readyzErr == nil
 }
