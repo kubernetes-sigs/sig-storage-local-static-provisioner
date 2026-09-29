@@ -16,7 +16,17 @@ limitations under the License.
 
 package controller
 
-import "testing"
+import (
+	"errors"
+	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
+	nodetaint "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-taint"
+)
 
 func TestSignalStop(t *testing.T) {
 	s := newSignal()
@@ -40,5 +50,53 @@ func TestSignalStop(t *testing.T) {
 
 	if !<-sync {
 		t.Error("Expected service to be successfully stopped")
+	}
+}
+
+func TestShouldRemoveNodeTaint(t *testing.T) {
+	newRemover := func(removeTaint bool) *nodetaint.Remover {
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "test-node"}}
+		userConfig := &common.UserConfig{
+			Node:                            node,
+			RemoveNodeNotReadyTaint:         removeTaint,
+			ProvisionerNotReadyNodeTaintKey: "test-taint-key",
+		}
+		runtimeConfig := &common.RuntimeConfig{
+			UserConfig: userConfig,
+			Client:     fake.NewSimpleClientset(node),
+		}
+		return nodetaint.NewRemover(runtimeConfig)
+	}
+
+	tests := []struct {
+		name      string
+		remover   *nodetaint.Remover
+		readyzErr error
+		want      bool
+	}{
+		{
+			name:    "removes taint when enabled and ready",
+			remover: newRemover(true),
+			want:    true,
+		},
+		{
+			name:      "does not remove taint when discovery is not ready",
+			remover:   newRemover(true),
+			readyzErr: errors.New("not ready"),
+			want:      false,
+		},
+		{
+			name:    "does not remove taint when feature disabled",
+			remover: newRemover(false),
+			want:    false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := shouldRemoveNodeTaint(test.remover, test.readyzErr); got != test.want {
+				t.Fatalf("shouldRemoveNodeTaint() = %v, want %v", got, test.want)
+			}
+		})
 	}
 }
