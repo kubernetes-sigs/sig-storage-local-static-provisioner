@@ -109,6 +109,14 @@ image: registry.k8s.io/sig-storage/local-volume-provisioner:v{{ .Chart.AppVersio
 # Defines Image pull secrets for the provisioner image.
 imagePullSecrets: []
 
+# Additional command-line arguments to pass to the provisioner container, in
+# both the Linux and Windows DaemonSets.
+#
+# Example:
+#   additionalArgs:
+#     - --stderrthreshold=INFO
+#     - --v=2
+additionalArgs: []
 # Defines a name of the Pod Priority Class to use with the Provisioner DaemonSet
 # Note that if you want to make it critical, specify "system-cluster-critical"
 # or "system-node-critical" and deploy in kube-system namespace.

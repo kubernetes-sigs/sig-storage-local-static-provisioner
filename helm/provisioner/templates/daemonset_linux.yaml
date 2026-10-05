@@ -68,6 +68,10 @@ spec:
           {{- if .Values.imagePullPolicy }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
           {{- end }}
+          {{- with .Values.additionalArgs }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           securityContext:
 {{- if and .Values.securityContext (kindIs "map" .Values.securityContext) }}
 {{- if not (hasKey .Values.securityContext "privileged") }}

@@ -1,0 +1,10 @@
+classes:
+- name: local-storage
+  hostDir: /mnt/disks
+  storageClass: true
+
+enableWindows: true
+
+additionalArgs:
+  - --stderrthreshold=INFO
+  - --v=2

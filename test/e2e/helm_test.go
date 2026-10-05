@@ -102,6 +102,7 @@ func buildHelmValues(config *localTestConfig, testConfig *testConfig) map[string
 		"imagePullPolicy":   string(provisionerImagePullPolicy),
 		"useJobForCleaning": useJobForCleaning,
 		"mountDevVolume":    false,
+		"additionalArgs":    []interface{}{"--stderrthreshold=INFO"},
 		"classes": []interface{}{
 			map[string]interface{}{
 				"name":         config.scName,
