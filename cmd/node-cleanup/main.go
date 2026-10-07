@@ -34,6 +34,7 @@ import (
 	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for client metric registration
 
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	metrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/controller"
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/node-cleanup/deleter"
@@ -45,6 +46,7 @@ var (
 	kubeAPIEndpoint          = flag.String("kube-api-endpoint", "", "Master URL to build a client config from. Either this or kubeconfig needs to be set if the provisioner is being run out of cluster.")
 	resync                   = flag.Duration("resync", 10*time.Minute, "Duration, in minutes, of the resync interval of the controller.")
 	storageClassNames        = flag.StringSlice("storageclass-names", []string{}, "Comma separated list of names of StorageClasses to opt-in PVs and PVCs for cleanup.")
+	csiDriverFlags           = flag.StringSlice("csi-drivers", []string{}, "Comma separated list of CSI drivers whose PVs are also eligible for cleanup, in addition to local PVs. Format: <driver>[=<ref>[|<ref>...]] where <ref> is affinity[:<topologyKey>], annotation:<key> or attribute:<key>; the first reference that yields a node wins. Without references, localdisk.csi.acstor.io uses its built-in ones and any other driver uses kubernetes.io/hostname node affinity. Only PVs that also belong to one of --storageclass-names are cleaned up. CSI PVs of drivers not listed here are never touched.")
 	workerThreads            = flag.Uint("worker-threads", 10, "Number of controller worker threads.")
 	pvcDeletionDelay         = flag.Duration("pvc-deletion-delay", 60*time.Second, "Duration, in seconds, to wait after Node deletion for PVC cleanup.")
 	stalePVDiscoveryInterval = flag.Duration("stale-pv-discovery-interval", 10*time.Second, "Duration, in seconds, the PV Deleter should wait between tries to clean up stale PVs.")
@@ -57,6 +59,12 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
+
+	csiDrivers, err := common.ParseCSIDrivers(*csiDriverFlags)
+	if err != nil {
+		klog.Error(err, "Error parsing --csi-drivers")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
 
 	config, err := buildConfig(*kubeconfig, *kubeAPIEndpoint)
 	if err != nil {
@@ -81,9 +89,10 @@ func main() {
 		pvcInformer,
 		nodeInformer,
 		*storageClassNames,
+		csiDrivers,
 		*pvcDeletionDelay,
 		*stalePVDiscoveryInterval)
-	deleter := deleter.NewDeleter(clientset, pvInformer.Lister(), nodeInformer.Lister(), *storageClassNames)
+	deleter := deleter.NewDeleter(clientset, pvInformer.Lister(), nodeInformer.Lister(), *storageClassNames, csiDrivers)
 
 	factory.Start(ctx.Done())
 

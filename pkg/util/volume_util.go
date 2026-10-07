@@ -94,6 +94,13 @@ func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
 //	        - <node1>
 //	        - <node2>
 func GetLocalPersistentVolumeNodeNames(pv *v1.PersistentVolume) []string {
+	return GetPersistentVolumeNodeNames(pv, v1.LabelHostname)
+}
+
+// GetPersistentVolumeNodeNames is like GetLocalPersistentVolumeNodeNames but
+// reads the node name(s) from node affinity match expressions with the given
+// topology key instead of kubernetes.io/hostname.
+func GetPersistentVolumeNodeNames(pv *v1.PersistentVolume, topologyKey string) []string {
 	if pv == nil || pv.Spec.NodeAffinity == nil || pv.Spec.NodeAffinity.Required == nil {
 		return nil
 	}
@@ -102,7 +109,7 @@ func GetLocalPersistentVolumeNodeNames(pv *v1.PersistentVolume) []string {
 	for _, term := range pv.Spec.NodeAffinity.Required.NodeSelectorTerms {
 		var nodes sets.Set[string]
 		for _, matchExpr := range term.MatchExpressions {
-			if matchExpr.Key == v1.LabelHostname && matchExpr.Operator == v1.NodeSelectorOpIn {
+			if matchExpr.Key == topologyKey && matchExpr.Operator == v1.NodeSelectorOpIn {
 				if nodes == nil {
 					nodes = sets.New(matchExpr.Values...)
 				} else {

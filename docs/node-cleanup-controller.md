@@ -14,10 +14,54 @@ Pods using a Local Persistent Volume are always scheduled to the same Node as th
 
 Please see the example [deployment](../deployment/kubernetes/example/node-cleanup-controller/deployment.yaml) and [rbac](../deployment/kubernetes/example/node-cleanup-controller/rbac.yaml) for deploying the controller.
 
+### CSI node-local volumes
+
+By default the controller only handles PVs of type `local`. Some CSI drivers also provision node-local volumes, for example the AWS EC2 instance store CSI driver (`lis.csi.aws.com`) or the Azure Container Storage local disk CSI driver (`localdisk.csi.acstor.io`). Their PVs are of type `csi`, and when the Node is deleted they get stuck in the same way as local PVs.
+
+To opt such volumes in, pass both flags:
+
+```
+--storageclass-names=<StorageClass using the driver>
+--csi-drivers=<csi driver>[,<csi driver>...]
+```
+
+A CSI PV is only cleaned up if **both** its StorageClass is listed in `--storageclass-names` **and** its driver is listed in `--csi-drivers`. CSI PVs of any other driver (for example network-attached volumes such as EBS or EFS) are never touched, even if their StorageClass is listed, and when `--csi-drivers` is not set the behavior is unchanged.
+
+Drivers record the Node a volume depends on in different places, so each `--csi-drivers` entry is `<driver>[=<ref>[|<ref>...]]`, where `<ref>` is one of:
+
+| Reference | Reads the Node name from |
+|---|---|
+| `affinity[:<topologyKey>]` | The PV node affinity. `<topologyKey>` defaults to `kubernetes.io/hostname`. |
+| `annotation:<key>` | A PV annotation. |
+| `attribute:<key>` | A CSI volume attribute (`spec.csi.volumeAttributes`). |
+
+References are tried in order and the first one that yields a Node name is used. If none does, the Node is unknown and the PV is left alone: an unknown Node is never treated as a deleted Node.
+
+Without references, a driver defaults to `affinity:kubernetes.io/hostname`, except for the well-known drivers below:
+
+| Driver | Default references |
+|---|---|
+| `lis.csi.aws.com` | `affinity:kubernetes.io/hostname` |
+| `localdisk.csi.acstor.io` | `annotation:localdisk.csi.acstor.io/selected-node\|attribute:localdisk.csi.acstor.io/selected-initial-node` |
+
+Examples:
+
+```
+# AWS and Azure
+--storageclass-names=ec2-instance-store-sc,local-csi
+--csi-drivers=lis.csi.aws.com,localdisk.csi.acstor.io
+
+# A driver that records the Node under its own topology key
+--csi-drivers=example.csi.vendor.io=affinity:topology.example.io/node
+```
+
+The Azure driver's PVs have no node affinity. The Node that currently owns the volume is in the `localdisk.csi.acstor.io/selected-node` annotation, which is set after a failover, and otherwise the Node that created the volume is in the `localdisk.csi.acstor.io/selected-initial-node` volume attribute. This is the same precedence the driver's own webhook uses, so a volume that failed over to a live Node is not cleaned up because its initial Node is gone. With that driver's default `availability` failover mode a Pod can move to another Node and get a new empty volume, so consider a larger `--pvc-deletion-delay` there.
+
 ### CleanupController command line options
 
 #### Important optional arguments that are highly recommended to be used
 * `--storageclass-names`: Comma separated list of names of StorageClasses to opt-in PVs and PVCs for cleanup.
+* `--csi-drivers`: Comma separated list of CSI drivers whose PVs are also eligible for cleanup, in addition to local PVs, as `<driver>[=<ref>[|<ref>...]]`. See [CSI node-local volumes](#csi-node-local-volumes). Defaults to empty, in which case only local PVs are handled.
 * `--pvc-deletion-delay`: Duration, in seconds, to wait after Node deletion for PVC cleanup. Defaults to 60 seconds.
 * `--stale-pv-discovery-interval`: Duration, in seconds, the Local PV Deleter should wait between tries to clean up stale PVs. Defaults to 10 seconds.
 

@@ -39,7 +39,6 @@ import (
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
 // CleanupController handles the deletion of PVCs that reference deleted Nodes.
@@ -69,6 +68,11 @@ type CleanupController struct {
 	// can belong to in order to be eligible for cleanup
 	storageClassNames []string
 
+	// csiDrivers are the CSI drivers whose PVs are eligible for cleanup, in addition
+	// to local PVs, and where each of them records the node a PV depends on.
+	// PVs of any other CSI driver are never cleaned up.
+	csiDrivers common.CSIDrivers
+
 	// pvcDeletionDelay is the amount of time to wait after Node deletion to cleanup resources.
 	pvcDeletionDelay time.Duration
 
@@ -78,13 +82,14 @@ type CleanupController struct {
 
 // NewCleanupController creates a CleanupController that handles the
 // deletion of stale PVCs.
-func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
+func NewCleanupController(client kubernetes.Interface, pvInformer coreinformers.PersistentVolumeInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, nodeInformer coreinformers.NodeInformer, storageClassNames []string, csiDrivers common.CSIDrivers, pvcDeletionDelay time.Duration, stalePVDiscoveryInterval time.Duration) *CleanupController {
 	broadcaster := record.NewBroadcaster()
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: fmt.Sprintf("cleanup-controller")})
 
 	controller := &CleanupController{
 		client:            client,
 		storageClassNames: storageClassNames,
+		csiDrivers:        csiDrivers,
 		// Delayed queue with rate limiting
 		pvQueue: workqueue.NewRateLimitingQueueWithConfig(
 			workqueue.DefaultControllerRateLimiter(),
@@ -197,8 +202,8 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return err
 	}
 
-	nodeNames := util.GetLocalPersistentVolumeNodeNames(pv)
-	if nodeNames == nil {
+	nodeNames := common.GetNodeNamesForCleanup(pv, c.csiDrivers)
+	if len(nodeNames) == 0 {
 		// For whatever reason the PV isn't formatted properly so we will
 		// never be able to get its corresponding Node, so ignore.
 		klog.Errorf("error getting node attached to pv: %s", pv)
@@ -249,7 +254,8 @@ func (c *CleanupController) nodeDeleted(obj interface{}) {
 }
 
 // startCleanupTimersIfNeeded enqueues any local PVs
-// with a NodeAffinity to a deleted Node and a StorageClass listed in storageClassNames.
+// (or CSI PVs of a driver listed in csiDrivers) with a NodeAffinity to a deleted Node and a StorageClass
+// listed in storageClassNames.
 func (c *CleanupController) startCleanupTimersIfNeeded() {
 	pvs, err := c.pvLister.List(labels.Everything())
 	if err != nil {
@@ -258,12 +264,12 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 	}
 
 	for _, pv := range pvs {
-		if !common.IsLocalPVWithStorageClass(pv, c.storageClassNames) {
+		if !common.IsPVEligibleForNodeCleanup(pv, c.storageClassNames, c.csiDrivers) {
 			continue
 		}
 
-		nodeNames := util.GetLocalPersistentVolumeNodeNames(pv)
-		if nodeNames == nil {
+		nodeNames := common.GetNodeNamesForCleanup(pv, c.csiDrivers)
+		if len(nodeNames) == 0 {
 			klog.Errorf("error getting node attached to pv: %s", pv)
 			continue
 		}
@@ -279,7 +285,8 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 }
 
 // shouldEnqueuePV checks if a PV should be enqueued to the entryQueue.
-// The PV must be a local PV, have a StorageClass present in the list of storageClassNames, have a NodeAffinity
+// The PV must be a local PV (or a CSI PV of a driver in csiDrivers), have a StorageClass present in the list
+// of storageClassNames, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
 func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeNames []string) bool {
 	if pv.Spec.ClaimRef == nil {
