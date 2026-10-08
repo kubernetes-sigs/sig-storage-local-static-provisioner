@@ -190,7 +190,9 @@ func ResolvePVNodes(pv *v1.PersistentVolume, csiDrivers CSIDrivers) PVNodes {
 	}
 
 	if pv.Spec.CSI == nil {
-		if names := util.GetLocalPersistentVolumeNodeNames(pv); len(names) > 0 {
+		// Strict: node selector terms are ORed, so a term without a hostname
+		// expression may match live Nodes and makes the Nodes unknown.
+		if names := util.GetPersistentVolumeNodeNames(pv, v1.LabelHostname); len(names) > 0 {
 			return PVNodes{Names: names}
 		}
 		return PVNodes{}

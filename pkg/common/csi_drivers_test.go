@@ -243,6 +243,7 @@ func TestResolvePVNodes(t *testing.T) {
 	}{
 		{"local PV uses hostname affinity", localPV(v1.LabelHostname, "n1"), nil, []string{"n1"}},
 		{"local PV with non-hostname affinity yields no node (never 'node gone')", localPV("other", "n1"), nil, nil},
+		{"local PV with an extra selector term lacking the hostname key yields no node (terms are ORed)", twoTermPV(&v1.PersistentVolume{Spec: v1.PersistentVolumeSpec{PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}}}}, v1.LabelHostname, "n1", "topology.kubernetes.io/zone", "z1"), nil, nil},
 		{"local PV without affinity yields no node", &v1.PersistentVolume{Spec: v1.PersistentVolumeSpec{PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}}}}, nil, nil},
 
 		{"aws CSI PV uses hostname affinity", affinityPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1"), mustParse(t, awsDriver), []string{"n1"}},
@@ -251,7 +252,7 @@ func TestResolvePVNodes(t *testing.T) {
 		{"aws CSI PV without any affinity yields no node", csiPV(awsDriver, "sc"), mustParse(t, awsDriver), nil},
 
 		{"aws CSI PV with an extra selector term lacking the hostname key yields no node (terms are ORed)", twoTermPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1", "topology.kubernetes.io/zone", "us-east-1a"), mustParse(t, awsDriver), nil},
-		{"aws CSI PV whose hostname term uses NotIn yields no node", notInPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1"), mustParse(t, awsDriver), nil},
+		{"aws CSI PV whose hostname term uses a not-in operator yields no node", notInPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1"), mustParse(t, awsDriver), nil},
 
 		// Real shape of a localdisk.csi.acstor.io PV: no nodeAffinity, node only in volumeAttributes.
 		{"azure PV never failed over: falls back to selected-initial-node attribute", attrPV(csiPV(azureDriver, "local-csi"), azureInit, "aks-vmss000001"), mustParse(t, azureDriver), []string{"aks-vmss000001"}},

@@ -329,6 +329,15 @@ func TestCleanupController(t *testing.T) {
 			},
 		},
 		{
+			name:              "local PV whose node affinity has an extra term without the hostname key -> don't delete pvc",
+			pv:                pvWithExtraZoneTerm(pvWithPVCAndNode(pvc, node)),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
 			name:              "PV with wrong storageclass + affinity to deleted node -> don't delete pvc",
 			pv:                pvWithPVCAndNode(pvc, node),
 			pvc:               pvc,

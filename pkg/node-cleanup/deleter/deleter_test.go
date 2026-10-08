@@ -275,6 +275,14 @@ func TestDeleter(t *testing.T) {
 			},
 		},
 		{
+			name:              "local pv whose node affinity has an extra term without the hostname key",
+			pv:                pvWithExtraZoneTerm(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName)),
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
 			name:            "empty",
 			expectedActions: []core.Action{
 				// Intentionally left empty
