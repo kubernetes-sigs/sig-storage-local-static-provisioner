@@ -41,6 +41,8 @@ const (
 	alternativeStorageClassName = "alternativeStorageClassName"
 	testCSIDriver               = "lis.csi.aws.com"
 	azureCSIDriver              = "localdisk.csi.acstor.io"
+	customCSIDriver             = "custom.csi.example.com"
+	customTopologyKey           = "topology.example.com/node"
 	azureSelectedNodeAnnotation = "localdisk.csi.acstor.io/selected-node"
 	azureInitialNodeAttribute   = "localdisk.csi.acstor.io/selected-initial-node"
 )
@@ -245,6 +247,34 @@ func TestDeleter(t *testing.T) {
 			},
 		},
 		{
+			name:              "custom affinity key: live Node has the label value under a different name",
+			pv:                pvWithCustomAffinity(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName), customCSIDriver, customTopologyKey, "n9"),
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{customCSIDriver + "=affinity:" + customTopologyKey},
+			node:              nodeWithLabel("ip-10-0-0-1", customTopologyKey, "n9"),
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "custom affinity key: no Node has the label value",
+			pv:                pvWithCustomAffinity(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName), customCSIDriver, customTopologyKey, "n9"),
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{customCSIDriver + "=affinity:" + customTopologyKey},
+			expectedActions: []core.Action{
+				deletePVAction(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName)),
+			},
+		},
+		{
+			name:              "CSI pv whose node affinity has an extra term without the hostname key",
+			pv:                pvWithExtraZoneTerm(pvWithCSIDriver(localPV(node, v1.VolumeReleased, v1.PersistentVolumeReclaimDelete, testStorageClassName), testCSIDriver)),
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
 			name:            "empty",
 			expectedActions: []core.Action{
 				// Intentionally left empty
@@ -334,6 +364,27 @@ func pvWithAzureNodeRefs(pv *v1.PersistentVolume, initialNode, selectedNode stri
 		pv.Annotations = map[string]string{azureSelectedNodeAnnotation: selectedNode}
 	}
 	return pv
+}
+
+// pvWithCustomAffinity makes the PV a CSI PV of the given driver whose node affinity uses
+// a custom topology key instead of kubernetes.io/hostname.
+func pvWithCustomAffinity(pv *v1.PersistentVolume, driver, key, value string) *v1.PersistentVolume {
+	pv.Spec.PersistentVolumeSource = v1.PersistentVolumeSource{CSI: &v1.CSIPersistentVolumeSource{Driver: driver}}
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Key = key
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values = []string{value}
+	return pv
+}
+
+// pvWithExtraZoneTerm adds a second (ORed) node selector term that has no hostname expression.
+func pvWithExtraZoneTerm(pv *v1.PersistentVolume) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms = append(pv.Spec.NodeAffinity.Required.NodeSelectorTerms, v1.NodeSelectorTerm{
+		MatchExpressions: []v1.NodeSelectorRequirement{{Key: "topology.kubernetes.io/zone", Operator: v1.NodeSelectorOpIn, Values: []string{"zone-a"}}},
+	})
+	return pv
+}
+
+func nodeWithLabel(name, key, value string) *v1.Node {
+	return &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{key: value}}}
 }
 
 func pvWithRemoteSource(pv *v1.PersistentVolume) *v1.PersistentVolume {

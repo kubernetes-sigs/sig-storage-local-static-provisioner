@@ -31,11 +31,11 @@ Drivers record the Node a volume depends on in different places, so each `--csi-
 
 | Reference | Reads the Node name from |
 |---|---|
-| `affinity[:<topologyKey>]` | The PV node affinity. `<topologyKey>` defaults to `kubernetes.io/hostname`. |
+| `affinity[:<topologyKey>]` | The PV node affinity. `<topologyKey>` defaults to `kubernetes.io/hostname`. For `kubernetes.io/hostname` the values are Node names; for any other key they are values of that Node label, so a Node exists if it carries `<topologyKey>=<value>`. |
 | `annotation:<key>` | A PV annotation. |
 | `attribute:<key>` | A CSI volume attribute (`spec.csi.volumeAttributes`). |
 
-References are tried in order and the first one that yields a Node name is used. If none does, the Node is unknown and the PV is left alone: an unknown Node is never treated as a deleted Node.
+References are tried in order and the first one that yields a Node name is used. If none does, the Node is unknown and the PV is left alone: an unknown Node is never treated as a deleted Node. Node selector terms of a PV are ORed, so for an `affinity` reference every term must contain a `<topologyKey> In (...)` expression; if any term does not, the Node is unknown.
 
 Without references, a driver defaults to `affinity:kubernetes.io/hostname`, except for the well-known drivers below:
 

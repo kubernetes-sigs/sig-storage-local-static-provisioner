@@ -20,9 +20,12 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -147,6 +150,21 @@ func affinityPV(pv *v1.PersistentVolume, key string, nodes ...string) *v1.Persis
 	return pv
 }
 
+func twoTermPV(pv *v1.PersistentVolume, key1, value1, key2, value2 string) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{Required: &v1.NodeSelector{NodeSelectorTerms: []v1.NodeSelectorTerm{
+		{MatchExpressions: []v1.NodeSelectorRequirement{{Key: key1, Operator: v1.NodeSelectorOpIn, Values: []string{value1}}}},
+		{MatchExpressions: []v1.NodeSelectorRequirement{{Key: key2, Operator: v1.NodeSelectorOpIn, Values: []string{value2}}}},
+	}}}
+	return pv
+}
+
+func notInPV(pv *v1.PersistentVolume, key, value string) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity = &v1.VolumeNodeAffinity{Required: &v1.NodeSelector{NodeSelectorTerms: []v1.NodeSelectorTerm{
+		{MatchExpressions: []v1.NodeSelectorRequirement{{Key: key, Operator: v1.NodeSelectorOpNotIn, Values: []string{value}}}},
+	}}}
+	return pv
+}
+
 func attrPV(pv *v1.PersistentVolume, key, value string) *v1.PersistentVolume {
 	if pv.Spec.CSI.VolumeAttributes == nil {
 		pv.Spec.CSI.VolumeAttributes = map[string]string{}
@@ -210,7 +228,7 @@ func TestIsPVEligibleForNodeCleanup(t *testing.T) {
 	}
 }
 
-func TestGetNodeNamesForCleanup(t *testing.T) {
+func TestResolvePVNodes(t *testing.T) {
 	localPV := func(key string, nodes ...string) *v1.PersistentVolume {
 		return affinityPV(&v1.PersistentVolume{Spec: v1.PersistentVolumeSpec{
 			PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
@@ -232,6 +250,9 @@ func TestGetNodeNamesForCleanup(t *testing.T) {
 		{"aws CSI PV without hostname affinity yields no node", affinityPV(csiPV(awsDriver, "sc"), "topology.kubernetes.io/zone", "us-east-1a"), mustParse(t, awsDriver), nil},
 		{"aws CSI PV without any affinity yields no node", csiPV(awsDriver, "sc"), mustParse(t, awsDriver), nil},
 
+		{"aws CSI PV with an extra selector term lacking the hostname key yields no node (terms are ORed)", twoTermPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1", "topology.kubernetes.io/zone", "us-east-1a"), mustParse(t, awsDriver), nil},
+		{"aws CSI PV whose hostname term uses NotIn yields no node", notInPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1"), mustParse(t, awsDriver), nil},
+
 		// Real shape of a localdisk.csi.acstor.io PV: no nodeAffinity, node only in volumeAttributes.
 		{"azure PV never failed over: falls back to selected-initial-node attribute", attrPV(csiPV(azureDriver, "local-csi"), azureInit, "aks-vmss000001"), mustParse(t, azureDriver), []string{"aks-vmss000001"}},
 		{"azure PV after failover: selected-node annotation wins", annPV(attrPV(csiPV(azureDriver, "local-csi"), azureInit, "aks-vmss000001"), azureSel, "aks-vmss000002"), mustParse(t, azureDriver), []string{"aks-vmss000002"}},
@@ -251,12 +272,83 @@ func TestGetNodeNamesForCleanup(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := GetNodeNamesForCleanup(test.pv, test.csiDrivers)
+			got := ResolvePVNodes(test.pv, test.csiDrivers).Names
 			if len(got) == 0 && len(test.expected) == 0 {
 				return
 			}
 			if !reflect.DeepEqual(got, test.expected) {
 				t.Errorf("expected %v, got %v", test.expected, got)
+			}
+		})
+	}
+}
+
+func TestResolvePVNodesLabelKey(t *testing.T) {
+	localPV := affinityPV(&v1.PersistentVolume{Spec: v1.PersistentVolumeSpec{
+		PersistentVolumeSource: v1.PersistentVolumeSource{Local: &v1.LocalVolumeSource{}},
+	}}, v1.LabelHostname, "n1")
+
+	tests := []struct {
+		name       string
+		pv         *v1.PersistentVolume
+		csiDrivers CSIDrivers
+		expected   PVNodes
+	}{
+		{"local PV: node names", localPV, nil, PVNodes{Names: []string{"n1"}}},
+		{"hostname affinity ref", affinityPV(csiPV(awsDriver, "sc"), v1.LabelHostname, "n1"), mustParse(t, awsDriver), PVNodes{Names: []string{"n1"}, LabelKey: v1.LabelHostname}},
+		{"custom affinity key: values of that node label", affinityPV(csiPV("x", "sc"), "topology.x/node", "n9"), mustParse(t, "x=affinity:topology.x/node"), PVNodes{Names: []string{"n9"}, LabelKey: "topology.x/node"}},
+		{"annotation ref: node names", annPV(csiPV(azureDriver, "sc"), azureSel, "n2"), mustParse(t, azureDriver), PVNodes{Names: []string{"n2"}}},
+		{"attribute ref: node names", attrPV(csiPV(azureDriver, "sc"), azureInit, "n3"), mustParse(t, azureDriver), PVNodes{Names: []string{"n3"}}},
+		{"unknown", csiPV(awsDriver, "sc"), mustParse(t, awsDriver), PVNodes{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := ResolvePVNodes(test.pv, test.csiDrivers)
+			if len(got.Names) == 0 && len(test.expected.Names) == 0 && got.LabelKey == "" {
+				return
+			}
+			if !reflect.DeepEqual(got, test.expected) {
+				t.Errorf("expected %#v, got %#v", test.expected, got)
+			}
+		})
+	}
+}
+
+func TestAnyPVNodeExists(t *testing.T) {
+	// A Node whose name differs from the value of its topology label.
+	labelled := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "ip-10-0-0-1", Labels: map[string]string{"topology.x/node": "n9"}}}
+	named := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "n1"}}
+	hostLabelled := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "other", Labels: map[string]string{NodeLabelKey: "n2"}}}
+
+	tests := []struct {
+		name     string
+		nodes    []*v1.Node
+		query    PVNodes
+		expected bool
+	}{
+		{"node names: found by name", []*v1.Node{named}, PVNodes{Names: []string{"n1"}}, true},
+		{"node names: found by hostname label", []*v1.Node{hostLabelled}, PVNodes{Names: []string{"n2"}}, true},
+		{"node names: not found", []*v1.Node{named}, PVNodes{Names: []string{"gone"}}, false},
+		{"hostname label key behaves like node names", []*v1.Node{named}, PVNodes{Names: []string{"n1"}, LabelKey: v1.LabelHostname}, true},
+		{"hostname label key: not found", []*v1.Node{named}, PVNodes{Names: []string{"gone"}, LabelKey: v1.LabelHostname}, false},
+		{"custom label key: live node has the label value but a different name", []*v1.Node{labelled}, PVNodes{Names: []string{"n9"}, LabelKey: "topology.x/node"}, true},
+		{"custom label key: no node has the label value", []*v1.Node{labelled}, PVNodes{Names: []string{"n8"}, LabelKey: "topology.x/node"}, false},
+		{"custom label key: a node merely NAMED like the value does not count", []*v1.Node{{ObjectMeta: metav1.ObjectMeta{Name: "n9"}}}, PVNodes{Names: []string{"n9"}, LabelKey: "topology.x/node"}, false},
+		{"custom label key: any of several values", []*v1.Node{labelled}, PVNodes{Names: []string{"n8", "n9"}, LabelKey: "topology.x/node"}, true},
+		{"custom label key: invalid label value is treated as existing (conservative)", []*v1.Node{}, PVNodes{Names: []string{"not a valid value!"}, LabelKey: "topology.x/node"}, true},
+		{"no names", []*v1.Node{named}, PVNodes{LabelKey: "topology.x/node"}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			informers := informers.NewSharedInformerFactory(fake.NewSimpleClientset(), time.Duration(0))
+			nodeInformer := informers.Core().V1().Nodes()
+			for _, n := range test.nodes {
+				nodeInformer.Informer().GetStore().Add(n)
+			}
+			if got := AnyPVNodeExists(nodeInformer.Lister(), test.query); got != test.expected {
+				t.Errorf("expected %t, got %t", test.expected, got)
 			}
 		})
 	}

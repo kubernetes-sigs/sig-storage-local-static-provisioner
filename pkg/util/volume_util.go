@@ -94,13 +94,22 @@ func (u *volumeUtil) ReadDir(fullPath string) ([]string, error) {
 //	        - <node1>
 //	        - <node2>
 func GetLocalPersistentVolumeNodeNames(pv *v1.PersistentVolume) []string {
-	return GetPersistentVolumeNodeNames(pv, v1.LabelHostname)
+	return persistentVolumeNodeNames(pv, v1.LabelHostname, false)
 }
 
-// GetPersistentVolumeNodeNames is like GetLocalPersistentVolumeNodeNames but
-// reads the node name(s) from node affinity match expressions with the given
-// topology key instead of kubernetes.io/hostname.
+// GetPersistentVolumeNodeNames returns the values of the node affinity match
+// expressions with the given topology key.
+//
+// Node selector terms are ORed, so a term that has no usable `key In (...)`
+// expression may still match Nodes that can not be enumerated here. Unlike
+// GetLocalPersistentVolumeNodeNames, nil ("unknown") is returned in that case
+// instead of silently ignoring the term, so callers never treat a PV as bound to
+// a deleted Node only because part of its node affinity could not be resolved.
 func GetPersistentVolumeNodeNames(pv *v1.PersistentVolume, topologyKey string) []string {
+	return persistentVolumeNodeNames(pv, topologyKey, true)
+}
+
+func persistentVolumeNodeNames(pv *v1.PersistentVolume, topologyKey string, strict bool) []string {
 	if pv == nil || pv.Spec.NodeAffinity == nil || pv.Spec.NodeAffinity.Required == nil {
 		return nil
 	}
@@ -108,14 +117,19 @@ func GetPersistentVolumeNodeNames(pv *v1.PersistentVolume, topologyKey string) [
 	var result sets.Set[string]
 	for _, term := range pv.Spec.NodeAffinity.Required.NodeSelectorTerms {
 		var nodes sets.Set[string]
+		resolved := false
 		for _, matchExpr := range term.MatchExpressions {
 			if matchExpr.Key == topologyKey && matchExpr.Operator == v1.NodeSelectorOpIn {
+				resolved = true
 				if nodes == nil {
 					nodes = sets.New(matchExpr.Values...)
 				} else {
 					nodes = nodes.Intersection(sets.New(matchExpr.Values...))
 				}
 			}
+		}
+		if strict && !resolved {
+			return nil
 		}
 		result = result.Union(nodes)
 	}

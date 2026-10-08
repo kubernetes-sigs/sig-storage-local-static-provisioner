@@ -124,12 +124,12 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 //	        values:
 //	        - <node1>
 func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) bool {
-	nodeNames := common.GetNodeNamesForCleanup(localPV, d.csiDrivers)
-	if len(nodeNames) == 0 {
+	nodes := common.ResolvePVNodes(localPV, d.csiDrivers)
+	if len(nodes.Names) == 0 {
 		return false
 	}
 
-	return !common.AnyNodeExists(d.nodeLister, nodeNames)
+	return !common.AnyPVNodeExists(d.nodeLister, nodes)
 }
 
 func (d *Deleter) deletePV(ctx context.Context, pvName string) error {

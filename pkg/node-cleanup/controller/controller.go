@@ -202,15 +202,15 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 		return err
 	}
 
-	nodeNames := common.GetNodeNamesForCleanup(pv, c.csiDrivers)
-	if len(nodeNames) == 0 {
+	nodes := common.ResolvePVNodes(pv, c.csiDrivers)
+	if len(nodes.Names) == 0 {
 		// For whatever reason the PV isn't formatted properly so we will
 		// never be able to get its corresponding Node, so ignore.
 		klog.Errorf("error getting node attached to pv: %s", pv)
 		return nil
 	}
 
-	nodeExists := common.AnyNodeExists(c.nodeLister, nodeNames)
+	nodeExists := common.AnyPVNodeExists(c.nodeLister, nodes)
 	// Check that the node the PV/PVC reference is still deleted
 	if nodeExists {
 		return nil
@@ -245,7 +245,7 @@ func (c *CleanupController) syncHandler(ctx context.Context, pvName string) erro
 	}
 
 	cleanupmetrics.PersistentVolumeClaimDeleteTotal.Inc()
-	klog.Infof("Deleted PVC %q that pointed to non-existent Nodes %q", pvClaimRef.Name, nodeNames)
+	klog.Infof("Deleted PVC %q that pointed to non-existent Nodes %q", pvClaimRef.Name, nodes.Names)
 	return nil
 }
 
@@ -268,13 +268,13 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 			continue
 		}
 
-		nodeNames := common.GetNodeNamesForCleanup(pv, c.csiDrivers)
-		if len(nodeNames) == 0 {
+		nodes := common.ResolvePVNodes(pv, c.csiDrivers)
+		if len(nodes.Names) == 0 {
 			klog.Errorf("error getting node attached to pv: %s", pv)
 			continue
 		}
 
-		shouldEnqueue := c.shouldEnqueueEntry(pv, nodeNames)
+		shouldEnqueue := c.shouldEnqueueEntry(pv, nodes)
 		if shouldEnqueue {
 			klog.Infof("Starting timer for resource deletion, resource:%s, timer duration: %s", pv.Spec.ClaimRef, c.pvcDeletionDelay.String())
 			c.eventRecorder.Event(pv.Spec.ClaimRef, v1.EventTypeWarning, "ReferencedNodeDeleted", fmt.Sprintf("PVC is tied to a deleted Node. PVC will be cleaned up in %s if the Node doesn't come back", c.pvcDeletionDelay.String()))
@@ -288,12 +288,12 @@ func (c *CleanupController) startCleanupTimersIfNeeded() {
 // The PV must be a local PV (or a CSI PV of a driver in csiDrivers), have a StorageClass present in the list
 // of storageClassNames, have a NodeAffinity
 // to a deleted Node, and have a PVC bound to it (otherwise there's nothing to clean up).
-func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodeNames []string) bool {
+func (c *CleanupController) shouldEnqueueEntry(pv *v1.PersistentVolume, nodes common.PVNodes) bool {
 	if pv.Spec.ClaimRef == nil {
 		return false
 	}
 
-	return !common.AnyNodeExists(c.nodeLister, nodeNames)
+	return !common.AnyPVNodeExists(c.nodeLister, nodes)
 }
 
 // deletePVC deletes the PVC with the given name and namespace

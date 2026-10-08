@@ -22,6 +22,9 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	corelisters "k8s.io/client-go/listers/core/v1"
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
@@ -167,44 +170,70 @@ func IsPVEligibleForNodeCleanup(pv *v1.PersistentVolume, storageClassNames []str
 	return slices.Contains(storageClassNames, pv.Spec.StorageClassName)
 }
 
-// GetNodeNamesForCleanup returns the name(s) of the node(s) a PV depends on:
-// the node affinity hostname(s) for a local PV, or the node(s) found through
-// the configured references of the PV's CSI driver. It returns nil if the node
-// can not be determined, which callers must treat as "unknown", never as
-// "the node is gone".
-func GetNodeNamesForCleanup(pv *v1.PersistentVolume, csiDrivers CSIDrivers) []string {
+// PVNodes is the Node(s) a PV depends on, as found by ResolvePVNodes. The zero
+// value means "unknown".
+type PVNodes struct {
+	// Names are Node names, or the values of the Node label LabelKey.
+	Names []string
+	// LabelKey is the Node label whose value is in Names. It is empty, or
+	// kubernetes.io/hostname, when Names are Node names.
+	LabelKey string
+}
+
+// ResolvePVNodes returns the Node(s) a PV depends on: the node affinity hostname(s)
+// for a local PV, or the Node(s) found through the configured references of the
+// PV's CSI driver. The result has no Names if the Node can not be determined,
+// which callers must treat as "unknown", never as "the Node is gone".
+func ResolvePVNodes(pv *v1.PersistentVolume, csiDrivers CSIDrivers) PVNodes {
 	if pv == nil {
-		return nil
+		return PVNodes{}
 	}
 
 	if pv.Spec.CSI == nil {
-		return nilIfEmpty(util.GetLocalPersistentVolumeNodeNames(pv))
+		if names := util.GetLocalPersistentVolumeNodeNames(pv); len(names) > 0 {
+			return PVNodes{Names: names}
+		}
+		return PVNodes{}
 	}
 
 	for _, ref := range csiDrivers[pv.Spec.CSI.Driver] {
-		var names []string
 		switch ref.Kind {
 		case NodeRefAffinity:
-			names = util.GetPersistentVolumeNodeNames(pv, ref.Key)
+			if names := util.GetPersistentVolumeNodeNames(pv, ref.Key); len(names) > 0 {
+				return PVNodes{Names: names, LabelKey: ref.Key}
+			}
 		case NodeRefAnnotation:
 			if value := pv.Annotations[ref.Key]; value != "" {
-				names = []string{value}
+				return PVNodes{Names: []string{value}}
 			}
 		case NodeRefAttribute:
 			if value := pv.Spec.CSI.VolumeAttributes[ref.Key]; value != "" {
-				names = []string{value}
+				return PVNodes{Names: []string{value}}
 			}
 		}
-		if len(names) > 0 {
-			return names
-		}
 	}
-	return nil
+	return PVNodes{}
 }
 
-func nilIfEmpty(names []string) []string {
-	if len(names) == 0 {
-		return nil
+// AnyPVNodeExists reports whether any of the Nodes a PV depends on exists. Names
+// are looked up as Node names (falling back to the kubernetes.io/hostname label)
+// unless LabelKey names another Node label, in which case a Node must carry that
+// label with one of the values. As in AnyNodeExists, it errs on the side of "exists"
+// when a lookup fails.
+func AnyPVNodeExists(nodeLister corelisters.NodeLister, nodes PVNodes) bool {
+	if nodes.LabelKey == "" || nodes.LabelKey == v1.LabelHostname {
+		return AnyNodeExists(nodeLister, nodes.Names)
 	}
-	return names
+
+	for _, value := range nodes.Names {
+		req, err := labels.NewRequirement(nodes.LabelKey, selection.Equals, []string{value})
+		if err != nil {
+			return true
+		}
+		found, err := nodeLister.List(labels.NewSelector().Add(*req))
+		if err != nil || len(found) > 0 {
+			return true
+		}
+	}
+	return false
 }
