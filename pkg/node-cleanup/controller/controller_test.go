@@ -44,6 +44,12 @@ const (
 	defaultNamespace            = "default"
 	alternativeStorageClassName = "alternative-storageclass"
 	defaultPVCUID               = "123"
+	testCSIDriver               = "lis.csi.aws.com"
+	azureCSIDriver              = "localdisk.csi.acstor.io"
+	customCSIDriver             = "custom.csi.example.com"
+	customTopologyKey           = "topology.example.com/node"
+	azureSelectedNodeAnnotation = "localdisk.csi.acstor.io/selected-node"
+	azureInitialNodeAttribute   = "localdisk.csi.acstor.io/selected-initial-node"
 )
 
 var (
@@ -71,7 +77,9 @@ func TestCleanupController(t *testing.T) {
 		node *v1.Node
 		// Names of StorageClasses that the PV/PVC need to belong to to be cleaned up.
 		storageClassNames []string
-		expectedActions   []core.Action
+		// Value of the --csi-drivers flag: CSI drivers whose PVs are eligible for cleanup (in addition to local PVs).
+		csiDrivers      []string
+		expectedActions []core.Action
 		// Whether the give node exists when the controller starts
 		nodeIsInitialObject bool
 		// Whether to bring up the given node in the middle of the test
@@ -155,6 +163,181 @@ func TestCleanupController(t *testing.T) {
 			},
 		},
 		{
+			name:              "CSI PV with allowlisted driver + affinity to deleted node -> delete pvc",
+			pv:                pvWithCSIDriver(pvWithPVCAndNode(pvc, node), testCSIDriver),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "CSI PV with allowlisted driver + affinity to node that exists -> don't delete pvc",
+			pv:                pvWithCSIDriver(pvWithPVCAndNode(pvc, node), testCSIDriver),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+			nodeIsInitialObject: true,
+		},
+		{
+			name:              "CSI PV with driver that is not allowlisted + affinity to deleted node -> don't delete pvc",
+			pv:                pvWithCSIDriver(pvWithPVCAndNode(pvc, node), "ebs.csi.aws.com"),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "CSI PV with allowlisted driver but wrong storageclass + affinity to deleted node -> don't delete pvc",
+			pv:                pvWithCSIDriver(pvWithPVCAndNode(pvc, node), testCSIDriver),
+			pvc:               pvc,
+			storageClassNames: []string{alternativeStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "CSI PV with listed storageclass but no csi drivers configured -> don't delete pvc",
+			pv:                pvWithCSIDriver(pvWithPVCAndNode(pvc, node), testCSIDriver),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "local PV is still cleaned up when csi drivers are configured -> delete pvc",
+			pv:                pvWithPVCAndNode(pvc, node),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "azure PV (no node affinity) whose initial node is deleted -> delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), node.Name, ""),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{azureCSIDriver},
+			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "azure PV whose initial node still exists -> don't delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), node.Name, ""),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{azureCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+			nodeIsInitialObject: true,
+		},
+		{
+			name:              "azure PV failed over: initial node deleted but selected-node annotation points to existing node -> don't delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), nonExistentNodeName, node.Name),
+			pvc:               pvc,
+			node:              node,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{azureCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+			nodeIsInitialObject: true,
+		},
+		{
+			name:              "azure PV with selected-node annotation pointing to a deleted node -> delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), nonExistentNodeName, node.Name),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{azureCSIDriver},
+			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "azure PV without any node reference -> don't delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), "", ""),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{azureCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "azure PV but azure driver not allowlisted -> don't delete pvc",
+			pv:                pvWithAzureNodeRefs(pvWithPVCAndNode(pvc, node), node.Name, ""),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "local PV whose affinity has no hostname key -> don't delete pvc",
+			pv:                pvWithOtherAffinityKey(pvWithPVCAndNode(pvc, node)),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "custom affinity key: live Node has the label value under a different name -> don't delete pvc",
+			pv:                pvWithCustomAffinity(pvWithPVCAndNode(pvc, node), customCSIDriver, customTopologyKey, "n9"),
+			pvc:               pvc,
+			node:              nodeWithLabel("ip-10-0-0-1", customTopologyKey, "n9"),
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{customCSIDriver + "=affinity:" + customTopologyKey},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+			nodeIsInitialObject: true,
+		},
+		{
+			name:              "custom affinity key: no Node has the label value -> delete pvc",
+			pv:                pvWithCustomAffinity(pvWithPVCAndNode(pvc, node), customCSIDriver, customTopologyKey, "n9"),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{customCSIDriver + "=affinity:" + customTopologyKey},
+			expectedActions: []core.Action{
+				deletePVCAction(pvc),
+			},
+		},
+		{
+			name:              "CSI PV whose node affinity has an extra term without the hostname key -> don't delete pvc",
+			pv:                pvWithExtraZoneTerm(pvWithCSIDriver(pvWithPVCAndNode(pvc, node), testCSIDriver)),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			csiDrivers:        []string{testCSIDriver},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
+			name:              "local PV whose node affinity has an extra term without the hostname key -> don't delete pvc",
+			pv:                pvWithExtraZoneTerm(pvWithPVCAndNode(pvc, node)),
+			pvc:               pvc,
+			storageClassNames: []string{testStorageClassName},
+			expectedActions:   []core.Action{
+				// Intentionally left empty
+			},
+		},
+		{
 			name:              "PV with wrong storageclass + affinity to deleted node -> don't delete pvc",
 			pv:                pvWithPVCAndNode(pvc, node),
 			pvc:               pvc,
@@ -213,7 +396,12 @@ func TestCleanupController(t *testing.T) {
 				queueDelay = time.Duration(0)
 			}
 
-			ctrl := NewCleanupController(client, pvInformer, pvcInformer, nodeInformer, test.storageClassNames, queueDelay, time.Duration(0))
+			csiDrivers, err := common.ParseCSIDrivers(test.csiDrivers)
+			if err != nil {
+				t.Fatalf("invalid csiDrivers %v: %v", test.csiDrivers, err)
+			}
+
+			ctrl := NewCleanupController(client, pvInformer, pvcInformer, nodeInformer, test.storageClassNames, csiDrivers, queueDelay, time.Duration(0))
 
 			// Populate the informers with initial objects so the controller can
 			// Get() and List() it.
@@ -307,6 +495,53 @@ func pv() *v1.PersistentVolume {
 			StorageClassName:       testStorageClassName,
 		},
 	}
+}
+
+func pvWithCSIDriver(pv *v1.PersistentVolume, driver string) *v1.PersistentVolume {
+	pv.Spec.PersistentVolumeSource = v1.PersistentVolumeSource{CSI: &v1.CSIPersistentVolumeSource{Driver: driver}}
+	return pv
+}
+
+// pvWithAzureNodeRefs turns the PV into one shaped like a localdisk.csi.acstor.io PV:
+// no node affinity, the creating node in a volume attribute and, only after a failover,
+// the owning node in the selected-node annotation. Empty node names are left out.
+func pvWithAzureNodeRefs(pv *v1.PersistentVolume, initialNode, selectedNode string) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity = nil
+	attributes := map[string]string{}
+	if initialNode != "" {
+		attributes[azureInitialNodeAttribute] = initialNode
+	}
+	pv.Spec.PersistentVolumeSource = v1.PersistentVolumeSource{CSI: &v1.CSIPersistentVolumeSource{Driver: azureCSIDriver, VolumeAttributes: attributes}}
+	if selectedNode != "" {
+		pv.Annotations = map[string]string{azureSelectedNodeAnnotation: selectedNode}
+	}
+	return pv
+}
+
+func pvWithOtherAffinityKey(pv *v1.PersistentVolume) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Key = "topology.example.com/zone"
+	return pv
+}
+
+// pvWithCustomAffinity makes the PV a CSI PV of the given driver whose node affinity uses
+// a custom topology key instead of kubernetes.io/hostname.
+func pvWithCustomAffinity(pv *v1.PersistentVolume, driver, key, value string) *v1.PersistentVolume {
+	pv.Spec.PersistentVolumeSource = v1.PersistentVolumeSource{CSI: &v1.CSIPersistentVolumeSource{Driver: driver}}
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Key = key
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values = []string{value}
+	return pv
+}
+
+// pvWithExtraZoneTerm adds a second (ORed) node selector term that has no hostname expression.
+func pvWithExtraZoneTerm(pv *v1.PersistentVolume) *v1.PersistentVolume {
+	pv.Spec.NodeAffinity.Required.NodeSelectorTerms = append(pv.Spec.NodeAffinity.Required.NodeSelectorTerms, v1.NodeSelectorTerm{
+		MatchExpressions: []v1.NodeSelectorRequirement{{Key: "topology.kubernetes.io/zone", Operator: v1.NodeSelectorOpIn, Values: []string{"zone-a"}}},
+	})
+	return pv
+}
+
+func nodeWithLabel(name, key, value string) *v1.Node {
+	return &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{key: value}}}
 }
 
 func pvWithRemoteSource(pv *v1.PersistentVolume) *v1.PersistentVolume {

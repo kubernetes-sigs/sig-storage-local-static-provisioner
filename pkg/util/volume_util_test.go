@@ -324,3 +324,43 @@ func TestGetPersistentVolumeNodeNames(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPersistentVolumeNodeNamesStrict(t *testing.T) {
+	pvWithTerms := func(terms ...v1.NodeSelectorTerm) *v1.PersistentVolume {
+		return &v1.PersistentVolume{Spec: v1.PersistentVolumeSpec{NodeAffinity: &v1.VolumeNodeAffinity{
+			Required: &v1.NodeSelector{NodeSelectorTerms: terms},
+		}}}
+	}
+	term := func(key string, op v1.NodeSelectorOperator, values ...string) v1.NodeSelectorTerm {
+		return v1.NodeSelectorTerm{MatchExpressions: []v1.NodeSelectorRequirement{{Key: key, Operator: op, Values: values}}}
+	}
+
+	tests := []struct {
+		name     string
+		pv       *v1.PersistentVolume
+		key      string
+		expected []string
+	}{
+		{"single term with the key", pvWithTerms(term("topology.x/node", v1.NodeSelectorOpIn, "n1", "n2")), "topology.x/node", []string{"n1", "n2"}},
+		{"several terms all with the key are unioned", pvWithTerms(term("k", v1.NodeSelectorOpIn, "n1"), term("k", v1.NodeSelectorOpIn, "n2")), "k", []string{"n1", "n2"}},
+		// Terms are ORed: a term that can not be resolved to node names may still match a live Node.
+		{"a term without the key makes the nodes unknown", pvWithTerms(term("k", v1.NodeSelectorOpIn, "n1"), term("topology.kubernetes.io/zone", v1.NodeSelectorOpIn, "z1")), "k", nil},
+		{"a term with the key but another operator makes the nodes unknown", pvWithTerms(term("k", v1.NodeSelectorOpIn, "n1"), term("k", v1.NodeSelectorOpNotIn, "n2")), "k", nil},
+		{"an empty term makes the nodes unknown", pvWithTerms(term("k", v1.NodeSelectorOpIn, "n1"), v1.NodeSelectorTerm{}), "k", nil},
+		{"only other keys", pvWithTerms(term("other", v1.NodeSelectorOpIn, "n1")), "k", nil},
+		{"no node affinity", &v1.PersistentVolume{}, "k", nil},
+		{"nil pv", nil, "k", nil},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := GetPersistentVolumeNodeNames(test.pv, test.key)
+			if len(got) == 0 && len(test.expected) == 0 {
+				return
+			}
+			if diff := cmp.Diff(test.expected, got); diff != "" {
+				t.Errorf("Unexpected nodeNames (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}

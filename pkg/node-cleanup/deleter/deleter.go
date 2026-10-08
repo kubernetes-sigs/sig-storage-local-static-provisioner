@@ -30,26 +30,29 @@ import (
 
 	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/common"
 	cleanupmetrics "sigs.k8s.io/sig-storage-local-static-provisioner/pkg/metrics/node-cleanup"
-	"sigs.k8s.io/sig-storage-local-static-provisioner/pkg/util"
 )
 
 // Deleter handles cleanup of local PVs with an affinity to a deleted Node.
 // Only PVs with a StorageClass listed in the storageClassNames will be considered for cleanup.
+// Besides local PVs, CSI PVs of a driver listed in csiDrivers are considered.
 type Deleter struct {
 	client            kubernetes.Interface
 	pvLister          corelisters.PersistentVolumeLister
 	nodeLister        corelisters.NodeLister
 	storageClassNames []string
+	csiDrivers        common.CSIDrivers
 }
 
 // NewDeleter creates a Deleter object to handle the deletion of local PVs
 // that have an affinity to a deleted Node and have a StorageClass listed in storageClassNames.
-func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolumeLister, nodeLister corelisters.NodeLister, storageClassNames []string) *Deleter {
+// CSI PVs are only handled if their driver is listed in csiDrivers.
+func NewDeleter(client kubernetes.Interface, pvLister corelisters.PersistentVolumeLister, nodeLister corelisters.NodeLister, storageClassNames []string, csiDrivers common.CSIDrivers) *Deleter {
 	return &Deleter{
 		client:            client,
 		pvLister:          pvLister,
 		nodeLister:        nodeLister,
 		storageClassNames: storageClassNames,
+		csiDrivers:        csiDrivers,
 	}
 }
 
@@ -68,7 +71,8 @@ func (d *Deleter) Run(ctx context.Context, discoveryInterval time.Duration) {
 }
 
 // DeletePVs will scan through PVs and delete those that are
-// local PVs with a StorageClass listed in storageClassNames and have an affinity to a deleted Node.
+// local PVs (or CSI PVs of a driver listed in csiDrivers) with a StorageClass listed in storageClassNames
+// and have an affinity to a deleted Node.
 func (d *Deleter) DeletePVs(ctx context.Context) {
 	pvs, err := d.pvLister.List(labels.Everything())
 	if err != nil {
@@ -77,7 +81,7 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 	}
 
 	for _, pv := range pvs {
-		if !common.IsLocalPVWithStorageClass(pv, d.storageClassNames) {
+		if !common.IsPVEligibleForNodeCleanup(pv, d.storageClassNames, d.csiDrivers) {
 			// Either isn't a local PV or doesn't have matching storage class.
 			continue
 		}
@@ -107,9 +111,9 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 	}
 }
 
-// referencesNonExistentNode returns true if the local PV has a NodeAffinity to
-// a deleted Node. An error is returned if the local PV's NodeAffinity
-// does not have the form:
+// referencesNonExistentNode returns true if the PV depends on a deleted Node.
+// For local PVs and CSI PVs configured with an affinity reference, the PV's
+// NodeAffinity must have the form:
 //
 //	nodeAffinity:
 //	  required:
@@ -120,12 +124,12 @@ func (d *Deleter) DeletePVs(ctx context.Context) {
 //	        values:
 //	        - <node1>
 func (d *Deleter) referencesNonExistentNode(localPV *v1.PersistentVolume) bool {
-	nodeNames := util.GetLocalPersistentVolumeNodeNames(localPV)
-	if nodeNames == nil {
+	nodes := common.ResolvePVNodes(localPV, d.csiDrivers)
+	if len(nodes.Names) == 0 {
 		return false
 	}
 
-	return !common.AnyNodeExists(d.nodeLister, nodeNames)
+	return !common.AnyPVNodeExists(d.nodeLister, nodes)
 }
 
 func (d *Deleter) deletePV(ctx context.Context, pvName string) error {
