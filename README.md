@@ -81,6 +81,7 @@ Recommended provisioner versions with Kubernetes versions:
 
 | Provisioner Version | K8s Version |
 |---------------------|-------------|
+| [2.10.0][10]        | 1.21+       |
 | [2.9.0][9]          | 1.21+       |
 | [2.8.0][8]          | 1.21+       |
 | [2.7.0][7]          | 1.21+       |
@@ -88,6 +89,7 @@ Recommended provisioner versions with Kubernetes versions:
 [7]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.7.0
 [8]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.8.0
 [9]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.9.0
+[10]: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/tree/v2.10.0
 
 ## Feature Status
 
