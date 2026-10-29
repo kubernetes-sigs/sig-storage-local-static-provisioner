@@ -1,0 +1,13 @@
+# Sets every controller flag that the chart renders. An argument rendered as
+# anything but a string, which the API server rejects, fails the install.
+storageClassNames:
+  - local-a
+  - local-b
+csiDrivers:
+  - "localdisk.csi.acstor.io=affinity:topology.localdisk.csi.acstor.io/node|annotation:localdisk.csi.acstor.io/node"
+additionalArgs:
+  - --worker-threads
+  - "5"
+metrics:
+  port: 9090
+  path: /custom
