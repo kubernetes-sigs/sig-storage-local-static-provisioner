@@ -16,6 +16,7 @@ local-volume-provisioner in your Kubernetes with `helm install` directly.
     - [Install with `helm install` directly](#install-with-helm-install-directly)
   - [Discovery Directory and Storage Classes](#discovery-directory-and-storage-classes)
   - [Configurations](#configurations)
+  - [Node cleanup controller](#node-cleanup-controller)
   - [Examples](#examples)
 
 ## Install Helm
@@ -271,6 +272,51 @@ provisioner chart and their default values.
 | serviceMonitor.relabelings              | Additional metrics relabel_config                                                                                              | lists    | `-`                                                           |
 
 Note: `classes` is a list of objects, you can specify one or more classes.
+
+## Node cleanup controller
+
+The [node-cleanup-controller](./node-cleanup-controller) chart installs the
+[local volume node cleanup controller](../docs/node-cleanup-controller.md), which
+deletes the PVs and PVCs of deleted Nodes so that StatefulSet Pods using local
+volumes can be rescheduled. It is independent of the provisioner chart: it works
+with any provisioner of local PVs, and with CSI drivers of node-local volumes.
+
+```sh
+helm repo add sig-storage-local-static-provisioner https://kubernetes-sigs.github.io/sig-storage-local-static-provisioner
+helm install node-cleanup-controller sig-storage-local-static-provisioner/node-cleanup-controller \
+  --namespace kube-system --set 'storageClassNames={fast-disks}'
+```
+
+| Parameter                     | Description                                                                                                                           | Type   | Default                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| nameOverride                  | Override default chartname                                                                                                            | str    | `""`                                                                          |
+| fullnameOverride              | Override default releasename                                                                                                          | str    | `""`                                                                          |
+| rbac.create                   | If `true`, create and use RBAC resources                                                                                              | bool   | `true`                                                                        |
+| serviceAccount.create         | If `true`, create serviceaccount in .Release.Namespace                                                                                | bool   | `true`                                                                        |
+| serviceAccount.name           | If set, the name of the serviceaccount to create or use                                                                               | str    | `""`                                                                          |
+| storageClassNames             | StorageClasses whose PVs and PVCs are cleaned up when their Node is deleted. Nothing is cleaned up while empty.                       | list   | `[]`                                                                          |
+| csiDrivers                    | CSI drivers of node-local volumes whose PVs are cleaned up too, as `<driver>[=<ref>[\|<ref>...]]`.                                    | list   | `[]`                                                                          |
+| pvcDeletionDelay              | Duration to wait after Node deletion before deleting its PVCs.                                                                        | str    | `60s`                                                                         |
+| stalePVDiscoveryInterval      | Duration to wait between tries to delete stale PVs.                                                                                   | str    | `10s`                                                                         |
+| additionalArgs                | Additional command line arguments, e.g. `--resync` or `--worker-threads`.                                                             | list   | `[]`                                                                          |
+| replicaCount                  | Number of replicas. The controller has no leader election, so keep it at 1.                                                           | int    | `1`                                                                           |
+| image                         | Controller image, rendered as a template.                                                                                             | str    | `registry.k8s.io/sig-storage/local-volume-node-cleanup:v{{ .Chart.AppVersion }}` |
+| imagePullPolicy               | Image pull policy.                                                                                                                    | str    | `-`                                                                           |
+| imagePullSecrets              | Image pull secrets.                                                                                                                   | list   | `[]`                                                                          |
+| podAnnotations                | Annotations for the Pod.                                                                                                              | map    | `{}`                                                                          |
+| podLabels                     | Labels for the Pod.                                                                                                                   | map    | `{}`                                                                          |
+| priorityClassName             | PriorityClass of the Pod.                                                                                                             | str    | `""`                                                                          |
+| nodeSelector                  | Node selector, added to `kubernetes.io/os: linux`.                                                                                    | map    | `{}`                                                                          |
+| tolerations                   | Tolerations of the Pod.                                                                                                               | list   | `[]`                                                                          |
+| affinity                      | Affinity of the Pod.                                                                                                                  | map    | `{}`                                                                          |
+| resources                     | Resources of the container.                                                                                                           | map    | `{}`                                                                          |
+| podSecurityContext            | Security context of the Pod. The controller only talks to the API server and runs unprivileged.                                       | map    | non-root, `RuntimeDefault` seccomp                                            |
+| securityContext               | Security context of the container.                                                                                                    | map    | no privilege escalation, read-only root, all capabilities dropped            |
+| serviceMonitor.enabled        | If `true`, create a Service and a Prometheus Operator ServiceMonitor for the controller's metrics.                                     | bool   | `false`                                                                       |
+| serviceMonitor.interval       | Scrape interval.                                                                                                                      | str    | `10s`                                                                         |
+| serviceMonitor.namespace      | Namespace of the ServiceMonitor.                                                                                                      | str    | release namespace                                                             |
+| serviceMonitor.additionalLabels | Labels of the ServiceMonitor.                                                                                                       | map    | `{}`                                                                          |
+| serviceMonitor.relabelings    | Relabelings of the scrape endpoint.                                                                                                   | list   | `[]`                                                                          |
 
 ## Examples
 
