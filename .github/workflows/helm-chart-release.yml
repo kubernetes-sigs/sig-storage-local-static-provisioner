@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - "helm/provisioner/Chart.yaml"
+      - "helm/node-cleanup-controller/Chart.yaml"
 
 jobs:
   release:

@@ -1,0 +1,78 @@
+# Override the default chartname or releasename
+nameOverride: ""
+fullnameOverride: ""
+
+rbac:
+  # rbac.create: `true` if rbac resources should be created
+  create: true
+
+# Defines whether to generate a serviceAccount
+serviceAccount:
+  # serviceAccount.create: Whether to create a service account or not
+  create: true
+  # serviceAccount.name: The name of the service account to create or use
+  name: ""
+
+# Names of the StorageClasses whose PVs and PVCs are cleaned up when their Node is
+# deleted. The controller touches nothing until at least one is listed.
+storageClassNames: []
+
+# CSI drivers that provision node-local volumes, whose PVs are cleaned up as well as
+# local PVs, as `<driver>[=<ref>[|<ref>...]]`. A CSI PV is only cleaned up if both
+# its StorageClass and its driver are listed. See docs/node-cleanup-controller.md.
+csiDrivers: []
+
+# Duration to wait after a Node is deleted before deleting the PVCs bound to its
+# PVs, in case the Node comes back.
+pvcDeletionDelay: 60s
+
+# Duration to wait between tries to delete stale PVs.
+stalePVDiscoveryInterval: 10s
+
+# Additional command line arguments, e.g. --resync or --worker-threads.
+additionalArgs: []
+
+# The controller has no leader election: more than one replica would race to delete
+# the same objects.
+replicaCount: 1
+
+image: registry.k8s.io/sig-storage/local-volume-node-cleanup:v{{ .Chart.AppVersion }}
+# imagePullPolicy: IfNotPresent
+imagePullSecrets: []
+
+podAnnotations: {}
+podLabels: {}
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+resources: {}
+  # limits:
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 10m
+  #   memory: 32Mi
+
+# The controller only talks to the API server, so it runs unprivileged.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+serviceMonitor:
+  enabled: false
+  ## Interval at which Prometheus scrapes the controller
+  interval: 10s
+  # Namespace Prometheus is installed in defaults to release namespace
+  namespace:
+  additionalLabels: {}
+  relabelings: []
