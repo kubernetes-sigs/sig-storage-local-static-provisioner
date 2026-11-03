@@ -25,6 +25,7 @@ local-volume-provisioner is released on an as-needed basis. The process is as fo
 1. An OWNER submits a PR to bump the helm chart version to a stable version
    1. In `helm/provisioner/Chart.yaml` bump the `version` and `appVersion` to the next major/minor/patch version
    1. In `helm/provisioner/values.yaml` bump the image version to the next major/minor/patch version
+   1. In `helm/node-cleanup-controller/Chart.yaml` bump the `version` and `appVersion` to the same version
    1. Run `./hack/update-generated.sh`
    1. Submit a PR
 1. TODO create a tag for the helm chart release.
