@@ -91,4 +91,23 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/download/local-static-provisioner-1.0.0/local-static-provisioner-1.0.0.tgz
     version: 1.0.0
-generated: "2026-10-10T08:30:44.138776538Z"
+  node-cleanup-controller:
+  - apiVersion: v2
+    appVersion: 2.10.0
+    created: "2026-11-03T13:32:23.489955826Z"
+    description: Helm chart for the SIG Storage Local Volume Node Cleanup Controller
+    digest: bef618bc579dceaf4c55cd9a5aba29e127432a51b3fdbd82ed1cabd5fdfc6a30
+    home: https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/
+    icon: https://avatars.githubusercontent.com/u/36015203?s=200&v=4
+    keywords:
+    - storage
+    - local
+    - volume
+    name: node-cleanup-controller
+    sources:
+    - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/
+    type: application
+    urls:
+    - https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/releases/download/node-cleanup-controller-2.10.0/node-cleanup-controller-2.10.0.tgz
+    version: 2.10.0
+generated: "2026-11-03T13:32:23.489967694Z"
