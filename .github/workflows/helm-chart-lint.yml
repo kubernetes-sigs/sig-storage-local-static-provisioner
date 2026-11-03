@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - "helm/provisioner/**"
+      - "helm/node-cleanup-controller/**"
 
 jobs:
   lint-test:
@@ -34,10 +35,10 @@ jobs:
         uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510
 
       - name: Run chart-testing (lint)
-        run: ct lint --chart-dirs=helm --charts=helm/provisioner --lint-conf=helm/lintconf.yaml --check-version-increment=false --validate-maintainers=false
+        run: ct lint --chart-dirs=helm --charts=helm/provisioner,helm/node-cleanup-controller --lint-conf=helm/lintconf.yaml --check-version-increment=false --validate-maintainers=false
 
       - name: Create Kind cluster
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa
 
       - name: Run chart-testing (install)
-        run: ct install --chart-dirs=helm --charts=helm/provisioner
+        run: ct install --chart-dirs=helm --charts=helm/provisioner,helm/node-cleanup-controller

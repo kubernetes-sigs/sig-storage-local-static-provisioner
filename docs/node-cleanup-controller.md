@@ -12,7 +12,7 @@ Pods using a Local Persistent Volume are always scheduled to the same Node as th
 
 ## Usage
 
-Please see the example [deployment](../deployment/kubernetes/example/node-cleanup-controller/deployment.yaml) and [rbac](../deployment/kubernetes/example/node-cleanup-controller/rbac.yaml) for deploying the controller.
+Install the controller with its [Helm chart](../helm/README.md#node-cleanup-controller), or see the example [deployment](../deployment/kubernetes/example/node-cleanup-controller/deployment.yaml) and [rbac](../deployment/kubernetes/example/node-cleanup-controller/rbac.yaml).
 
 ### CSI node-local volumes
 

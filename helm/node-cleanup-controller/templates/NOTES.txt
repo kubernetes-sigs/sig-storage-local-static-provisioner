@@ -1,0 +1,6 @@
+node-cleanup-controller installed
+{{- if not .Values.storageClassNames }}
+
+storageClassNames is empty: the controller cleans up nothing until at least one
+StorageClass is listed.
+{{- end }}
